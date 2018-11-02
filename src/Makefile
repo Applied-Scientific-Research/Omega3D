@@ -4,10 +4,10 @@ CPPOPTS=-std=c++17
 PERF=-O3 -mavx2
 #PERF=-ggdb
 
-all : omega3d
+all : Omega3D.bin
 
-omega3d : main.cpp
+Omega3D.bin : main.cpp
 	$(CC) $(CPPOPTS) $(PERF) -o $@ $<
 
 clean : 
-	rm -f omega3d
+	rm -f Omega3D.bin
