@@ -20,6 +20,6 @@ It currently contains a mere architectural skeleton onto which more complex beha
 * Rework into struct of arrays to allow Vc to work properly (this requires more work for compute and draw shaders :one buffer per array), but should be nice and flexible - and easier than all the `4*idx+3` crap
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json), or just by copying?
 
-    submodule add https://...xxx.git thirdparty/xxx
+        submodule add https://...xxx.git thirdparty/xxx
 
 
