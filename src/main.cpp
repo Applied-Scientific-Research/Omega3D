@@ -15,7 +15,7 @@
 
 int main(int argc, char const *argv[]) {
 
-  const solution_t solver = direct_cpu;
+  //const solution_t solver = direct_cpu;
   std::array<double,Dimensions> fs = {0.0, 0.0, 0.0};
   double time = 0.0;
   const double dt = 0.01;

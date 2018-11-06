@@ -14,7 +14,7 @@ template <class S>
 class ElementBase {
 public:
   ElementBase<S>(const size_t _n, const elem_t _e, const move_t _m) :
-      n(_n), E(_e), M(_m) {
+      E(_e), M(_m), n(_n) {
   }
 
   size_t getn() const { return n; }
