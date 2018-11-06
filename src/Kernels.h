@@ -19,7 +19,7 @@ static inline void kernel_0_0 (const S* __restrict__ sx, const S __restrict__ sr
   const S dzxw = dy*ss[0] - dx*ss[1];
   tu[0] += r2 * dxxw;
   tu[1] += r2 * dyxw;
-  tu[2] += r2 * dxxw;
+  tu[2] += r2 * dzxw;
 }
 
 template <class S, class A>
@@ -36,7 +36,7 @@ static inline void kernel_0_0g (const S* __restrict__ sx, const S __restrict__ s
   S dzxw = dy*ss[0] - dx*ss[1];
   tu[0] += r2 * dxxw;
   tu[1] += r2 * dyxw;
-  tu[2] += r2 * dxxw;
+  tu[2] += r2 * dzxw;
 
   // HACK - you need to figure out what this term is
   const S bbb = r2 / std::sqrt(r2);
