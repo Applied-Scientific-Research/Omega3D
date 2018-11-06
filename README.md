@@ -16,10 +16,13 @@ It currently contains a mere architectural skeleton onto which more complex beha
 
 ## To do
 
-* Wrap solver in a GUI - use existing code from [Omega2D](https://github.com/Applied-Scientific-Research/Omega2D)
+* Support CMake
+* Wrap solver in a GUI - use existing code from [Omega2D](https://github.com/Applied-Scientific-Research/Omega2D). This means supporting only, say, vortex rings and stretch, but no diffusion.
 * Rework into struct of arrays to allow Vc to work properly (this requires more work for compute and draw shaders :one buffer per array), but should be nice and flexible - and easier than all the `4*idx+3` crap
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json), or just by copying?
 
         submodule add https://...xxx.git thirdparty/xxx
 
+## Thanks
 
+Many thanks to NBL for valuable discussions of architecture and C++ syntax and idioms.
