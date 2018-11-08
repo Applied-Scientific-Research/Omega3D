@@ -1,4 +1,7 @@
 #pragma once
+
+#include "ElementBase.h"
+
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -6,7 +9,6 @@
 #include <variant>
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include "ElementBase.h"
 
 
 // 1-D elements

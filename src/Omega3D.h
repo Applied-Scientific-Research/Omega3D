@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdlib>
+
 const size_t Dimensions = 3;
 
 // templated solution type

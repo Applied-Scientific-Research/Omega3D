@@ -1,3 +1,9 @@
+
+#include "Omega3D.h"
+#include "Collection.h"
+#include "Points.h"
+#include "Influence.h"
+
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -5,10 +11,6 @@
 #include <variant>
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include "Omega3D.h"
-#include "Collection.h"
-#include "Points.h"
-#include "Influence.h"
 
 
 // execution starts here

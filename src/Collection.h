@@ -1,8 +1,10 @@
 #pragma once
-#include <iostream>
-#include <variant>
+
 #include "Points.h"
 #include "Panels.h"
+
+#include <iostream>
+#include <variant>
 
 
 // helper alias for any type of collection of elements

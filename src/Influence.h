@@ -1,13 +1,15 @@
 #pragma once
+
+#include "Kernels.h"
+#include "Points.h"
+#include "Panels.h"
+
 #include <iostream>
 #include <vector>
 #include <memory>
 #include <optional>
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include "Kernels.h"
-#include "Points.h"
-#include "Panels.h"
 
 
 template <class S, class A>
