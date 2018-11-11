@@ -23,7 +23,7 @@ It currently contains a mere architectural skeleton onto which more complex beha
 
         submodule add https://...xxx.git thirdparty/xxx
 
-* move rand() to std::random (see Omega2D)
+* ~~move rand() to std::random (see Omega2D)~~
 
 ## Thanks
 

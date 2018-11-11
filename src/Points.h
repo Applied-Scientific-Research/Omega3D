@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <optional>
+#include <random>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -17,11 +18,16 @@ public:
   Points(const size_t _n, const elem_t _e, const move_t _m)
     : ElementBase<S>(_n, _e, _m) {
 
+    // init random number generator
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+    std::uniform_real_distribution<> zmean_dist(-1.0, 1.0);
+
     // this initialization specific to Points
     for (size_t d=0; d<Dimensions; ++d) {
       this->x[d].resize(_n);
       for (size_t i=0; i<_n; ++i) {
-        this->x[d][i] = -1.0 + 2.0*(S)rand()/(S)RAND_MAX;
+        this->x[d][i] = zmean_dist(gen);
       }
     }
     this->r.resize(_n);
@@ -37,7 +43,7 @@ public:
       std::vector<S> new_s;
       new_s.resize(3*_n);
       for (size_t i=0; i<3*_n; ++i) {
-        new_s[i] = (-1.0 + 2.0*(S)rand()/(S)RAND_MAX) / (S)_n;
+        new_s[i] = zmean_dist(gen) / (S)_n;
       }
       this->s = std::move(new_s);
     }
