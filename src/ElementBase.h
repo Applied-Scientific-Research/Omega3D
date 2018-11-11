@@ -20,16 +20,22 @@ public:
 
   size_t getn() const { return n; }
   const std::array<std::vector<S>,Dimensions>& get_pos() const { return x; }
-  const std::vector<S>& get_rad() const { return r; }
-  const std::vector<S>& get_str() const { return *s; }
-  std::vector<S>& get_vel() { return u; }
+  const std::vector<S>&                        get_rad() const { return r; }
+  const std::vector<S>&                        get_str() const { return *s; }
+  std::array<std::vector<S>,Dimensions>&       get_vel()       { return u; }
 
-  void zero_vels() { for( S& val : u ) val = 0.0; }
+  void zero_vels() {
+    for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t i=0; i<getn(); ++i) {
+        u[d][i] = 0.0;
+      }
+    }
+  }
   void finalize_vels(const std::array<double,Dimensions>& _fs) {
-    for (size_t i=0; i<getn(); ++i) {
-      u[3*i+0] = _fs[0] + u[3*i+0] * 0.25/M_PI;
-      u[3*i+1] = _fs[1] + u[3*i+1] * 0.25/M_PI;
-      u[3*i+2] = _fs[2] + u[3*i+2] * 0.25/M_PI;
+    for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t i=0; i<getn(); ++i) {
+        u[d][i] = _fs[d] + u[d][i] * 0.25/M_PI;
+      }
     }
   }
   void move(const double _dt) {
@@ -37,17 +43,14 @@ public:
       std::cout << "  Moving" << to_string() << std::endl;
 
       // update positions
-      //for (size_t i=0; i<3*n; ++i) {
-      //  x[i] += (S)_dt * u[i];
-      //}
       for (size_t d=0; d<Dimensions; ++d) {
         for (size_t i=0; i<n; ++i) {
-          x[d][i] += (S)_dt * u[3*i+d];
+          x[d][i] += (S)_dt * u[d][i];
         }
       }
 
       // update elongation
-      // update strengths
+      // update strengths (in derived class)
     }
   }
 
@@ -83,14 +86,12 @@ protected:
   size_t n;
 
   // state vector
-  //std::vector<S> x;            // position
-  std::array<std::vector<S>,Dimensions> x;            // position
-  std::vector<S> r;            // thickness/radius
-  std::optional<std::vector<S>> s;    // strength
+  std::array<std::vector<S>,Dimensions> x;   // position
+  std::vector<S> r;                          // thickness/radius
+  std::optional<std::vector<S>> s;           // strength
 
   // time derivative of state vector
-  std::vector<S> u;            // velocity
-  //std::array<std::vector<S>,Dimensions> u;            // position
-  std::optional<std::vector<S>> dsdt;    // strength change
+  std::array<std::vector<S>,Dimensions> u;   // velocity
+  std::optional<std::vector<S>> dsdt;        // strength change
 };
 

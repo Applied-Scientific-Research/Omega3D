@@ -24,7 +24,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   const std::vector<S>&                        ss = src.get_str();
   const std::array<std::vector<S>,Dimensions>& tx = targ.get_pos();
   const std::vector<S>&                        tr = targ.get_rad();
-  std::vector<S>&                              tu = targ.get_vel();
+  std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
   std::optional<std::vector<S>>&           opttug = targ.get_velgrad();
   float flops = (float)targ.getn() * (float)src.getn();
 
@@ -45,9 +45,9 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
         kernel_0_0sg<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j], &ss[3*j],
                           tx[0][i], tx[1][i], tx[2][i], tr[i], accum.data());
       }
-      tu[3*i+0] += accum[0];
-      tu[3*i+1] += accum[1];
-      tu[3*i+2] += accum[2];
+      tu[0][i] += accum[0];
+      tu[1][i] += accum[1];
+      tu[2][i] += accum[2];
       tug[9*i+0] += accum[3];
       tug[9*i+1] += accum[4];
       tug[9*i+2] += accum[5];
@@ -70,9 +70,9 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
         kernel_0_0s<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j], &ss[3*j],
                          tx[0][i], tx[1][i], tx[2][i], tr[i], accum.data());
       }
-      tu[3*i+0] += accum[0];
-      tu[3*i+1] += accum[1];
-      tu[3*i+2] += accum[2];
+      tu[0][i] += accum[0];
+      tu[1][i] += accum[1];
+      tu[2][i] += accum[2];
     }
     flops *= 30.0;
   }
@@ -94,10 +94,10 @@ void panels_affect_points (Panels<S> const& src, Points<S>& targ) {
   const std::vector<S>&                        ss = src.get_str();
   const std::array<std::vector<S>,Dimensions>& tx = targ.get_pos();
   //const std::vector<S>&                      tr = targ.get_rad();
-  std::vector<S>&                              tu = targ.get_vel();
+  std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
 
   for (size_t i=0; i<targ.getn(); ++i) {
-    std::array<A,2> accum = {0.0};
+    std::array<A,3> accum = {0.0};
     for (size_t j=0; j<src.getn(); ++j) {
       const size_t jp0 = si[2*j];
       const size_t jp1 = si[2*j+1];
@@ -109,8 +109,9 @@ void panels_affect_points (Panels<S> const& src, Points<S>& targ) {
                        tx[0][i], tx[1][i], tx[2][i],
                        accum.data());
     }
-    tu[2*i]   += accum[0];
-    tu[2*i+1] += accum[1];
+    tu[0][i] += accum[0];
+    tu[1][i] += accum[1];
+    tu[2][i] += accum[2];
   }
 }
 
@@ -124,10 +125,10 @@ void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
   const std::vector<S>&                        ss = src.get_str();
   const std::array<std::vector<S>,Dimensions>& tx = targ.get_pos();
   const std::vector<uint16_t>&                 ti = targ.get_idx();
-  std::vector<S>&                              tu = targ.get_vel();
+  std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
 
   for (size_t i=0; i<targ.getn(); ++i) {
-    std::array<A,2> accum = {0.0};
+    std::array<A,3> accum = {0.0};
     const size_t ip0 = ti[2*i];
     const size_t ip1 = ti[2*i+1];
     for (size_t j=0; j<src.getn(); ++j) {
@@ -141,8 +142,9 @@ void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
                        accum.data());
     }
     // we use it backwards, so the resulting velocities are negative
-    tu[2*i]   -= accum[0];
-    tu[2*i+1] -= accum[1];
+    tu[0][i] -= accum[0];
+    tu[1][i] -= accum[1];
+    tu[2][i] -= accum[2];
   }
 }
 

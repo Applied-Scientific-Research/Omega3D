@@ -43,7 +43,10 @@ public:
     }
 
     // velocity in base class
-    this->u.resize(3*_n);
+    for (size_t d=0; d<Dimensions; ++d) {
+      this->u[d].resize(_n);
+    }
+
     // optional velgrads here
     if (_m == lagrangian) {
       std::vector<S> new_ug;

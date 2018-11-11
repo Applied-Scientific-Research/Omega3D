@@ -39,8 +39,13 @@ public:
       idx[2*i+1] = i+1;
     }
     idx[2*_n-1] = 0;
+
     // just size vels
-    this->u.resize(2*_n);
+    //this->u.resize(2*_n);
+    // velocity in base class
+    //for (size_t d=0; d<Dimensions; ++d) {
+    //  this->u[d].resize(_n);
+    //}
 
     // and generate panel strengths
     if (_e != inert) {
