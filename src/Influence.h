@@ -25,8 +25,8 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   const std::array<std::vector<S>,Dimensions>& tx = targ.get_pos();
   const std::vector<S>&                        tr = targ.get_rad();
   std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
-  std::optional<std::vector<S>>&           opttug = targ.get_velgrad();
-  float flops = (float)targ.getn() * (float)src.getn();
+  std::optional<std::array<std::vector<S>,9>>& opttug = targ.get_velgrad();
+  float flops = (float)targ.getn();
 
   // here is where we can dispatch on solver type, grads-or-not, core function, etc.
 
@@ -48,17 +48,17 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tu[0][i] += accum[0];
       tu[1][i] += accum[1];
       tu[2][i] += accum[2];
-      tug[9*i+0] += accum[3];
-      tug[9*i+1] += accum[4];
-      tug[9*i+2] += accum[5];
-      tug[9*i+3] += accum[6];
-      tug[9*i+4] += accum[7];
-      tug[9*i+5] += accum[8];
-      tug[9*i+6] += accum[9];
-      tug[9*i+7] += accum[10];
-      tug[9*i+8] += accum[11];
+      tug[0][i] += accum[3];
+      tug[1][i] += accum[4];
+      tug[2][i] += accum[5];
+      tug[3][i] += accum[6];
+      tug[4][i] += accum[7];
+      tug[5][i] += accum[8];
+      tug[6][i] += accum[9];
+      tug[7][i] += accum[10];
+      tug[8][i] += accum[11];
     }
-    flops *= 65.0;
+    flops *= 12.0 + 65.0*(float)src.getn();
 
   } else {
     // velocity-only kernel
@@ -74,7 +74,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tu[1][i] += accum[1];
       tu[2][i] += accum[2];
     }
-    flops *= 30.0;
+    flops *= 3.0 + 30.0*(float)src.getn();
   }
 
   auto end = std::chrono::system_clock::now();

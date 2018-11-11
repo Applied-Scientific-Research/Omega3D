@@ -49,22 +49,29 @@ public:
 
     // optional velgrads here
     if (_m == lagrangian) {
-      std::vector<S> new_ug;
-      new_ug.resize(9*_n);
+      std::array<std::vector<S>,9> new_ug;
+      for (size_t d=0; d<9; ++d) {
+        new_ug[d].resize(_n);
+      }
       ug = std::move(new_ug);
     }
   }
 
-  std::optional<std::vector<S>>& get_velgrad() { return ug; }
+  std::optional<std::array<std::vector<S>,9>>& get_velgrad() { return ug; }
 
   void zero_vels() {
-    // must explicitly call the method in the base class
+    // must explicitly call the method in the base class to zero the vels
     ElementBase<S>::zero_vels();
-    // and specialize
+    // and specialize here for the vel grads
     if (ug) {
-      for( S& val : *ug ) val = 0.0;
+      for (size_t d=0; d<9; ++d) {
+        for (size_t i=0; i<this->n; ++i) {
+          (*ug)[d][i] = 0.0;
+        }
+      }
     }
   }
+
   void move(const double _dt) {
     // must explicitly call the method in the base class
     ElementBase<S>::move(_dt);
@@ -73,12 +80,14 @@ public:
       std::cout << "  Stretching" << to_string() << std::endl;
 
       // get pointers to the right part of the vectors
-      std::vector<S> all_ug = *ug;
       std::vector<S> all_s = *this->s;
 
       for (size_t i=0; i<this->n; ++i) {
         std::array<S,3> wdu = {0.0};
-        S* this_ug = &all_ug[9*i];
+        std::array<S,9> this_ug = {0.0};
+        for (size_t d=0; d<9; ++d) {
+          this_ug[d] = (*ug)[d][i];
+        }
         S* this_s = &all_s[3*i];
 
         // compute stretch term
@@ -112,12 +121,11 @@ public:
   }
 
 protected:
-  //Geometry<0,0,S> x;    // num dimensions, num order, storage type
   // movement
   //std::optional<Body&> b;
   // state vector
   std::vector<S> elong;   // scalar elongation
   // time derivative of state vector
-  std::optional<std::vector<S>> ug;   // velocity gradients
+  std::optional<std::array<std::vector<S>,9>> ug;   // velocity gradients
 };
 
