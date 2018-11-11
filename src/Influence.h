@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <optional>
+#include <chrono>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -15,6 +16,7 @@
 template <class S, class A>
 void points_affect_points (Points<S> const& src, Points<S>& targ) {
   std::cout << "    0_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  auto start = std::chrono::system_clock::now();
 
   // get references to use locally
   const std::array<std::vector<S>,Dimensions>& sx = src.get_pos();
@@ -24,6 +26,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   const std::vector<S>&                        tr = targ.get_rad();
   std::vector<S>&                              tu = targ.get_vel();
   std::optional<std::vector<S>>&           opttug = targ.get_velgrad();
+  float flops = (float)targ.getn() * (float)src.getn();
 
   // here is where we can dispatch on solver type, grads-or-not, core function, etc.
 
@@ -55,6 +58,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tug[9*i+7] += accum[10];
       tug[9*i+8] += accum[11];
     }
+    flops *= 65.0;
 
   } else {
     // velocity-only kernel
@@ -70,7 +74,12 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tu[3*i+1] += accum[1];
       tu[3*i+2] += accum[2];
     }
+    flops *= 30.0;
   }
+
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "    time " << (float)elapsed_seconds.count() << " at " << (1.e-9*flops/elapsed_seconds.count()) << " GFlop/s" << std::endl;
 }
 
 
