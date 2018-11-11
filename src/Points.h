@@ -66,7 +66,7 @@ public:
     // must explicitly call the method in the base class
     ElementBase<S>::move(_dt);
     // and specialize
-    if (this->M == lagrangian and ug) {
+    if (this->M == lagrangian and ug and this->E != inert) {
       std::cout << "  Stretching" << to_string() << std::endl;
 
       // get pointers to the right part of the vectors
@@ -97,6 +97,8 @@ public:
         this_s[1] += _dt * wdu[1];
         this_s[2] += _dt * wdu[2];
       }
+    } else {
+      //std::cout << "  Not stretching" << to_string() << std::endl;
     }
   }
 
