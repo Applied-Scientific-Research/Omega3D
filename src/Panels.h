@@ -50,10 +50,12 @@ public:
     // and generate panel strengths
     if (_e != inert) {
       // need to assign it a vector first!
-      std::vector<S> new_s;
-      new_s.resize(_n);
-      for (size_t i=0; i<_n; ++i) {
-        new_s[i] = 2.0 * sin(2.0*(i+0.5)*M_PI/_n);
+      std::array<std::vector<S>,3> new_s;
+      for (size_t d=0; d<3; ++d) {
+        new_s[d].resize(_n);
+        for (size_t i=0; i<_n; ++i) {
+          new_s[d][i] = 2.0 * sin(2.0*(i+0.5)*M_PI/_n);
+        }
       }
       this->s = std::move(new_s);
     }

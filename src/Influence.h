@@ -21,11 +21,13 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   // get references to use locally
   const std::array<std::vector<S>,Dimensions>& sx = src.get_pos();
   const std::vector<S>&                        sr = src.get_rad();
-  const std::vector<S>&                        ss = src.get_str();
+  const std::array<std::vector<S>,Dimensions>& ss = src.get_str();
+
   const std::array<std::vector<S>,Dimensions>& tx = targ.get_pos();
   const std::vector<S>&                        tr = targ.get_rad();
   std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
   std::optional<std::array<std::vector<S>,9>>& opttug = targ.get_velgrad();
+
   float flops = (float)targ.getn();
 
   // here is where we can dispatch on solver type, grads-or-not, core function, etc.
@@ -42,7 +44,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       for (size_t j=0; j<src.getn(); ++j) {
         //kernel_0_0vg<S,A>(&sx[3*j], sr[j], &ss[3*j],
         //                  &tx[3*i], tr[i], accum.data());
-        kernel_0_0sg<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j], &ss[3*j],
+        kernel_0_0sg<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j], ss[0][j], ss[1][j], ss[2][j],
                           tx[0][i], tx[1][i], tx[2][i], tr[i], accum.data());
       }
       tu[0][i] += accum[0];
@@ -67,7 +69,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       for (size_t j=0; j<src.getn(); ++j) {
         //kernel_0_0v<S,A>(&sx[3*j], sr[j], &ss[3*j],
         //                 &tx[3*i], tr[i], accum.data());
-        kernel_0_0s<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j], &ss[3*j],
+        kernel_0_0s<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j], ss[0][j], ss[1][j], ss[2][j],
                          tx[0][i], tx[1][i], tx[2][i], tr[i], accum.data());
       }
       tu[0][i] += accum[0];
@@ -91,7 +93,7 @@ void panels_affect_points (Panels<S> const& src, Points<S>& targ) {
   const std::array<std::vector<S>,Dimensions>& sx = src.get_pos();
   //const std::vector<S>&                      sr = src.get_rad();
   const std::vector<uint16_t>&                 si = src.get_idx();
-  const std::vector<S>&                        ss = src.get_str();
+  const std::array<std::vector<S>,Dimensions>& ss = src.get_str();
   const std::array<std::vector<S>,Dimensions>& tx = targ.get_pos();
   //const std::vector<S>&                      tr = targ.get_rad();
   std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
@@ -105,7 +107,7 @@ void panels_affect_points (Panels<S> const& src, Points<S>& targ) {
       //                &tx[2*i], accum.data());
       kernel_1_0s<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                        sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                       ss[j],
+                       ss[0][j], ss[1][j], ss[2][j],
                        tx[0][i], tx[1][i], tx[2][i],
                        accum.data());
     }
@@ -122,7 +124,7 @@ void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
 
   // get references to use locally
   const std::array<std::vector<S>,Dimensions>& sx = src.get_pos();
-  const std::vector<S>&                        ss = src.get_str();
+  const std::array<std::vector<S>,Dimensions>& ss = src.get_str();
   const std::array<std::vector<S>,Dimensions>& tx = targ.get_pos();
   const std::vector<uint16_t>&                 ti = targ.get_idx();
   std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
@@ -137,7 +139,7 @@ void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
       //                 &sx[2*j], accum.data());
       kernel_1_0s<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
                        tx[0][ip1], tx[1][ip1], tx[2][ip1],
-                       ss[j],
+                       ss[0][j], ss[1][j], ss[2][j],
                        sx[0][j], sx[1][j], sx[2][j],
                        accum.data());
     }

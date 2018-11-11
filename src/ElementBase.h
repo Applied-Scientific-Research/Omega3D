@@ -21,7 +21,7 @@ public:
   size_t getn() const { return n; }
   const std::array<std::vector<S>,Dimensions>& get_pos() const { return x; }
   const std::vector<S>&                        get_rad() const { return r; }
-  const std::vector<S>&                        get_str() const { return *s; }
+  const std::array<std::vector<S>,Dimensions>& get_str() const { return *s; }
   std::array<std::vector<S>,Dimensions>&       get_vel()       { return u; }
 
   void zero_vels() {
@@ -86,12 +86,13 @@ protected:
   size_t n;
 
   // state vector
-  std::array<std::vector<S>,Dimensions> x;   // position
-  std::vector<S> r;                          // thickness/radius
-  std::optional<std::vector<S>> s;           // strength
+  std::array<std::vector<S>,Dimensions> x;                   // position
+  std::vector<S> r;                                          // thickness/radius
+  std::optional<std::array<std::vector<S>,Dimensions>> s;    // strength
 
   // time derivative of state vector
-  std::array<std::vector<S>,Dimensions> u;   // velocity
-  std::optional<std::vector<S>> dsdt;        // strength change
+  std::array<std::vector<S>,Dimensions> u;                   // velocity
+  //std::vector<S> dr;                                       // thickness/radius
+  std::optional<std::array<std::vector<S>,Dimensions>> dsdt; // strength change
 };
 

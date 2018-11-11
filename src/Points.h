@@ -40,10 +40,12 @@ public:
     // optional strength in base class
     if (_e != inert) {
       // need to assign it a vector first!
-      std::vector<S> new_s;
-      new_s.resize(3*_n);
-      for (size_t i=0; i<3*_n; ++i) {
-        new_s[i] = zmean_dist(gen) / (S)_n;
+      std::array<std::vector<S>,3> new_s;
+      for (size_t d=0; d<3; ++d) {
+        new_s[d].resize(_n);
+        for (size_t i=0; i<_n; ++i) {
+          new_s[d][i] = zmean_dist(gen) / (S)_n;
+        }
       }
       this->s = std::move(new_s);
     }
@@ -85,20 +87,20 @@ public:
     if (this->M == lagrangian and ug and this->E != inert) {
       std::cout << "  Stretching" << to_string() << std::endl;
 
-      // get pointers to the right part of the vectors
-      std::vector<S> all_s = *this->s;
-
       for (size_t i=0; i<this->n; ++i) {
-        std::array<S,3> wdu = {0.0};
         std::array<S,9> this_ug = {0.0};
         for (size_t d=0; d<9; ++d) {
           this_ug[d] = (*ug)[d][i];
         }
-        S* this_s = &all_s[3*i];
+        std::array<S,3> this_s = {0.0};
+        for (size_t d=0; d<3; ++d) {
+          this_s[d] = (*this->s)[d][i];
+        }
 
         // compute stretch term
         // note that multiplying by the transpose may maintain linear impulse better, but
         //   severely underestimates stretch!
+        std::array<S,3> wdu = {0.0};
         wdu[0] = this_s[0]*this_ug[0] + this_s[1]*this_ug[3] + this_s[2]*this_ug[6];
         wdu[1] = this_s[0]*this_ug[1] + this_s[1]*this_ug[4] + this_s[2]*this_ug[7];
         wdu[2] = this_s[0]*this_ug[2] + this_s[1]*this_ug[5] + this_s[2]*this_ug[8];
@@ -111,9 +113,9 @@ public:
         // add Cottet SFS into stretch term (after elongation)
 
         // update strengths
-        this_s[0] += _dt * wdu[0];
-        this_s[1] += _dt * wdu[1];
-        this_s[2] += _dt * wdu[2];
+        (*this->s)[0][i] = this_s[0] + _dt * wdu[0];
+        (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
+        (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
       }
     } else {
       //std::cout << "  Not stretching" << to_string() << std::endl;

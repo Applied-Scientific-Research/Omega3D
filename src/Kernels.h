@@ -9,7 +9,7 @@
 template <class S, class A>
 static inline void kernel_0_0s (const S sx, const S sy, const S sz,
                                 const S sr,
-                                const S* __restrict__ ss,
+                                const S ssx, const S ssy, const S ssz,
                                 const S tx, const S ty, const S tz,
                                 const S tr,
                                 A* __restrict__ tu) {
@@ -19,9 +19,9 @@ static inline void kernel_0_0s (const S sx, const S sy, const S sz,
   const S dz = tz - sz;
   S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
   r2 = 1.0 / (r2*std::sqrt(r2));
-  const S dxxw = dz*ss[1] - dy*ss[2];
-  const S dyxw = dx*ss[2] - dz*ss[0];
-  const S dzxw = dy*ss[0] - dx*ss[1];
+  const S dxxw = dz*ssy - dy*ssz;
+  const S dyxw = dx*ssz - dz*ssx;
+  const S dzxw = dy*ssx - dx*ssy;
   tu[0] += r2 * dxxw;
   tu[1] += r2 * dyxw;
   tu[2] += r2 * dzxw;
@@ -47,7 +47,7 @@ static inline void kernel_0_0v (const S* __restrict__ sx, const S __restrict__ s
 template <class S, class A>
 static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
                                  const S sr,
-                                 const S* __restrict__ ss,
+                                 const S ssx, const S ssy, const S ssz,
                                  const S tx, const S ty, const S tz,
                                  const S tr,
                                  A* __restrict__ tu) {
@@ -57,9 +57,9 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
   const S dz = tz - sz;
   S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
   r2 = 1.0 / (r2*std::sqrt(r2));
-  S dxxw = dz*ss[1] - dy*ss[2];
-  S dyxw = dx*ss[2] - dz*ss[0];
-  S dzxw = dy*ss[0] - dx*ss[1];
+  S dxxw = dz*ssy - dy*ssz;
+  S dyxw = dx*ssz - dz*ssx;
+  S dzxw = dy*ssx - dx*ssy;
   tu[0] += r2 * dxxw;
   tu[1] += r2 * dyxw;
   tu[2] += r2 * dzxw;
@@ -71,13 +71,13 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
   dyxw *= bbb;
   dzxw *= bbb;
   tu[3] += dx*dxxw;
-  tu[4] += dx*dyxw + ss[2]*r2;
-  tu[5] += dx*dzxw - ss[1]*r2;
-  tu[6] += dy*dxxw - ss[2]*r2;
+  tu[4] += dx*dyxw + ssz*r2;
+  tu[5] += dx*dzxw - ssy*r2;
+  tu[6] += dy*dxxw - ssz*r2;
   tu[7] += dy*dyxw;
-  tu[8] += dy*dzxw + ss[0]*r2;
-  tu[9] += dz*dxxw + ss[1]*r2;
-  tu[10] += dz*dyxw - ss[0]*r2;
+  tu[8] += dy*dzxw + ssx*r2;
+  tu[9] += dz*dxxw + ssy*r2;
+  tu[10] += dz*dyxw - ssx*r2;
   tu[11] += dz*dzxw;
 }
 
@@ -156,7 +156,7 @@ static inline void kernel_1_0v (const S* __restrict__ sx0, const S* __restrict__
 template <class S, class A>
 static inline void kernel_1_0s (const S sx0, const S sy0, const S sz0,
                                 const S sx1, const S sy1, const S sz1,
-                                const S str,
+                                const S ssx, const S ssy, const S ssz,
                                 const S tx, const S ty, const S tz,
                                 A* __restrict__ tu) {
 
@@ -181,7 +181,7 @@ static inline void kernel_1_0s (const S sx0, const S sy0, const S sz0,
   const S velx  = ustar*px - vstar*py;
   const S vely  = ustar*py + vstar*px;
   //std::cout << "velx is " << velx << " and vely is " << vely << std::endl;
-  const S mult  = str / std::sqrt(std::pow(px,2) + std::pow(py,2));
+  const S mult  = ssx / std::sqrt(std::pow(px,2) + std::pow(py,2));
   //std::cout << "finalx is " << (mult*velx) << " and finaly is " << (mult*vely) << std::endl;
 
   // and multiply by vortex sheet strength
