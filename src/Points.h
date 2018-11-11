@@ -14,19 +14,23 @@
 template <class S>
 class Points: public ElementBase<S> {
 public:
-  Points(const size_t _n, const elem_t _e, const move_t _m) :
-      ElementBase<S>(_n, _e, _m) {
+  Points(const size_t _n, const elem_t _e, const move_t _m)
+    : ElementBase<S>(_n, _e, _m) {
+
     // this initialization specific to Points
-    this->x.resize(3*_n);
+    for (size_t d=0; d<Dimensions; ++d) {
+      this->x[d].resize(_n);
+      for (size_t i=0; i<_n; ++i) {
+        this->x[d][i] = -1.0 + 2.0*(S)rand()/(S)RAND_MAX;
+      }
+    }
     this->r.resize(_n);
     this->elong.resize(_n);
     for (size_t i=0; i<_n; ++i) {
-      this->x[3*i+0] = -1.0 + 2.0*(S)rand()/(S)RAND_MAX;
-      this->x[3*i+1] = -1.0 + 2.0*(S)rand()/(S)RAND_MAX;
-      this->x[3*i+2] = -1.0 + 2.0*(S)rand()/(S)RAND_MAX;
       this->r[i] = 0.01;
       this->elong[i] = 1.0;
     }
+
     // optional strength in base class
     if (_e != inert) {
       // need to assign it a vector first!
@@ -37,6 +41,7 @@ public:
       }
       this->s = std::move(new_s);
     }
+
     // velocity in base class
     this->u.resize(3*_n);
     // optional velgrads here

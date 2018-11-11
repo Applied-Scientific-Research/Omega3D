@@ -19,7 +19,7 @@ public:
   }
 
   size_t getn() const { return n; }
-  const std::vector<S>& get_pos() const { return x; }
+  const std::array<std::vector<S>,Dimensions>& get_pos() const { return x; }
   const std::vector<S>& get_rad() const { return r; }
   const std::vector<S>& get_str() const { return *s; }
   std::vector<S>& get_vel() { return u; }
@@ -37,8 +37,13 @@ public:
       std::cout << "  Moving" << to_string() << std::endl;
 
       // update positions
-      for (size_t i=0; i<3*n; ++i) {
-        x[i] += (S)_dt * u[i];
+      //for (size_t i=0; i<3*n; ++i) {
+      //  x[i] += (S)_dt * u[i];
+      //}
+      for (size_t d=0; d<Dimensions; ++d) {
+        for (size_t i=0; i<n; ++i) {
+          x[d][i] += (S)_dt * u[3*i+d];
+        }
       }
 
       // update elongation
@@ -76,12 +81,16 @@ protected:
 
   // common arrays for all derived types
   size_t n;
+
   // state vector
-  std::vector<S> x;            // position
+  //std::vector<S> x;            // position
+  std::array<std::vector<S>,Dimensions> x;            // position
   std::vector<S> r;            // thickness/radius
   std::optional<std::vector<S>> s;    // strength
+
   // time derivative of state vector
   std::vector<S> u;            // velocity
+  //std::array<std::vector<S>,Dimensions> u;            // position
   std::optional<std::vector<S>> dsdt;    // strength change
 };
 

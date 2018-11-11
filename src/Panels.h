@@ -15,16 +15,23 @@
 template <class S>
 class Panels: public ElementBase<S> {
 public:
-  Panels(const size_t _n, const elem_t _e, const move_t _m) :
-      ElementBase<S>(_n, _e, _m) {
+  Panels(const size_t _n, const elem_t _e, const move_t _m)
+    : ElementBase<S>(_n, _e, _m) {
+
     // this initialization specific to Panels - a circle
-    this->x.resize(2*_n);
+    this->x[0].resize(_n);
+    this->x[1].resize(_n);
+    this->x[2].resize(_n);
+    for (size_t i=0; i<_n; ++i) {
+      this->x[0][i] = 0.5 * cos(2.0*i*M_PI/_n);
+      this->x[1][i] = 0.5 * sin(2.0*i*M_PI/_n);
+      this->x[2][i] = 0.5 * cos(2.0*i*M_PI/_n) * sin(2.0*i*M_PI/_n);
+    }
     this->r.resize(_n);
     for (size_t i=0; i<_n; ++i) {
-      this->x[2*i+0] = 0.5 * cos(2.0*i*M_PI/_n);
-      this->x[2*i+1] = 0.5 * sin(2.0*i*M_PI/_n);
       this->r[i] = 0.01;
     }
+
     // initialize indices to nodes
     idx.resize(2*_n);
     for (size_t i=0; i<_n; ++i) {
@@ -34,6 +41,7 @@ public:
     idx[2*_n-1] = 0;
     // just size vels
     this->u.resize(2*_n);
+
     // and generate panel strengths
     if (_e != inert) {
       // need to assign it a vector first!
@@ -54,8 +62,7 @@ public:
 
 protected:
   // geometry
-  //std::vector<S> x;
-  //std::vector<S> r;
+  // x, r, s are in ElementBase
   //std::variant<std::vector<uint16_t>, std::vector<uint32_t>> idx;
   std::vector<uint16_t> idx;
   // velocity
