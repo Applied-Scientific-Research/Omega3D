@@ -23,6 +23,8 @@ It currently contains a mere architectural skeleton onto which more complex beha
 
         submodule add https://...xxx.git thirdparty/xxx
 
+* move rand() to std::random (see Omega2D)
+
 ## Thanks
 
 Many thanks to NBL for valuable discussions of architecture and C++ syntax and idioms.
