@@ -12,7 +12,7 @@ static inline void kernel_0_0s (const S sx, const S sy, const S sz,
                                 const S ssx, const S ssy, const S ssz,
                                 const S tx, const S ty, const S tz,
                                 const S tr,
-                                A* __restrict__ tu) {
+                                A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
   // 30 flops
   const S dx = tx - sx;
   const S dy = ty - sy;
@@ -22,9 +22,9 @@ static inline void kernel_0_0s (const S sx, const S sy, const S sz,
   const S dxxw = dz*ssy - dy*ssz;
   const S dyxw = dx*ssz - dz*ssx;
   const S dzxw = dy*ssx - dx*ssy;
-  tu[0] += r2 * dxxw;
-  tu[1] += r2 * dyxw;
-  tu[2] += r2 * dzxw;
+  *tu += r2 * dxxw;
+  *tv += r2 * dyxw;
+  *tw += r2 * dzxw;
 }
 
 template <class S, class A>
@@ -50,7 +50,10 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
                                  const S ssx, const S ssy, const S ssz,
                                  const S tx, const S ty, const S tz,
                                  const S tr,
-                                 A* __restrict__ tu) {
+                                 A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw,
+                                 A* __restrict__ tux, A* __restrict__ tvx, A* __restrict__ twx,
+                                 A* __restrict__ tuy, A* __restrict__ tvy, A* __restrict__ twy,
+                                 A* __restrict__ tuz, A* __restrict__ tvz, A* __restrict__ twz) {
   // 30 flops
   const S dx = tx - sx;
   const S dy = ty - sy;
@@ -60,9 +63,9 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
   S dzxw = dy*ssx - dx*ssy;
-  tu[0] += r2 * dxxw;
-  tu[1] += r2 * dyxw;
-  tu[2] += r2 * dzxw;
+  *tu += r2 * dxxw;
+  *tv += r2 * dyxw;
+  *tw += r2 * dzxw;
 
   // HACK - you need to figure out what this term is
   const S bbb = r2 / std::sqrt(r2);
@@ -70,15 +73,15 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
   dxxw *= bbb;
   dyxw *= bbb;
   dzxw *= bbb;
-  tu[3] += dx*dxxw;
-  tu[4] += dx*dyxw + ssz*r2;
-  tu[5] += dx*dzxw - ssy*r2;
-  tu[6] += dy*dxxw - ssz*r2;
-  tu[7] += dy*dyxw;
-  tu[8] += dy*dzxw + ssx*r2;
-  tu[9] += dz*dxxw + ssy*r2;
-  tu[10] += dz*dyxw - ssx*r2;
-  tu[11] += dz*dzxw;
+  *tux += dx*dxxw;
+  *tvx += dx*dyxw + ssz*r2;
+  *twx += dx*dzxw - ssy*r2;
+  *tuy += dy*dxxw - ssz*r2;
+  *tvy += dy*dyxw;
+  *twy += dy*dzxw + ssx*r2;
+  *tuz += dz*dxxw + ssy*r2;
+  *tvz += dz*dyxw - ssx*r2;
+  *twz += dz*dzxw;
 }
 
 template <class S, class A>
@@ -158,7 +161,7 @@ static inline void kernel_1_0s (const S sx0, const S sy0, const S sz0,
                                 const S sx1, const S sy1, const S sz1,
                                 const S ssx, const S ssy, const S ssz,
                                 const S tx, const S ty, const S tz,
-                                A* __restrict__ tu) {
+                                A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
 
   // side lengths of the triangle s0, s1, t
   const S rij2  = std::pow(tx-sx0,2) + std::pow(ty-sy0,2);
@@ -185,7 +188,7 @@ static inline void kernel_1_0s (const S sx0, const S sy0, const S sz0,
   //std::cout << "finalx is " << (mult*velx) << " and finaly is " << (mult*vely) << std::endl;
 
   // and multiply by vortex sheet strength
-  tu[0] += mult*velx;
-  tu[1] += mult*vely;
+  *tu += mult*velx;
+  *tv += mult*vely;
 }
 

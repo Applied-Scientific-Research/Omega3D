@@ -40,41 +40,73 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 
     // velocity+grads kernel
     for (size_t i=0; i<targ.getn(); ++i) {
-      std::array<A,12> accum = {0.0};
+      //std::array<A,12> accum = {0.0};
+      A accumu = 0.0;
+      A accumv = 0.0;
+      A accumw = 0.0;
+      A accumux = 0.0;
+      A accumvx = 0.0;
+      A accumwx = 0.0;
+      A accumuy = 0.0;
+      A accumvy = 0.0;
+      A accumwy = 0.0;
+      A accumuz = 0.0;
+      A accumvz = 0.0;
+      A accumwz = 0.0;
       for (size_t j=0; j<src.getn(); ++j) {
         //kernel_0_0vg<S,A>(&sx[3*j], sr[j], &ss[3*j],
         //                  &tx[3*i], tr[i], accum.data());
         kernel_0_0sg<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j], ss[0][j], ss[1][j], ss[2][j],
-                          tx[0][i], tx[1][i], tx[2][i], tr[i], accum.data());
+                          tx[0][i], tx[1][i], tx[2][i], tr[i],
+                          &accumu, &accumv, &accumw,
+                          &accumux, &accumvx, &accumwx,
+                          &accumuy, &accumvy, &accumwy,
+                          &accumuz, &accumvz, &accumwz);
       }
-      tu[0][i] += accum[0];
-      tu[1][i] += accum[1];
-      tu[2][i] += accum[2];
-      tug[0][i] += accum[3];
-      tug[1][i] += accum[4];
-      tug[2][i] += accum[5];
-      tug[3][i] += accum[6];
-      tug[4][i] += accum[7];
-      tug[5][i] += accum[8];
-      tug[6][i] += accum[9];
-      tug[7][i] += accum[10];
-      tug[8][i] += accum[11];
+      //tu[0][i] += accum[0];
+      //tu[1][i] += accum[1];
+      //tu[2][i] += accum[2];
+      //tug[0][i] += accum[3];
+      //tug[1][i] += accum[4];
+      //tug[2][i] += accum[5];
+      //tug[3][i] += accum[6];
+      //tug[4][i] += accum[7];
+      //tug[5][i] += accum[8];
+      //tug[6][i] += accum[9];
+      //tug[7][i] += accum[10];
+      //tug[8][i] += accum[11];
+      tu[0][i] += accumu;
+      tu[1][i] += accumv;
+      tu[2][i] += accumw;
+      tug[0][i] += accumux;
+      tug[1][i] += accumvx;
+      tug[2][i] += accumwx;
+      tug[3][i] += accumuy;
+      tug[4][i] += accumvy;
+      tug[5][i] += accumwy;
+      tug[6][i] += accumuz;
+      tug[7][i] += accumvz;
+      tug[8][i] += accumwz;
     }
     flops *= 12.0 + 65.0*(float)src.getn();
 
   } else {
     // velocity-only kernel
     for (size_t i=0; i<targ.getn(); ++i) {
-      std::array<A,3> accum = {0.0};
+      //std::array<A,3> accum = {0.0};
+      A accumu = 0.0;
+      A accumv = 0.0;
+      A accumw = 0.0;
       for (size_t j=0; j<src.getn(); ++j) {
         //kernel_0_0v<S,A>(&sx[3*j], sr[j], &ss[3*j],
         //                 &tx[3*i], tr[i], accum.data());
         kernel_0_0s<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j], ss[0][j], ss[1][j], ss[2][j],
-                         tx[0][i], tx[1][i], tx[2][i], tr[i], accum.data());
+                         tx[0][i], tx[1][i], tx[2][i], tr[i],
+                         &accumu, &accumv, &accumw);
       }
-      tu[0][i] += accum[0];
-      tu[1][i] += accum[1];
-      tu[2][i] += accum[2];
+      tu[0][i] += accumu;
+      tu[1][i] += accumv;
+      tu[2][i] += accumw;
     }
     flops *= 3.0 + 30.0*(float)src.getn();
   }
@@ -99,7 +131,10 @@ void panels_affect_points (Panels<S> const& src, Points<S>& targ) {
   std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
 
   for (size_t i=0; i<targ.getn(); ++i) {
-    std::array<A,3> accum = {0.0};
+    //std::array<A,3> accum = {0.0};
+    A accumu = 0.0;
+    A accumv = 0.0;
+    A accumw = 0.0;
     for (size_t j=0; j<src.getn(); ++j) {
       const size_t jp0 = si[2*j];
       const size_t jp1 = si[2*j+1];
@@ -109,11 +144,15 @@ void panels_affect_points (Panels<S> const& src, Points<S>& targ) {
                        sx[0][jp1], sx[1][jp1], sx[2][jp1],
                        ss[0][j], ss[1][j], ss[2][j],
                        tx[0][i], tx[1][i], tx[2][i],
-                       accum.data());
+                       //accum.data());
+                       &accumu, &accumv, &accumw);
     }
-    tu[0][i] += accum[0];
-    tu[1][i] += accum[1];
-    tu[2][i] += accum[2];
+    //tu[0][i] += accum[0];
+    //tu[1][i] += accum[1];
+    //tu[2][i] += accum[2];
+    tu[0][i] += accumu;
+    tu[1][i] += accumv;
+    tu[2][i] += accumw;
   }
 }
 
@@ -130,7 +169,10 @@ void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
   std::array<std::vector<S>,Dimensions>&       tu = targ.get_vel();
 
   for (size_t i=0; i<targ.getn(); ++i) {
-    std::array<A,3> accum = {0.0};
+    //std::array<A,3> accum = {0.0};
+    A accumu = 0.0;
+    A accumv = 0.0;
+    A accumw = 0.0;
     const size_t ip0 = ti[2*i];
     const size_t ip1 = ti[2*i+1];
     for (size_t j=0; j<src.getn(); ++j) {
@@ -141,12 +183,16 @@ void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
                        tx[0][ip1], tx[1][ip1], tx[2][ip1],
                        ss[0][j], ss[1][j], ss[2][j],
                        sx[0][j], sx[1][j], sx[2][j],
-                       accum.data());
+                       //accum.data());
+                       &accumu, &accumv, &accumw);
     }
     // we use it backwards, so the resulting velocities are negative
-    tu[0][i] -= accum[0];
-    tu[1][i] -= accum[1];
-    tu[2][i] -= accum[2];
+    //tu[0][i] -= accum[0];
+    //tu[1][i] -= accum[1];
+    //tu[2][i] -= accum[2];
+    tu[0][i] -= accumu;
+    tu[1][i] -= accumv;
+    tu[2][i] -= accumw;
   }
 }
 
