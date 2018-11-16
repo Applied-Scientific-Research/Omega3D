@@ -1,5 +1,7 @@
 #pragma once
 
+#include "VectorHelper.h"
+
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -19,10 +21,10 @@ public:
   }
 
   size_t getn() const { return n; }
-  const std::array<std::vector<S>,Dimensions>& get_pos() const { return x; }
-  const std::vector<S>&                        get_rad() const { return r; }
-  const std::array<std::vector<S>,Dimensions>& get_str() const { return *s; }
-  std::array<std::vector<S>,Dimensions>&       get_vel()       { return u; }
+  const std::array<Vector<S>,Dimensions>& get_pos() const { return x; }
+  const Vector<S>&                        get_rad() const { return r; }
+  const std::array<Vector<S>,Dimensions>& get_str() const { return *s; }
+  std::array<Vector<S>,Dimensions>&       get_vel()       { return u; }
 
   void zero_vels() {
     for (size_t d=0; d<Dimensions; ++d) {
@@ -86,13 +88,13 @@ protected:
   size_t n;
 
   // state vector
-  std::array<std::vector<S>,Dimensions> x;                   // position
-  std::vector<S> r;                                          // thickness/radius
-  std::optional<std::array<std::vector<S>,Dimensions>> s;    // strength
+  std::array<Vector<S>,Dimensions> x;                   // position
+  Vector<S> r;                                          // thickness/radius
+  std::optional<std::array<Vector<S>,Dimensions>> s;    // strength
 
   // time derivative of state vector
-  std::array<std::vector<S>,Dimensions> u;                   // velocity
-  //std::vector<S> dr;                                       // thickness/radius
-  std::optional<std::array<std::vector<S>,Dimensions>> dsdt; // strength change
+  std::array<Vector<S>,Dimensions> u;                   // velocity
+  //Vector<S> dr;                                       // thickness/radius
+  std::optional<std::array<Vector<S>,Dimensions>> dsdt; // strength change
 };
 

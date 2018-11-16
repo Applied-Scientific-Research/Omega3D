@@ -18,7 +18,11 @@ static inline void kernel_0_0s (const S sx, const S sy, const S sz,
   const S dy = ty - sy;
   const S dz = tz - sz;
   S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
+#ifdef USE_VC
+  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#else
   r2 = 1.0 / (r2*std::sqrt(r2));
+#endif
   const S dxxw = dz*ssy - dy*ssz;
   const S dyxw = dx*ssz - dz*ssx;
   const S dzxw = dy*ssx - dx*ssy;
@@ -59,7 +63,11 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
   const S dy = ty - sy;
   const S dz = tz - sz;
   S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
+#ifdef USE_VC
+  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#else
   r2 = 1.0 / (r2*std::sqrt(r2));
+#endif
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
   S dzxw = dy*ssx - dx*ssy;
@@ -68,7 +76,11 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
   *tw += r2 * dzxw;
 
   // HACK - you need to figure out what this term is
+#ifdef USE_VC
+  const S bbb = r2 * Vc::reciprocal(Vc::sqrt(r2));
+#else
   const S bbb = r2 / std::sqrt(r2);
+#endif
   // continuing with grads - this section is 33 flops
   dxxw *= bbb;
   dyxw *= bbb;

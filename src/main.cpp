@@ -33,7 +33,7 @@ int main(int argc, char const *argv[]) {
 
   // need this for dispatching velocity influence calls, template param is accumulator type
   // should the solution_t be an argument to the constructor?
-  InfluenceVisitor<double> visitor;
+  InfluenceVisitor<float> visitor;
 
 
   // one-half diffusion step

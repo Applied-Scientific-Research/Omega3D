@@ -1,5 +1,6 @@
 #pragma once
 
+#include "VectorHelper.h"
 #include "ElementBase.h"
 
 #include <iostream>
@@ -50,7 +51,7 @@ public:
     // and generate panel strengths
     if (_e != inert) {
       // need to assign it a vector first!
-      std::array<std::vector<S>,3> new_s;
+      std::array<Vector<S>,3> new_s;
       for (size_t d=0; d<3; ++d) {
         new_s[d].resize(_n);
         for (size_t i=0; i<_n; ++i) {
@@ -77,6 +78,6 @@ protected:
   // movement
   //std::optional<Body&> b;
   // curved panels need: normals
-  std::optional<std::vector<S>> norm;
+  //std::optional<std::vector<S>> norm;
 };
 

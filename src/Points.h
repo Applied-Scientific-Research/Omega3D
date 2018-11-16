@@ -1,5 +1,6 @@
 #pragma once
 
+#include "VectorHelper.h"
 #include "ElementBase.h"
 
 #include <iostream>
@@ -40,7 +41,7 @@ public:
     // optional strength in base class
     if (_e != inert) {
       // need to assign it a vector first!
-      std::array<std::vector<S>,3> new_s;
+      std::array<Vector<S>,3> new_s;
       for (size_t d=0; d<3; ++d) {
         new_s[d].resize(_n);
         for (size_t i=0; i<_n; ++i) {
@@ -57,7 +58,7 @@ public:
 
     // optional velgrads here
     if (_m == lagrangian) {
-      std::array<std::vector<S>,9> new_ug;
+      std::array<Vector<S>,9> new_ug;
       for (size_t d=0; d<9; ++d) {
         new_ug[d].resize(_n);
       }
@@ -65,7 +66,7 @@ public:
     }
   }
 
-  std::optional<std::array<std::vector<S>,9>>& get_velgrad() { return ug; }
+  std::optional<std::array<Vector<S>,9>>& get_velgrad() { return ug; }
 
   void zero_vels() {
     // must explicitly call the method in the base class to zero the vels
@@ -132,8 +133,8 @@ protected:
   // movement
   //std::optional<Body&> b;
   // state vector
-  std::vector<S> elong;   // scalar elongation
+  std::vector<S> elong;   // scalar elongation, does not require register alignment
   // time derivative of state vector
-  std::optional<std::array<std::vector<S>,9>> ug;   // velocity gradients
+  std::optional<std::array<Vector<S>,9>> ug;   // velocity gradients
 };
 
