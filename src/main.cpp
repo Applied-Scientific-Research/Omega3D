@@ -6,11 +6,7 @@
 
 #include <iostream>
 #include <vector>
-#include <memory>
-#include <optional>
 #include <variant>
-#define _USE_MATH_DEFINES
-#include <cmath>
 
 
 // execution starts here
