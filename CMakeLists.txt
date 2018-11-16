@@ -1,34 +1,39 @@
+#
+# Omega3D
+# (c)2017-2018 Applied Scientific Research, Inc.
+#
 CMAKE_MINIMUM_REQUIRED( VERSION 2.6 )
 PROJECT( Omega3D )
 
+SET (CMAKE_CONFIGURATION_TYPES "Debug" "Release")
+#if(NOT CMAKE_BUILD_TYPE)
+#    set(CMAKE_BUILD_TYPE Release)
+#endif(NOT CMAKE_BUILD_TYPE)
+SET (CMAKE_BUILD_TYPE "Release" CACHE STRING "Select which configuration to build" )
+SET (USE_OMP FALSE CACHE BOOL "Use OpenMP multithreading")
+SET (USE_VC FALSE CACHE BOOL "Use Vc for vector arithmetic")
 set(CMAKE_VERBOSE_MAKEFILE on)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif(NOT CMAKE_BUILD_TYPE)
-
 IF (CMAKE_COMPILER_IS_GNUCXX)
-  SET (CMAKE_CXX_FLAGS "-Wall -Wformat -std=c++17")
+  # support Core2 at a minimum, haswell ideally
+  SET (CMAKE_CXX_FLAGS "-Wall -Wformat -std=c++17 -march=core2 -mtune=haswell")
   SET (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -ggdb")
-  SET (CMAKE_CXX_FLAGS_RELEASE "-O3 -mavx2")
+  SET (CMAKE_CXX_FLAGS_RELEASE "-O3 -mavx2 -mfma")
 ELSEIF (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  SET (CMAKE_CXX_FLAGS "-O2 -Wall -Wformat -std=c++17 -stdlib=libc++")
+  SET (CMAKE_CXX_FLAGS "-Wall -Wformat -std=c++17 -stdlib=libc++")
   SET (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -ggdb")
+  SET (CMAKE_CXX_FLAGS_RELEASE "-O3")
 ELSEIF (MSVC)
   SET (CMAKE_CXX_FLAGS "/Ox")
 ENDIF ()
 
 IF( WIN32 )
   SET( GL_LIBS_HOME "C:/lib" CACHE PATH "Location of support libraries" )
-
   SET( GLFW3_ROOT "${GL_LIBS_HOME}/glfw-3.1.2.bin.WIN32" CACHE STRING "GLFW3 root" )
-
   INCLUDE_DIRECTORIES( "${GLFW3_ROOT}/include" )
   LINK_DIRECTORIES   ( "${GLFW3_ROOT}/lib-vc2015" )
   SET( FRAMEWORK_LIBS glfw3.lib )
-
   SET( PLATFORM_LIBS ${FRAMEWORK_LIBS} opengl32 )
 
 ELSEIF( APPLE )
@@ -48,14 +53,15 @@ ELSEIF( APPLE )
 
   SET(PLATFORM_LIBS ${FRAMEWORK_LIBS} ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${COREVIDEO_LIBRARY} ${OpenGL_LIBRARY})
 
-  FIND_PACKAGE( OpenMP )
-  if(OPENMP_FOUND)
-    message("OPENMP FOUND")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-  endif()
-
+  IF( USE_OMP )
+    FIND_PACKAGE( OpenMP )
+    IF( OPENMP_FOUND )
+      #message("OPENMP FOUND")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+    ENDIF()
+  ENDIF()
 
 ELSEIF( UNIX )
   # glfw finds opengl
@@ -72,14 +78,21 @@ ELSEIF( UNIX )
 
   INCLUDE_DIRECTORIES ( "/usr/include/eigen3" )
 
-  FIND_PACKAGE( OpenMP REQUIRED)
-  if(OPENMP_FOUND)
-    message("OPENMP FOUND")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-  endif()
+  # OpenMP for multithreading
+  IF( USE_OMP )
+    FIND_PACKAGE( OpenMP REQUIRED )
+    IF( OPENMP_FOUND )
+      #message("OPENMP FOUND")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+    ENDIF()
+  ENDIF()
 
+  # Vc for explicit vectorization
+  IF( USE_VC )
+    #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  ENDIF()
 ENDIF()
 
 set(GLADSRC "src/glad/glad.c" )
@@ -87,7 +100,13 @@ INCLUDE_DIRECTORIES( "src/glad" )
 file(GLOB SOURCES "src/*.cpp" )
 file(GLOB IMGUISOURCES "src/imgui/*.cpp" )
 
+# create a binary for the GUI version
 ADD_EXECUTABLE( ${PROJECT_NAME} ${GLADSRC} ${IMGUISOURCES} ${SOURCES} )
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.bin")
+SET_TARGET_PROPERTIES( ${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.bin" )
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME} ${PLATFORM_LIBS} )
+
+# create a binary for the command-line version
+ADD_EXECUTABLE( "${PROJECT_NAME}batch" ${SOURCES} )
+SET_TARGET_PROPERTIES( "${PROJECT_NAME}batch" PROPERTIES OUTPUT_NAME "${PROJECT_NAME}batch.bin" )
+TARGET_LINK_LIBRARIES( "${PROJECT_NAME}batch" ${PLATFORM_LIBS} )
 
