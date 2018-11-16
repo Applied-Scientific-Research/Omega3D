@@ -12,6 +12,7 @@
 // execution starts here
 
 int main(int argc, char const *argv[]) {
+  std::cout << std::endl << "Omega3D GUI" << std::endl;
 
   //const solution_t solver = direct_cpu;
   std::array<double,Dimensions> fs = {0.0, 0.0, 0.0};

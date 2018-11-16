@@ -97,16 +97,16 @@ ENDIF()
 
 set(GLADSRC "src/glad/glad.c" )
 INCLUDE_DIRECTORIES( "src/glad" )
-file(GLOB SOURCES "src/*.cpp" )
+file(GLOB SOURCES "src/[A-Z]*.cpp" )
 file(GLOB IMGUISOURCES "src/imgui/*.cpp" )
 
 # create a binary for the GUI version
-ADD_EXECUTABLE( ${PROJECT_NAME} ${GLADSRC} ${IMGUISOURCES} ${SOURCES} )
+ADD_EXECUTABLE( ${PROJECT_NAME} ${GLADSRC} ${IMGUISOURCES} ${SOURCES} "src/main_gui.cpp" )
 SET_TARGET_PROPERTIES( ${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.bin" )
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME} ${PLATFORM_LIBS} )
 
 # create a binary for the command-line version
-ADD_EXECUTABLE( "${PROJECT_NAME}batch" ${SOURCES} )
+ADD_EXECUTABLE( "${PROJECT_NAME}batch" ${SOURCES} "src/main_batch.cpp" )
 SET_TARGET_PROPERTIES( "${PROJECT_NAME}batch" PROPERTIES OUTPUT_NAME "${PROJECT_NAME}batch.bin" )
 TARGET_LINK_LIBRARIES( "${PROJECT_NAME}batch" ${PLATFORM_LIBS} )
 
