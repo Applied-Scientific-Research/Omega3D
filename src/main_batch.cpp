@@ -23,9 +23,9 @@ int main(int argc, char const *argv[]) {
   std::vector<Collection> bdry;		// all boundaries
   std::vector<Collection> fldpt;	// tracers and field points
  
-  vort.push_back(Points<float>(5000, active, lagrangian));	// vortons
-  fldpt.push_back(Points<float>(2000, inert, lagrangian));	// tracer particles
-  fldpt.push_back(Points<float>(100, inert, fixed));		// static field points
+  vort.push_back(Points<float>(10000, active, lagrangian));	// vortons
+  fldpt.push_back(Points<float>(5000, inert, lagrangian));	// tracer particles
+  fldpt.push_back(Points<float>(2000, inert, fixed));		// static field points
   //bdry.push_back(Panels<float>(500, reactive, bodybound));	// panels
 
   // need this for dispatching velocity influence calls, template param is accumulator type
