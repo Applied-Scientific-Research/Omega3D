@@ -70,11 +70,10 @@ ELSEIF( UNIX )
   # this works for Fedora 21
   #FIND_PACKAGE( glfw 3.0 REQUIRED )
   # this seems to be more general
-  FIND_LIBRARY( FRAMEWORK_LIBS NAMES glfw3 glfw libglfw PATHS /usr/local/lib)
+  FIND_LIBRARY( FRAMEWORK_LIBS NAMES glfw3 glfw libglfw PATHS /usr/local/lib )
 
   # but glad needs dl, which cmake doesn't think glfw needs
   SET( FRAMEWORK_LIBS glfw dl )
-  SET( PLATFORM_LIBS ${FRAMEWORK_LIBS} ${GLFW_LIBRARIES})
 
   INCLUDE_DIRECTORIES ( "/usr/include/eigen3" )
 
@@ -91,10 +90,17 @@ ELSEIF( UNIX )
 
   # Vc for explicit vectorization
   IF( USE_VC )
-    #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    SET (CPREPROCDEFS ${CPREPROCDEFS} -DUSE_VC)
+    INCLUDE_DIRECTORIES( "/opt/Vc/include" )
+    FIND_LIBRARY( VC_LIBS NAMES Vc PATHS /opt/Vc/lib )
+  ELSE()
+    SET (VC_LIBS "")
   ENDIF()
+
+  SET( PLATFORM_LIBS ${FRAMEWORK_LIBS} ${GLFW_LIBRARIES} ${VC_LIBS} )
 ENDIF()
 
+ADD_DEFINITIONS (${CPREPROCDEFS})
 set(GLADSRC "src/glad/glad.c" )
 INCLUDE_DIRECTORIES( "src/glad" )
 file(GLOB SOURCES "src/[A-Z]*.cpp" )
