@@ -19,7 +19,7 @@ IF (CMAKE_COMPILER_IS_GNUCXX)
   # support Core2 at a minimum, haswell ideally
   SET (CMAKE_CXX_FLAGS "-Wall -Wformat -std=c++17 -march=core2 -mtune=haswell")
   SET (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -ggdb")
-  SET (CMAKE_CXX_FLAGS_RELEASE "-O3 -mavx2 -mfma")
+  SET (CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
 ELSEIF (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   SET (CMAKE_CXX_FLAGS "-Wall -Wformat -std=c++17 -stdlib=libc++")
   SET (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -ggdb")
@@ -103,7 +103,7 @@ ENDIF()
 ADD_DEFINITIONS (${CPREPROCDEFS})
 set(GLADSRC "src/glad/glad.c" )
 INCLUDE_DIRECTORIES( "src/glad" )
-file(GLOB SOURCES "src/[A-Z]*.cpp" )
+SET(SOURCES "src/Simulation.cpp")
 file(GLOB IMGUISOURCES "src/imgui/*.cpp" )
 
 # create a binary for the GUI version
