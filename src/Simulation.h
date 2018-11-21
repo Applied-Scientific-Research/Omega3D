@@ -1,7 +1,8 @@
 /*
  * Simulation - a class to control a 3D vortex particle sim
  *
- * (c)2017 Mark J Stock
+ * (c)2017-8 Applied Scientific Research, Inc.
+ *   written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once

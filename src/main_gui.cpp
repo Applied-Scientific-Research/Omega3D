@@ -1,3 +1,9 @@
+/*
+ * Omega3D - The Vorticity Flow Solver
+ *
+ * (c)2017-8 Applied Scientific Research, Inc.
+ * Written by Mark J Stock <markjstock@gmail.com>
+ */
 
 #include "Omega3D.h"
 #include "Simulation.h"
@@ -25,6 +31,7 @@ int main(int argc, char const *argv[]) {
   //const double dt = 0.01;
 
   // for starters, generate some vortons, particles, and field points
+  // eventually use the GUI to generate these elements
   ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.01, 10000));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(10000, active, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
@@ -53,6 +60,7 @@ int main(int argc, char const *argv[]) {
     }
 
     // begin a dynamic step: convection and diffusion
+    // eventually use the async call here
     sim.step();
 
     // for testing: always break after one step

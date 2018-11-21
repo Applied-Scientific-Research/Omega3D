@@ -1,3 +1,9 @@
+/*
+ * Omega3D - The Vorticity Flow Solver
+ *
+ * (c)2017-8 Applied Scientific Research, Inc.
+ * Written by Mark J Stock <markjstock@gmail.com>
+ */
 
 #include "Omega3D.h"
 #include "Simulation.h"
@@ -38,9 +44,9 @@ int main(int argc, char const *argv[]) {
       std::cout << std::endl << "Initializing simulation" << std::endl;
 
       // initialize particle distributions
-      //for (auto const& ff: ffeatures) {
-      //  sim.add_particles( ff->init_particles(sim.get_ips()) );
-      //}
+      for (auto const& ff: ffeatures) {
+        sim.add_particles( ff->init_particles(sim.get_ips()) );
+      }
 
       // initialize solid objects
       //for (auto const& bf : bfeatures) {
@@ -53,6 +59,7 @@ int main(int argc, char const *argv[]) {
     }
 
     // begin a dynamic step: convection and diffusion
+    // no need for async call in the batch program
     sim.step();
 
     // for testing: always break after one step
