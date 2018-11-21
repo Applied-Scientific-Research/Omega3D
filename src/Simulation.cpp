@@ -300,10 +300,10 @@ void Simulation::add_particles(std::vector<float> _xysr) {
   if (_xysr.size() == 0) return;
 
   // make sure we're getting full particles
-  assert(_xysr.size() % 4 == 0);
+  assert(_xysr.size() % 7 == 0);
 
   // add the vdelta to each particle and pass it on
-  for (size_t i=3; i<_xysr.size(); i+=4) {
+  for (size_t i=6; i<_xysr.size(); i+=7) {
     _xysr[i] = get_vdelta();
   }
 

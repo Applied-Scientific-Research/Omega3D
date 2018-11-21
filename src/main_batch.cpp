@@ -1,6 +1,7 @@
 
 #include "Omega3D.h"
 #include "Simulation.h"
+#include "FlowFeature.h"
 
 #include <iostream>
 #include <vector>
@@ -13,7 +14,7 @@ int main(int argc, char const *argv[]) {
 
   // Set up vortex particle simulation
   Simulation sim;
-  //std::vector< std::unique_ptr<FlowFeature> > ffeatures;
+  std::vector< std::unique_ptr<FlowFeature> > ffeatures;
   //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
 
   //static bool sim_is_running = false;
@@ -22,6 +23,12 @@ int main(int argc, char const *argv[]) {
   //std::array<double,Dimensions> fs = {0.0, 0.0, 0.0};
   //double time = 0.0;
   //const double dt = 0.01;
+
+  // for starters, generate some vortons, particles, and field points
+  ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.01, 10000));
+  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(10000, active, lagrangian));
+  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
+  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(2000, inert, fixed));
  
   // Main loop
   while (true) {
