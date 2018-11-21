@@ -32,7 +32,7 @@ int main(int argc, char const *argv[]) {
 
   // for starters, generate some vortons, particles, and field points
   // eventually use the GUI to generate these elements
-  ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.01, 10000));
+  ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.01, 5000));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(10000, active, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(2000, inert, fixed));
@@ -45,9 +45,9 @@ int main(int argc, char const *argv[]) {
       std::cout << std::endl << "Initializing simulation" << std::endl;
 
       // initialize particle distributions
-      //for (auto const& ff: ffeatures) {
-      //  sim.add_particles( ff->init_particles(sim.get_ips()) );
-      //}
+      for (auto const& ff: ffeatures) {
+        sim.add_particles( ff->init_particles(sim.get_ips()) );
+      }
 
       // initialize solid objects
       //for (auto const& bf : bfeatures) {
