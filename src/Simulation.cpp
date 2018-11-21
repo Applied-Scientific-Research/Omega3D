@@ -213,6 +213,8 @@ void Simulation::step() {
 
   if (vort.size()+fldpt.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl << std::endl;
 
+  // TODO - can I temporarily join vort and fldpt for the loop below?
+
   // find the influence on every vorticity element
   for (auto &targ: vort) {
     std::cout << "  Solving for velocities on" << to_string(targ) << std::endl << std::flush;
@@ -297,6 +299,7 @@ void Simulation::step() {
 }
 
 // set up the particles
+// TODO - accept elem_t and move_t from the caller!
 void Simulation::add_particles(std::vector<float> _invec) {
 
   if (_invec.size() == 0) return;
@@ -310,8 +313,10 @@ void Simulation::add_particles(std::vector<float> _invec) {
     _invec[i] = thisvd;
   }
 
+  // TODO - need to find a way to not always make a new collection!
+  //        like, test a collection for matching elem_t and move_t and Points/Panels/etc
+  //        and add to the most appropriate
   // also add to vorticity
-  //vort.add_new(_invec);
   vort.push_back(Points<float>(_invec, active, lagrangian));      // vortons
 }
 
