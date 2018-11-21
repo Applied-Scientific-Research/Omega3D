@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <random>
+#include <cassert>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -16,6 +17,56 @@
 template <class S>
 class Points: public ElementBase<S> {
 public:
+  // flexible constructor - use input 7*n vector
+  Points(const std::vector<S>& _in, const elem_t _e, const move_t _m)
+    : ElementBase<S>(_in.size()/7, _e, _m) {
+
+    // make sure we have a complete input vector
+    assert(_in.size() % 7 == 0);
+
+    // this initialization specific to Points
+    for (size_t d=0; d<Dimensions; ++d) {
+      this->x[d].resize(this->n);
+      for (size_t i=0; i<this->n; ++i) {
+        this->x[d][i] = _in[7*i+d];
+      }
+    }
+    this->r.resize(this->n);
+    this->elong.resize(this->n);
+    for (size_t i=0; i<this->n; ++i) {
+      this->r[i] = _in[7*i+6];
+      this->elong[i] = 1.0;
+    }
+
+    // optional strength in base class
+    if (_e != inert) {
+      // need to assign it a vector first!
+      std::array<Vector<S>,3> new_s;
+      for (size_t d=0; d<3; ++d) {
+        new_s[d].resize(this->n);
+        for (size_t i=0; i<this->n; ++i) {
+          new_s[d][i] = _in[7*i+d+3];
+        }
+      }
+      this->s = std::move(new_s);
+    }
+
+    // velocity in base class
+    for (size_t d=0; d<Dimensions; ++d) {
+      this->u[d].resize(this->n);
+    }
+
+    // optional velgrads here
+    if (_m == lagrangian) {
+      std::array<Vector<S>,9> new_ug;
+      for (size_t d=0; d<9; ++d) {
+        new_ug[d].resize(this->n);
+      }
+      ug = std::move(new_ug);
+    }
+  }
+
+  // alternative (old) constructor - assume random points in a cube
   Points(const size_t _n, const elem_t _e, const move_t _m)
     : ElementBase<S>(_n, _e, _m) {
 

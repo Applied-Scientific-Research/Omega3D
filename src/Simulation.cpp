@@ -169,7 +169,7 @@ void Simulation::step() {
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
 
-  vort.push_back(Points<float>(5000, active, lagrangian));      // vortons
+  //vort.push_back(Points<float>(5000, active, lagrangian));      // vortons
   fldpt.push_back(Points<float>(2000, inert, lagrangian));      // tracer particles
   fldpt.push_back(Points<float>(100, inert, fixed));            // static field points
   //bdry.push_back(Panels<float>(500, reactive, bodybound));    // panels
@@ -297,20 +297,22 @@ void Simulation::step() {
 }
 
 // set up the particles
-void Simulation::add_particles(std::vector<float> _xysr) {
+void Simulation::add_particles(std::vector<float> _invec) {
 
-  if (_xysr.size() == 0) return;
+  if (_invec.size() == 0) return;
 
   // make sure we're getting full particles
-  assert(_xysr.size() % 7 == 0);
+  assert(_invec.size() % 7 == 0);
 
   // add the vdelta to each particle and pass it on
-  for (size_t i=6; i<_xysr.size(); i+=7) {
-    _xysr[i] = get_vdelta();
+  const float thisvd = get_vdelta();
+  for (size_t i=6; i<_invec.size(); i+=7) {
+    _invec[i] = thisvd;
   }
 
   // also add to vorticity
-  //vort.add_new(_xysr);
+  //vort.add_new(_invec);
+  vort.push_back(Points<float>(_invec, active, lagrangian));      // vortons
 }
 
 // add geometry
