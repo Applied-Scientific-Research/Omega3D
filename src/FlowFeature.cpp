@@ -191,7 +191,7 @@ BlockOfRandom::init_particles(float _ips) const {
   static std::uniform_real_distribution<> zmean_dist(-1.0, 1.0);
   static std::uniform_real_distribution<> zo_dist(0.0, 1.0);
 
-  std::vector<float> x(4*m_num);
+  std::vector<float> x(7*m_num);
   // initialize the particles' locations and strengths, leave radius zero for now
   for (size_t i=0; i<(size_t)m_num; ++i) {
     size_t idx = 7*i;
