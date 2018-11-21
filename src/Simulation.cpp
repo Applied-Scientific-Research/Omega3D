@@ -44,7 +44,8 @@ float Simulation::get_time() { return (float)time; }
 size_t Simulation::get_nparts() {
   size_t n = 0;
   for (auto &targ: vort) {
-    n += std::visit([=](auto& elem) { return elem.getn(); }, targ);
+    //n += std::visit([=](auto& elem) { return elem.getn(); }, targ);
+    std::visit([&n](auto& elem) { n += elem.getn(); }, targ);
   }
   return n;
 }
@@ -52,7 +53,8 @@ size_t Simulation::get_nparts() {
 size_t Simulation::get_n(std::vector<Collection>& _collect) {
   size_t n = 0;
   for (auto &targ: _collect) {
-    n += std::visit([=](auto& elem) { return elem.getn(); }, targ);
+    //n += std::visit([=](auto& elem) { return elem.getn(); }, targ);
+    std::visit([&n](auto& elem) { n += elem.getn(); }, targ);
   }
   return n;
 }
