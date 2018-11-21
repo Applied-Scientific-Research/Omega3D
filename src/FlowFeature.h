@@ -131,13 +131,59 @@ private:
 };
 
 
-// vortex ring (singular)
+//
+// Concrete class for a singular vortex ring
+//
+class SingularRing : public FlowFeature {
+public:
+  SingularRing(float _x,
+               float _y,
+               float _z,
+               float _nx,
+               float _ny,
+               float _nz,
+               float _majrad,
+               float _circ)
+    : FlowFeature(_x, _y, _z),
+      m_nx(_nx),
+      m_ny(_ny),
+      m_nz(_nz),
+      m_majrad(_majrad),
+      m_circ(_circ)
+    {}
+
+  void debug(std::ostream& os) const override;
+  std::string to_string() const override;
+  std::vector<float> init_particles(float) const override;
+  std::vector<float> step_particles(float) const override;
+
+private:
+  float m_nx;
+  float m_ny;
+  float m_nz;
+  float m_majrad;
+  float m_circ;
+};
+
+
+//
+// Concrete class for a thick vortex ring
+//
+//class ThickRing : public SingularRing {
+//private:
+//  float m_minrad;
+//};
+
+
+// how about an oval ring? requires no radii, but two basis vectors: long axis and short axis
+
+
 // vortex ring (thick)
 // vortex ring emitter (singular)
 
-// uniformly-spaced particles
+// uniformly-spaced brick of particles
 
-// particles from file
+// particles from file (binary or json?)
 
 // panels: circle, rectangle, from file
 

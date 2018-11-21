@@ -1,4 +1,5 @@
 #include "FlowFeature.h"
+#include "MathHelper.h"
 
 #include <cmath>
 #include <iostream>
@@ -12,6 +13,8 @@ std::ostream& operator<<(std::ostream& os, FlowFeature const& ff) {
 }
 
 // various debug print methods for the subclasses
+
+// debug SingleParticle
 void
 SingleParticle::debug(std::ostream& os) const {
   os << to_string();
@@ -26,6 +29,7 @@ SingleParticle::to_string() const {
 }
 
 
+// debug VortexBlob
 void
 VortexBlob::debug(std::ostream& os) const {
   os << to_string();
@@ -40,6 +44,7 @@ VortexBlob::to_string() const {
 }
 
 
+// debug BlockOfRandom
 void
 BlockOfRandom::debug(std::ostream& os) const {
   os << to_string();
@@ -56,6 +61,7 @@ BlockOfRandom::to_string() const {
 }
 
 
+// debug ParticleEmitter
 void
 ParticleEmitter::debug(std::ostream& os) const {
   os << to_string();
@@ -66,6 +72,21 @@ ParticleEmitter::to_string() const {
   std::stringstream ss;
   ss << "particle emitter at " << m_x << " " << m_y << " " << m_z << " spawning particles";
   ss << " with strength " << m_sx << " " << m_sy << " " << m_sz;
+  return ss.str();
+}
+
+
+// debug SingularRing
+void
+SingularRing::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+SingularRing::to_string() const {
+  std::stringstream ss;
+  ss << "singular vortex ring at " << m_x << " " << m_y << " " << m_z << ", radius " << m_majrad << ", circulation " << m_circ;
+  ss << ", aimed along " << m_nx << " " << m_ny << " " << m_nz;
   return ss.str();
 }
 
@@ -114,7 +135,7 @@ VortexBlob::init_particles(float _ips) const {
   for (int k=-irad; k<=irad; ++k) {
 
     // how far from the center are we?
-    float dr = sqrt((float)(i*i+j*j+k*k)) * _ips;
+    float dr = std::sqrt((float)(i*i+j*j+k*k)) * _ips;
     if (dr < m_rad + 0.5*m_softness) {
 
       // create a particle here
@@ -206,6 +227,57 @@ std::vector<float>
 ParticleEmitter::step_particles(float _ips) const {
   return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
 }
+
+
+//
+// make a singular (one row) vortex ring
+//
+std::vector<float>
+SingularRing::init_particles(float _ips) const {
+  // create a new vector to pass on
+  std::vector<float> x;
+
+  // will need this
+  const double pi = std::acos(-1);
+
+  // what size 2D integer array will we loop over
+  const int ndiam = 1 + (2.0 * pi * m_majrad) / _ips;
+  std::cout << "  ring needs " << ndiam << " particles" << std::endl;
+  const float this_ips = (2.0 * pi * m_majrad) / (float)ndiam;
+
+  // generate a set of orthogonal basis vectors for the given normal
+  std::array<float,3> norm = {m_nx, m_ny, m_nz};
+  std::array<float,3> b1, b2;
+  branchlessONB<float>(norm, b1, b2);
+
+  // loop over integer indices
+  for (int i=0; i<ndiam; ++i) {
+
+    // how far from the center are we?
+    const float theta = 2.0 * pi * (float)i;
+
+    // create a particle here
+    x.emplace_back(m_x + b1[0]*std::cos(theta) + b2[0]*std::sin(theta));
+    x.emplace_back(m_y + b1[1]*std::cos(theta) + b2[1]*std::sin(theta));
+    x.emplace_back(m_z + b1[2]*std::cos(theta) + b2[2]*std::sin(theta));
+
+    // set the strength
+    x.emplace_back(this_ips * m_circ * (b2[0]*std::cos(theta) - b1[0]*std::sin(theta)));
+    x.emplace_back(this_ips * m_circ * (b2[1]*std::cos(theta) - b1[1]*std::sin(theta)));
+    x.emplace_back(this_ips * m_circ * (b2[2]*std::cos(theta) - b1[2]*std::sin(theta)));
+
+    // this is the radius - still zero for now
+    x.emplace_back(0.0f);
+  }
+
+  return x;
+}
+
+std::vector<float>
+SingularRing::step_particles(float _ips) const {
+  return std::vector<float>();
+}
+
 
 //
 // various GUI draw methods for the subclasses
