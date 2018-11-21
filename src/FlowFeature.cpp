@@ -200,10 +200,10 @@ BlockOfRandom::init_particles(float _ips) const {
     x[idx+1] = m_y + m_ysize*zmean_dist(gen);
     x[idx+2] = m_z + m_zsize*zmean_dist(gen);
     // strengths
-    x[idx+3] = m_maxstr * zmean_dist(gen);
-    x[idx+4] = m_maxstr * zmean_dist(gen);
-    x[idx+5] = m_maxstr * zmean_dist(gen);
-    // radius is zero still
+    x[idx+3] = m_maxstr * zmean_dist(gen) / (float)m_num;
+    x[idx+4] = m_maxstr * zmean_dist(gen) / (float)m_num;
+    x[idx+5] = m_maxstr * zmean_dist(gen) / (float)m_num;
+    // radius will get set later
     x[idx+6] = 0.0f;
   }
   return x;
