@@ -243,8 +243,6 @@ int main(int argc, char const *argv[]) {
       }
 
       // begin a dynamic step: convection and diffusion
-      // eventually use the async call here
-      sim.step();
       sim.async_step();
 
       begin_single_step = false;

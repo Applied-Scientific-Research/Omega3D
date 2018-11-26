@@ -153,7 +153,7 @@ bool Simulation::test_for_new_results() {
 //
 void Simulation::async_step() {
   step_has_started = true;
-  //stepfuture = std::async(std::launch::async, [this](){step();});
+  stepfuture = std::async(std::launch::async, [this](){step();});
 }
 
 //
@@ -168,8 +168,8 @@ void Simulation::step() {
 
 
   //vort.push_back(Points<float>(5000, active, lagrangian));      // vortons
-  fldpt.push_back(Points<float>(2000, inert, lagrangian));      // tracer particles
-  fldpt.push_back(Points<float>(100, inert, fixed));            // static field points
+  //fldpt.push_back(Points<float>(2000, inert, lagrangian));      // tracer particles
+  //fldpt.push_back(Points<float>(100, inert, fixed));            // static field points
   //bdry.push_back(Panels<float>(500, reactive, bodybound));    // panels
 
   // need this for dispatching velocity influence calls, template param is accumulator type
