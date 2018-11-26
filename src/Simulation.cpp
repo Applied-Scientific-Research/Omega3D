@@ -264,10 +264,6 @@ void Simulation::step() {
   // one-half diffusion step
   //tbd
 
-  // write output, restart files
-  //time += dt;
-
-  std::cout << std::endl << "Done" << std::endl << std::endl;
 
 
 
@@ -294,6 +290,8 @@ void Simulation::step() {
 
   // update dt and return
   time += (double)dt;
+
+  std::cout << std::endl << "Done" << std::endl << std::endl;
 }
 
 // set up the particles
