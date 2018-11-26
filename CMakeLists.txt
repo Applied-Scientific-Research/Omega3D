@@ -109,7 +109,8 @@ ENDIF()
 ADD_DEFINITIONS (${CPREPROCDEFS})
 set(GLADSRC "src/glad/glad.c" )
 INCLUDE_DIRECTORIES( "src/glad" )
-SET(SOURCES "src/Simulation.cpp" "src/FlowFeature.cpp")
+SET(SOURCES "src/Simulation.cpp"
+            "src/FlowFeature.cpp")
 file(GLOB IMGUISOURCES "src/imgui/*.cpp" )
 
 # create a binary for the GUI version
