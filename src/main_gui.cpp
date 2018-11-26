@@ -196,7 +196,7 @@ int main(int argc, char const *argv[]) {
 
   // for starters, generate some vortons, particles, and field points
   // eventually use the GUI to generate these elements
-  ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.01, 5000));
+  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.01, 5000));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(10000, active, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(2000, inert, fixed));
@@ -284,6 +284,145 @@ int main(int argc, char const *argv[]) {
       ImGui::Separator();
       ImGui::Text("Flow structures");
 
+      int buttonIDs = 10;
+
+      // list existing flow features here
+      int del_this_item = -1;
+      for (int i=0; i<(int)ffeatures.size(); ++i) {
+        // add a "remove" button here somehow
+        ImGui::PushID(++buttonIDs);
+        if (ImGui::SmallButton("remove")) del_this_item = i;
+        ImGui::PopID();
+
+        //ImGui::SameLine();
+        //ImGui::PushID(++buttonIDs);
+        //if (ImGui::SmallButton("edit", ImVec2(60,0))) del_this_item = 0;
+        //ImGui::PopID();
+
+        ImGui::SameLine();
+        ImGui::Text("%s", ffeatures[i]->to_string().c_str());
+      }
+      if (del_this_item > -1) {
+        std::cout << "Asked to delete flow feature " << del_this_item << std::endl;
+        ffeatures.erase(ffeatures.begin()+del_this_item);
+      }
+
+      // list existing boundary features here
+/*
+      int del_this_bdry = -1;
+      for (int i=0; i<(int)bfeatures.size(); ++i) {
+        // add a "remove" button here somehow
+        ImGui::PushID(++buttonIDs);
+        if (ImGui::SmallButton("remove")) del_this_bdry = i;
+        ImGui::PopID();
+
+        ImGui::SameLine();
+        ImGui::Text("%s", bfeatures[i]->to_string().c_str());
+      }
+      if (del_this_bdry > -1) {
+        std::cout << "Asked to delete boundary feature " << del_this_bdry << std::endl;
+        bfeatures.erase(bfeatures.begin()+del_this_bdry);
+      }
+*/
+
+
+      // button and modal window for adding new ones
+      if (ImGui::Button("Add new flow structure")) ImGui::OpenPopup("New flow structure");
+      ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
+      if (ImGui::BeginPopupModal("New flow structure"))
+      {
+        static int item = 1;
+        const char* items[] = { "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
+        ImGui::Combo("type", &item, items, 4);
+
+        static float xc[3] = {0.0f, 0.0f, 0.0f};	// a center
+        static float rad = 5.0 * sim.get_ips();		// a major radius
+        static float soft = sim.get_ips();		// a softness or minor radius
+        static float vstr[3] = {0.0f, 0.0f, 1.0f};	// a vectorial strength
+        static float strmag = 0.01f;			// a scalar strength
+        static float circ = 1.0f;			// a circulation
+        static int npart = 1000;
+        static float xs[3] = {2.0f, 2.0f, 2.0f};	// a size
+        int guess_n = 0;
+
+        // always ask for center
+        ImGui::InputFloat3("center", xc);
+
+        // show different inputs based on what is selected
+        switch(item) {
+          case 0:
+            // a blob of multiple vortons
+            ImGui::InputFloat3("strength", vstr);
+            ImGui::SliderFloat("radius", &rad, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
+            ImGui::SliderFloat("softness", &soft, sim.get_ips(), rad, "%.4f");
+            guess_n = 4.1888f * std::pow((2.0f*rad+soft)/sim.get_ips(), 3);
+            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            if (ImGui::Button("Add vortex blob")) {
+              ffeatures.emplace_back(std::make_unique<VortexBlob>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft));
+              std::cout << "Added " << (*ffeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+
+          case 1:
+            // random particles in a block
+            ImGui::SliderInt("number", &npart, 10, 100000);
+            ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
+            ImGui::SliderFloat("strength magnitude", &strmag, 0.00001f, 0.1f, "%.5f", 2.0f);
+            ImGui::TextWrapped("This feature will add %d particles", npart);
+            if (ImGui::Button("Add random vorticies")) {
+              ffeatures.emplace_back(std::make_unique<BlockOfRandom>(xc[0],xc[1],xc[2], xs[0],xs[1],xs[2], strmag, npart));
+              std::cout << "Added " << (*ffeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+
+          case 2:
+            // oriented singular vortex ring
+            ImGui::InputFloat3("direction", vstr);
+            ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
+            ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
+            guess_n = 1 + (3.1416f * rad / sim.get_ips());
+            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            if (ImGui::Button("Add singular vortex ring")) {
+              ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
+              std::cout << "Added " << (*ffeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+
+          case 3:
+            // oriented thick-cored vortex ring
+            ImGui::InputFloat3("direction", vstr);
+            ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
+            ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
+            ImGui::SliderFloat("thickness", &soft, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
+            guess_n = 1 + (3.1416f * rad / sim.get_ips());
+            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            if (ImGui::Button("Add thick vortex ring")) {
+              ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
+              std::cout << "Added " << (*ffeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+        }
+
+        if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+      }
+
+
+      // button and modal window for adding new boundary objects
+      //ImGui::SameLine();
+      //if (ImGui::Button("Add new boundary structure")) ImGui::OpenPopup("New boundary structure");
+      //ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
+
+
+      // colors and stuff
       ImGui::Separator();
       ImGui::Text("Rendering parameters");
       ImGui::ColorEdit3("positive circulation", (float*)&pos_circ_color);
