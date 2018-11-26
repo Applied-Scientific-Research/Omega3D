@@ -70,26 +70,24 @@ void Simulation::set_re_for_ips(const float _ips) {
 //  diff.set_diffuse(true);
 //}
 
-/*
 void Simulation::initGL(std::vector<float>& _projmat,
                         float*              _poscolor,
                         float*              _negcolor) {
-  bdry.initGL(_projmat, _poscolor, _negcolor);
-  vort.initGL(_projmat, _poscolor, _negcolor);
+  //bdry.initGL(_projmat, _poscolor, _negcolor);
+  //vort.initGL(_projmat, _poscolor, _negcolor);
 }
 void Simulation::updateGL() {
-  bdry.updateGL();
-  vort.updateGL();
+  //bdry.updateGL();
+  //vort.updateGL();
 }
 void Simulation::drawGL(std::vector<float>& _projmat,
                         float*              _poscolor,
                         float*              _negcolor) {
   if (step_is_finished) {
-    bdry.drawGL(_projmat, _poscolor, _negcolor);
-    vort.drawGL(_projmat, _poscolor, _negcolor);
+    //bdry.drawGL(_projmat, _poscolor, _negcolor);
+    //vort.drawGL(_projmat, _poscolor, _negcolor);
   }
 }
-*/
 
 //
 // main must indicate that panels should be made

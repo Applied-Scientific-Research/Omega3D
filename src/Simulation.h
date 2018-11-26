@@ -62,9 +62,9 @@ public:
   bool test_for_new_results();
 
   // graphics pass-through calls
-  //void initGL(std::vector<float>&, float*, float*);
-  //void updateGL();
-  //void drawGL(std::vector<float>&, float*, float*);
+  void initGL(std::vector<float>&, float*, float*);
+  void updateGL();
+  void drawGL(std::vector<float>&, float*, float*);
 
 private:
   // primary simulation params
