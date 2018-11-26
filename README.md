@@ -8,25 +8,50 @@ Omega3D aims to be an accurate combined Lagrangian-Eulerian fluid flow solver fo
 It currently contains a mere architectural skeleton onto which more complex behavior can be built.
 
 ## Build and run
+This code uses some C++17 features, so should compile on GCC 7, Clang 4, and MSVC 19.10 compilers.
+
+Both the GUI and batch versions require CMake to compile.  To build the GUI version, users will also need GLFW3, which can be installed in Red Hat/Fedora with
+
+    sudo yum install glfw3-devel
+
+or on Ubuntu with
+
+    sudo apt-get install glfw3-dev
+
+or on OSX with
+
+    brew install glfw3
+
+Upon installation of the prerequisites, the following commands should build the program:
 
     git clone git@github.com:Applied-Scientific-Research/Omega3D.git
-    cd Omega3D/src
+    cd Omega3D
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DUSE_OMP=ON -DUSE_VC=OFF ..
     make
+
+Then you can run the GUI program with
+
     ./Omega3D.bin
+
+and the batch program with
+
+    ./Omega3Dbatch.bin
 
 ## To do
 Tasks to consider or implement:
 
 * Copy the simulation time step logic from Omega2D (using std::async)
-* Use [libigl](https://github.com/libigl/libigl/) or something else to load geometry files for boundaries
+* Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Have the GUI set up a vortex ring object
 * Start fresh GUI main file, look for first run and splash a help window
-* Move time step code into Simulation/Convection files, like Omega2D
+* ~~Move time step code into Simulation/Convection files, like Omega2D~~
 * ~~Make separate batch and GUI main files and binaries~~
 * ~~Support CMake with optional OpenMP and optional Vc~~
 * Wrap solver in a GUI - use existing code from [Omega2D](https://github.com/Applied-Scientific-Research/Omega2D). This means supporting only, say, vortex rings and stretch, but no diffusion.
 * ~~Rework into struct of arrays to allow Vc to work properly (this requires more work for compute and draw shaders :one buffer per array), but should be nice and flexible - and easier than all the `4*idx+3` crap~~
-* Test ~~speed and~~ accuracy with Vc as the float type
+* ~~Test speed and accuracy with Vc as the float type~~
 * ~~move rand() to std::random (see Omega2D)~~
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
 
