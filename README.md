@@ -42,9 +42,12 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
+* Have the GUI set up a vortex ring object
+* Get it to run a vortex ring without drawing anything
+* Rework the particle shader to read from all the various arrays
+* Rework the updateGL code to move all the appropriate arrays to the GPU
 * Copy the simulation time step logic from Omega2D (using std::async)
 * Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
-* Have the GUI set up a vortex ring object
 * Start fresh GUI main file, look for first run and splash a help window
 * ~~Move time step code into Simulation/Convection files, like Omega2D~~
 * ~~Make separate batch and GUI main files and binaries~~
