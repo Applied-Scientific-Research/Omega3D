@@ -186,12 +186,12 @@ void Simulation::step() {
   if (bdry.size() > 0) std::cout << std::endl << "Solving for BEM RHS" << std::endl << std::endl;
 
   // loop over boundary collections
-  for (auto &targ: bdry) {
+  for (auto &targ : bdry) {
     std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
     // zero velocities
     std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
     // accumulate from vorticity
-    for (auto &src: vort) {
+    for (auto &src : vort) {
       std::visit(visitor, src, targ);
     }
   }
@@ -199,10 +199,10 @@ void Simulation::step() {
   if (bdry.size() > 0) std::cout << std::endl << "Solving for BEM matrix" << std::endl << std::endl;
 
   // loop over boundary collections
-  for (auto &targ: bdry) {
+  for (auto &targ : bdry) {
     std::cout << "  Solving for influence coefficients on" << to_string(targ) << std::endl;
     // assemble from all boundaries
-    for (auto &src: bdry) {
+    for (auto &src : bdry) {
       std::visit(visitor, src, targ);
     }
   }
@@ -214,17 +214,17 @@ void Simulation::step() {
   // TODO - can I temporarily join vort and fldpt for the loop below?
 
   // find the influence on every vorticity element
-  for (auto &targ: vort) {
+  for (auto &targ : vort) {
     std::cout << "  Solving for velocities on" << to_string(targ) << std::endl << std::flush;
     // zero velocities
     std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
     // accumulate from vorticity
-    for (auto &src: vort) {
+    for (auto &src : vort) {
       // how do I specify the solver?
       std::visit(visitor, src, targ);
     }
     // accumulate from boundaries
-    for (auto &src: bdry) {
+    for (auto &src : bdry) {
       std::visit(visitor, src, targ);
     }
     // add freestream and divide by 2pi
@@ -232,16 +232,16 @@ void Simulation::step() {
   }
 
   // find the influence on every field point/tracer element
-  for (auto &targ: fldpt) {
+  for (auto &targ : fldpt) {
     std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
     // zero velocities
     std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
     // accumulate from vorticity
-    for (auto &src: vort) {
+    for (auto &src : vort) {
       std::visit(visitor, src, targ);
     }
     // accumulate from boundaries
-    for (auto &src: bdry) {
+    for (auto &src : bdry) {
       std::visit(visitor, src, targ);
     }
     // add freestream and divide by 2pi
@@ -251,13 +251,13 @@ void Simulation::step() {
   std::cout << std::endl << "Convection step" << std::endl << std::endl;
 
   // move every movable element
-  for (auto &coll: vort) {
+  for (auto &coll : vort) {
     std::visit([=](auto& elem) { elem.move(dt); }, coll);
   }
-  for (auto &coll: bdry) {
+  for (auto &coll : bdry) {
     std::visit([=](auto& elem) { elem.move(dt); }, coll);
   }
-  for (auto &coll: fldpt) {
+  for (auto &coll : fldpt) {
     std::visit([=](auto& elem) { elem.move(dt); }, coll);
   }
 
@@ -309,11 +309,30 @@ void Simulation::add_particles(std::vector<float> _invec) {
     _invec[i] = thisvd;
   }
 
-  // TODO - need to find a way to not always make a new collection!
-  //        like, test a collection for matching elem_t and move_t and Points/Panels/etc
-  //        and add to the most appropriate
-  // also add to vorticity
-  vort.push_back(Points<float>(_invec, active, lagrangian));      // vortons
+  // if no collections exist
+  if (vort.size() == 0) {
+    // make a new collection
+    vort.push_back(Points<float>(_invec, active, lagrangian));      // vortons
+
+  } else {
+    // THIS MUST USE A VISITOR
+
+    // helper struct for dispatching through a variant
+    //struct AddElemsVisitor {
+    //  void operator()(Points<float> const& coll) { coll.add_new(what); }
+    //  void operator()(Panels<float> const& coll) { coll.add_new(src); }
+    //} visitor;
+
+    // HACK - add all particles to first collection
+    std::visit([&](auto& elem) { elem.add_new(_invec); }, vort.back());
+
+    // TODO - need to find a way to not always make a new collection!
+    //        like, test a collection for matching elem_t and move_t and Points/Panels/etc
+    //        and add to the most appropriate
+    //for (auto &coll : vort) {
+      //std::visit([&](auto& elem) { elem.add_new(_invec); }, coll);
+    //}
+  }
 }
 
 // add geometry

@@ -26,6 +26,66 @@ public:
   const std::array<Vector<S>,Dimensions>& get_str() const { return *s; }
   std::array<Vector<S>,Dimensions>&       get_vel()       { return u; }
 
+  void add_new(std::vector<float>& _in) {
+
+    // check inputs
+    if (_in.size() == 0) return;
+    assert(_in.size() % 7 == 0);
+    const size_t nnew = _in.size()/7;
+    std::cout << "  adding " << (_in.size()/7) << " particles to simulation...";
+
+    // this initialization is specific to Points - so should we do it there?
+    for (size_t d=0; d<Dimensions; ++d) {
+      // copy existing vector
+      //Vector<S> new_x = x[d];
+      // extend with more space for new values
+      //new_x.resize(n+nnew);
+      x[d].resize(n+nnew);
+      // copy new values to end of vector
+      for (size_t i=0; i<nnew; ++i) {
+        //new_x[n+i] = _in[7*i+d];
+        x[d][n+i] = _in[7*i+d];
+      }
+      // finally, replace the master with this new vector
+      //x[d] = std::move(new_x);
+    }
+
+    // do radius now
+    {
+      //Vector<S> new_r = r;
+      //new_r.resize(n+nnew);
+      r.resize(n+nnew);
+      for (size_t i=0; i<nnew; ++i) {
+        //new_r[n+i] = _in[7*i+6];
+        r[n+i] = _in[7*i+6];
+      }
+      //r = std::move(new_r);
+    }
+
+    // strength
+    if (s) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        (*s)[d].resize(n+nnew);
+        for (size_t i=0; i<nnew; ++i) {
+          (*s)[d][n+i] = _in[7*i+d+3];
+        }
+      }
+    }
+
+    // extend the other vectors as well
+    for (size_t d=0; d<Dimensions; ++d) {
+      u[d].resize(n+nnew);
+    }
+    if (dsdt) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        (*dsdt)[d].resize(n+nnew);
+      }
+    }
+
+    // finally, update n
+    n += nnew;
+  }
+
   void zero_vels() {
     for (size_t d=0; d<Dimensions; ++d) {
       for (size_t i=0; i<getn(); ++i) {

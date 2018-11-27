@@ -64,6 +64,11 @@ public:
 
   const std::vector<uint16_t>& get_idx() const { return idx; }
 
+  void add_new(std::vector<float>& _in) {
+    // must explicitly call the method in the base class first?
+    ElementBase<S>::add_new(_in);
+  }
+
   std::string to_string() const {
     return ElementBase<S>::to_string() + " Panels";
   }

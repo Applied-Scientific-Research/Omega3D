@@ -58,8 +58,8 @@ public:
 
     // optional velgrads here
     if (_m == lagrangian) {
-      std::array<Vector<S>,9> new_ug;
-      for (size_t d=0; d<9; ++d) {
+      std::array<Vector<S>,Dimensions*Dimensions> new_ug;
+      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
         new_ug[d].resize(this->n);
       }
       ug = std::move(new_ug);
@@ -109,22 +109,44 @@ public:
 
     // optional velgrads here
     if (_m == lagrangian) {
-      std::array<Vector<S>,9> new_ug;
-      for (size_t d=0; d<9; ++d) {
+      std::array<Vector<S>,Dimensions*Dimensions> new_ug;
+      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
         new_ug[d].resize(_n);
       }
       ug = std::move(new_ug);
     }
   }
 
-  std::optional<std::array<Vector<S>,9>>& get_velgrad() { return ug; }
+  std::optional<std::array<Vector<S>,Dimensions*Dimensions>>& get_velgrad() { return ug; }
+
+  void add_new(std::vector<float>& _in) {
+    // remember old size and incoming size
+    const size_t nold = this->n;
+    const size_t nnew = _in.size()/7;
+
+    // must explicitly call the method in the base class first
+    ElementBase<S>::add_new(_in);
+
+    // then do local stuff
+    elong.resize(nold+nnew);
+    for (size_t i=nold; i<nold+nnew; ++i) {
+      elong[i] = 1.0;
+    }
+
+    // optional vel grads don't need to be initialized
+    if (ug) {
+      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+        (*ug)[d].resize(nold+nnew);
+      }
+    }
+  }
 
   void zero_vels() {
     // must explicitly call the method in the base class to zero the vels
     ElementBase<S>::zero_vels();
     // and specialize here for the vel grads
     if (ug) {
-      for (size_t d=0; d<9; ++d) {
+      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
         for (size_t i=0; i<this->n; ++i) {
           (*ug)[d][i] = 0.0;
         }
@@ -140,8 +162,8 @@ public:
       std::cout << "  Stretching" << to_string() << std::endl;
 
       for (size_t i=0; i<this->n; ++i) {
-        std::array<S,9> this_ug = {0.0};
-        for (size_t d=0; d<9; ++d) {
+        std::array<S,Dimensions*Dimensions> this_ug = {0.0};
+        for (size_t d=0; d<Dimensions*Dimensions; ++d) {
           this_ug[d] = (*ug)[d][i];
         }
         std::array<S,3> this_s = {0.0};
@@ -186,6 +208,6 @@ protected:
   // state vector
   std::vector<S> elong;   // scalar elongation, does not require register alignment
   // time derivative of state vector
-  std::optional<std::array<Vector<S>,9>> ug;   // velocity gradients
+  std::optional<std::array<Vector<S>,Dimensions*Dimensions>> ug;   // velocity gradients
 };
 
