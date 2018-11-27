@@ -172,7 +172,6 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
     flops *= 3.0 + 30.0*(float)src.getn();
   }
 
-
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
   std::cout << "    time " << (float)elapsed_seconds.count() << " at " << (1.e-9*flops/elapsed_seconds.count()) << " GFlop/s" << std::endl;
