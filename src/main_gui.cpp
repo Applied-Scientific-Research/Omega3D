@@ -336,7 +336,8 @@ int main(int argc, char const *argv[]) {
         ImGui::Combo("type", &item, items, 4);
 
         static float xc[3] = {0.0f, 0.0f, 0.0f};	// a center
-        static float rad = 5.0 * sim.get_ips();		// a major radius
+        //static float rad = 5.0 * sim.get_ips();		// a major radius
+        static float rad = 1.0;				// a major radius
         static float soft = sim.get_ips();		// a softness or minor radius
         static float vstr[3] = {0.0f, 0.0f, 1.0f};	// a vectorial strength
         static float strmag = 0.01f;			// a scalar strength
