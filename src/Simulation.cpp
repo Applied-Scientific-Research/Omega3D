@@ -114,8 +114,8 @@ void Simulation::reset() {
 
   // now reset everything else
   time = 0.0;
-  //vort.reset();
-  //bdry.reset();
+  vort.clear();
+  //bdry.clear();
   sim_is_initialized = false;
   step_has_started = false;
   step_is_finished = false;
@@ -160,7 +160,7 @@ void Simulation::async_step() {
 // here's the vortex method: convection and diffusion with operator splitting
 //
 void Simulation::step() {
-  std::cout << "taking step at t=" << time << " with n=" << get_n(vort) << std::endl;
+  std::cout << std::endl << "Taking step at t=" << time << " with n=" << get_n(vort) << std::endl;
 
   // we wind up using this a lot
   //std::array<double,3> thisfs = reinterpret_cast<std::array<float,3>&>(fs);
@@ -209,7 +209,7 @@ void Simulation::step() {
 
   //std::cout << std::endl << "Solving BEM for strengths" << std::endl << std::endl;
 
-  if (vort.size()+fldpt.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl << std::endl;
+  if (vort.size()+fldpt.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
 
   // TODO - can I temporarily join vort and fldpt for the loop below?
 
@@ -248,7 +248,7 @@ void Simulation::step() {
     std::visit([=](auto& elem) { elem.finalize_vels(thisfs); }, targ);
   }
 
-  std::cout << std::endl << "Convection step" << std::endl << std::endl;
+  std::cout << std::endl << "Convection step" << std::endl;
 
   // move every movable element
   for (auto &coll : vort) {
@@ -290,8 +290,6 @@ void Simulation::step() {
 
   // update dt and return
   time += (double)dt;
-
-  std::cout << std::endl << "Done" << std::endl << std::endl;
 }
 
 // set up the particles

@@ -32,7 +32,6 @@ public:
     if (_in.size() == 0) return;
     assert(_in.size() % 7 == 0);
     const size_t nnew = _in.size()/7;
-    std::cout << "  adding " << (_in.size()/7) << " particles to simulation...";
 
     // this initialization is specific to Points - so should we do it there?
     for (size_t d=0; d<Dimensions; ++d) {

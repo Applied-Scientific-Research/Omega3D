@@ -384,7 +384,7 @@ int main(int argc, char const *argv[]) {
             ImGui::InputFloat3("direction", vstr);
             ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
             ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
-            guess_n = 1 + (3.1416f * rad / sim.get_ips());
+            guess_n = 1 + (2.0f * 3.1416f * rad / sim.get_ips());
             ImGui::TextWrapped("This feature will add about %d particles", guess_n);
             if (ImGui::Button("Add singular vortex ring")) {
               ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
@@ -400,7 +400,7 @@ int main(int argc, char const *argv[]) {
             ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
             ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
             ImGui::SliderFloat("thickness", &soft, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
-            guess_n = 1 + (3.1416f * rad / sim.get_ips());
+            guess_n = 1 + (2.0f * 3.1416f * rad / sim.get_ips());
             ImGui::TextWrapped("This feature will add about %d particles", guess_n);
             if (ImGui::Button("Add thick vortex ring")) {
               ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
@@ -449,8 +449,10 @@ int main(int argc, char const *argv[]) {
       }
       ImGui::SameLine();
       if (ImGui::Button("Reset", ImVec2(120,0))) {
+        std::cout << std::endl << "Reset requested" << std::endl;
         // remove all particles and reset timer
         sim.reset();
+        std::cout << "Reset complete" << std::endl;
       }
 
       ImGui::Separator();

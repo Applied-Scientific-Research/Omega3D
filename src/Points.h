@@ -21,6 +21,8 @@ public:
   Points(const std::vector<S>& _in, const elem_t _e, const move_t _m)
     : ElementBase<S>(_in.size()/7, _e, _m) {
 
+    std::cout << "  new collection with " << (_in.size()/7) << " particles..." << std::endl;
+
     // make sure we have a complete input vector
     assert(_in.size() % 7 == 0);
 
@@ -69,6 +71,8 @@ public:
   // alternative (old) constructor - assume random points in a cube
   Points(const size_t _n, const elem_t _e, const move_t _m)
     : ElementBase<S>(_n, _e, _m) {
+
+    std::cout << "  new collection with " << _n << " particles..." << std::endl;
 
     // init random number generator
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
@@ -123,6 +127,7 @@ public:
     // remember old size and incoming size
     const size_t nold = this->n;
     const size_t nnew = _in.size()/7;
+    std::cout << "  adding " << nnew << " particles to collection..." << std::endl;
 
     // must explicitly call the method in the base class first
     ElementBase<S>::add_new(_in);

@@ -42,7 +42,8 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
-* Get new features to just add particles to the current Points object
+* ~~Make the reset button actally reset~~
+* ~~Get new features to just add particles to the current Points object~~
 * ~~Have the GUI set up a vortex ring object~~
 * Get it to run a vortex ring without drawing anything
 * Rework the particle shader to read from all the various arrays
