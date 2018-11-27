@@ -209,8 +209,8 @@ public:
         (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
         (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
 
-        //if (false) {
-        if (i == 0) {
+        if (false) {
+        //if (i == 0) {
         //if (i < 10) {
           std::cout << "  x " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i];// << std::endl;
           std::cout << "  v " << this->u[0][i] << " " << this->u[1][i] << " " << this->u[2][i];// << std::endl;
