@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <cassert>
 #include <optional>
 #include <variant>
 #define _USE_MATH_DEFINES
