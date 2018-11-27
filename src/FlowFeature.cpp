@@ -252,14 +252,12 @@ SingularRing::init_particles(float _ips) const {
 
   // loop over integer indices
   for (int i=0; i<ndiam; ++i) {
-
-    // how far from the center are we?
-    const float theta = 2.0 * pi * (float)i;
+    const float theta = 2.0 * pi * (float)i / (float)ndiam;
 
     // create a particle here
-    x.emplace_back(m_x + b1[0]*std::cos(theta) + b2[0]*std::sin(theta));
-    x.emplace_back(m_y + b1[1]*std::cos(theta) + b2[1]*std::sin(theta));
-    x.emplace_back(m_z + b1[2]*std::cos(theta) + b2[2]*std::sin(theta));
+    x.emplace_back(m_x + m_majrad * (b1[0]*std::cos(theta) + b2[0]*std::sin(theta)));
+    x.emplace_back(m_y + m_majrad * (b1[1]*std::cos(theta) + b2[1]*std::sin(theta)));
+    x.emplace_back(m_z + m_majrad * (b1[2]*std::cos(theta) + b2[2]*std::sin(theta)));
 
     // set the strength
     x.emplace_back(this_ips * m_circ * (b2[0]*std::cos(theta) - b1[0]*std::sin(theta)));
