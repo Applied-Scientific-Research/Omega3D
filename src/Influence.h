@@ -46,7 +46,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   // dispatch on presence of val grads
   if (opttug) {
     // get the pointer from the optional
-    std::array<Vector<S>,9> tug = *opttug;
+    std::array<Vector<S>,9>& tug = *opttug;
 
     // velocity+grads kernel
     #pragma omp parallel for
@@ -130,6 +130,8 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 #endif // no Vc
     }
     flops *= 12.0 + 65.0*(float)src.getn();
+
+    //std::cout << "p 0 vel " << tu[0][0] << " " << tu[1][0] << " " << tu[2][0] << " velg " << tug[0][0] << " " << tug[1][0] << " " << tug[2][0] << std::endl;
 
   } else {
     // velocity-only kernel
