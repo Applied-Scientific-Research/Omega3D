@@ -52,14 +52,14 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
     #pragma omp parallel for
     for (size_t i=0; i<targ.getn(); ++i) {
 #ifdef USE_VC
-      const Vc::Vector<S> txv = tx[0][i];
-      const Vc::Vector<S> tyv = tx[1][i];
-      const Vc::Vector<S> tzv = tx[2][i];
-      const Vc::Vector<S> trv = tr[i];
+      const Vc::Vector<S> txv(tx[0][i]);
+      const Vc::Vector<S> tyv(tx[1][i]);
+      const Vc::Vector<S> tzv(tx[2][i]);
+      const Vc::Vector<S> trv(tr[i]);
       // care must be taken if S != A, because these vectors must have the same length
-      Vc::Vector<A> accumu = 0.0;
-      Vc::Vector<A> accumv = 0.0;
-      Vc::Vector<A> accumw = 0.0;
+      Vc::Vector<A> accumu(0.0);
+      Vc::Vector<A> accumv(0.0);
+      Vc::Vector<A> accumw(0.0);
       Vc::Vector<A> accumux = 0.0;
       Vc::Vector<A> accumvx = 0.0;
       Vc::Vector<A> accumwx = 0.0;
@@ -71,9 +71,11 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       Vc::Vector<A> accumwz = 0.0;
       // loop over source particles
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
+        // NOTE: .vectorAt(i) gets the vector at scalar position i
+        //       .vector(i) gets the i'th vector!!!
         kernel_0_0sg<Vc::Vector<S>,Vc::Vector<A>>(
-                          sxv[j], syv[j], szv[j], srv[j],
-                          ssxv[j], ssyv[j], sszv[j],
+                          sxv.vector(j), syv.vector(j), szv.vector(j), srv.vector(j),
+                          ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                           txv, tyv, tzv, trv,
                           &accumu,  &accumv,  &accumw,
                           &accumux, &accumvx, &accumwx,

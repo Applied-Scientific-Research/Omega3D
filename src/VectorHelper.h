@@ -21,9 +21,13 @@ template <class S> using Vector = std::vector<S, Vc::Allocator<S>>;
 // use this to safely convert a std::vector<S> to an array of Vc::Vector<S>
 template <class S>
 inline const Vc::Memory<Vc::Vector<S>> stdvec_to_vcvec (const Vector<S>& in, const S defaultval) {
+    // create the new vector with memory to hold the given number of elements, plus buffer
     Vc::Memory<Vc::Vector<S>> out(in.size());
+    //out.setZero();	// no need for this
+    // because in.size() == out.entriesCount() always, we explicitly set the buffer region
+    out.vector(out.entriesCount()-1) = Vc::Vector<S>(defaultval);
+    // now we copy the input vector
     for (size_t i=0; i<in.size(); ++i) out[i] = in[i];
-    for (size_t i=in.size(); i<out.entriesCount(); ++i) out[i] = defaultval;
     return out;
 }
 
