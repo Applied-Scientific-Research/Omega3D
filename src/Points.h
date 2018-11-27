@@ -159,6 +159,19 @@ public:
     }
   }
 
+  void finalize_vels(const std::array<double,Dimensions>& _fs) {
+    // must explicitly call the method in the base class, too
+    ElementBase<S>::finalize_vels(_fs);
+    // and specialize here for the vel grads
+    if (ug) {
+      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+        for (size_t i=0; i<this->n; ++i) {
+          (*ug)[d][i] = (*ug)[d][i] * 0.25/M_PI;
+        }
+      }
+    }
+  }
+
   void move(const double _dt) {
     // must explicitly call the method in the base class
     ElementBase<S>::move(_dt);
@@ -171,8 +184,8 @@ public:
         for (size_t d=0; d<Dimensions*Dimensions; ++d) {
           this_ug[d] = (*ug)[d][i];
         }
-        std::array<S,3> this_s = {0.0};
-        for (size_t d=0; d<3; ++d) {
+        std::array<S,Dimensions> this_s = {0.0};
+        for (size_t d=0; d<Dimensions; ++d) {
           this_s[d] = (*this->s)[d][i];
         }
 
@@ -195,6 +208,18 @@ public:
         (*this->s)[0][i] = this_s[0] + _dt * wdu[0];
         (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
         (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
+
+        //if (false) {
+        if (i == 0) {
+        //if (i < 10) {
+          std::cout << "  x " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i];// << std::endl;
+          std::cout << "  v " << this->u[0][i] << " " << this->u[1][i] << " " << this->u[2][i];// << std::endl;
+          std::cout << "  ug " << this_ug[0] << " " << this_ug[1] << " " << this_ug[2];// << std::endl;
+          //std::cout << "  wdu " << wdu[0] << " " << wdu[1] << " " << wdu[2];// << std::endl;
+          std::cout << "  s " << (*this->s)[0][i] << " " << (*this->s)[1][i] << " " << (*this->s)[2][i];// << std::endl;
+          //std::cout << "  elong " << elong[i];
+          std::cout << std::endl;
+        }
       }
     } else {
       //std::cout << "  Not stretching" << to_string() << std::endl;

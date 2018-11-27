@@ -62,37 +62,38 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
+  const S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
 #ifdef USE_VC
-  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+  const S r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
 #else
-  r2 = 1.0 / (r2*std::sqrt(r2));
+  const S r3 = 1.0 / (r2*std::sqrt(r2));
 #endif
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
   S dzxw = dy*ssx - dx*ssy;
-  *tu += r2 * dxxw;
-  *tv += r2 * dyxw;
-  *tw += r2 * dzxw;
+  *tu += r3 * dxxw;
+  *tv += r3 * dyxw;
+  *tw += r3 * dzxw;
 
-  // HACK - you need to figure out what this term is
+  // accumulate velocity gradients
 #ifdef USE_VC
-  const S bbb = r2 * Vc::reciprocal(Vc::sqrt(r2));
+  //const S bbb = -3.f * r3 * Vc::reciprocal(r2);
+  const S bbb = S(-3.0) * r3 * Vc::reciprocal(r2);
 #else
-  const S bbb = r2 / std::sqrt(r2);
+  const S bbb = -3.0 * r3 / r2;
 #endif
   // continuing with grads - this section is 33 flops
   dxxw *= bbb;
   dyxw *= bbb;
   dzxw *= bbb;
   *tux += dx*dxxw;
-  *tvx += dx*dyxw + ssz*r2;
-  *twx += dx*dzxw - ssy*r2;
-  *tuy += dy*dxxw - ssz*r2;
+  *tvx += dx*dyxw + ssz*r3;
+  *twx += dx*dzxw - ssy*r3;
+  *tuy += dy*dxxw - ssz*r3;
   *tvy += dy*dyxw;
-  *twy += dy*dzxw + ssx*r2;
-  *tuz += dz*dxxw + ssy*r2;
-  *tvz += dz*dyxw - ssx*r2;
+  *twy += dy*dzxw + ssx*r3;
+  *tuz += dz*dxxw + ssy*r3;
+  *tvz += dz*dyxw - ssx*r3;
   *twz += dz*dzxw;
 }
 
