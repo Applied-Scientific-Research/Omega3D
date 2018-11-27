@@ -25,7 +25,7 @@ inline const Vc::Memory<Vc::Vector<S>> stdvec_to_vcvec (const Vector<S>& in, con
     Vc::Memory<Vc::Vector<S>> out(in.size());
     //out.setZero();	// no need for this
     // because in.size() == out.entriesCount() always, we explicitly set the buffer region
-    out.vector(out.entriesCount()-1) = Vc::Vector<S>(defaultval);
+    out.vector(out.vectorsCount()-1) = Vc::Vector<S>(defaultval);
     // now we copy the input vector
     for (size_t i=0; i<in.size(); ++i) out[i] = in[i];
     return out;
