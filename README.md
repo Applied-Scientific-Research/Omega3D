@@ -58,15 +58,17 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
+* add arcball rotation to the viewport - make my brain hurt
+* Rework the particle shader to read from all the various arrays - goal is to draw an inviscid sim
+* Rework the updateGL code to move all the appropriate arrays to the GPU
+* Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
+* Start fresh GUI main file, look for first run and splash a help window
+* Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
 * ~~Make the reset button actally reset~~
 * ~~Get new features to just add particles to the current Points object~~
 * ~~Have the GUI set up a vortex ring object~~
-* Get it to run a vortex ring without drawing anything
-* Rework the particle shader to read from all the various arrays
-* Rework the updateGL code to move all the appropriate arrays to the GPU
+* ~~Get it to run a vortex ring without drawing anything~~
 * ~~Copy the simulation time step logic from Omega2D (using std::async)~~
-* Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
-* Start fresh GUI main file, look for first run and splash a help window
 * ~~Move time step code into Simulation/Convection files, like Omega2D~~
 * ~~Make separate batch and GUI main files and binaries~~
 * ~~Support CMake with optional OpenMP and optional Vc~~
@@ -74,7 +76,6 @@ Tasks to consider or implement:
 * ~~Rework into struct of arrays to allow Vc to work properly (this requires more work for compute and draw shaders :one buffer per array), but should be nice and flexible - and easier than all the `4*idx+3` crap~~
 * ~~Test speed and accuracy with Vc as the float type~~
 * ~~move rand() to std::random (see Omega2D)~~
-* Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
 
 ## Thanks
 
