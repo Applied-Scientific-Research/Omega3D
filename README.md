@@ -10,19 +10,33 @@ It currently contains a mere architectural skeleton onto which more complex beha
 ## Build and run
 This code uses some C++17 features, so should compile on GCC 7, Clang 4, and MSVC 19.10 compilers.
 
-Both the GUI and batch versions require CMake to compile.  To build the GUI version, users will also need GLFW3, which can be installed in Red Hat/Fedora with
+#### Prerequisites
+Both the GUI and batch versions require CMake to compile.  To build the GUI version, users will also need GLFW3. These can be installed in Red Hat/Fedora with
 
-    sudo yum install glfw3-devel
+    sudo yum install cmake glfw3-devel
 
 or on Ubuntu with
 
-    sudo apt-get install glfw3-dev
+    sudo apt-get install cmake glfw3-dev
 
 or on OSX with
 
-    brew install glfw3
+    brew install cmake glfw3
 
-Upon installation of the prerequisites, the following commands should build the program:
+#### Optional libraries
+[Vc](https://github.com/VcDevel/Vc) is a vectorization library, and Omega3D uses it to greatly accelerate the velocity evaluations. This package can be built and installed external to Omega3D with
+
+    git clone https://github.com/VcDevel/Vc.git
+    cd Vc
+    mkdir build
+    cd build
+    cmake -DCMAKE_INSTALL_PREFIX=/opt/Vc -DBUILD_TESTING=OFF ..
+    make -j 4
+    sudo make install
+    cd ../..
+
+#### Compilation
+Upon installation of the prerequisites, the following commands should build Omega3D.
 
     git clone git@github.com:Applied-Scientific-Research/Omega3D.git
     cd Omega3D
@@ -31,7 +45,9 @@ Upon installation of the prerequisites, the following commands should build the 
     cmake -DCMAKE_BUILD_TYPE=Release -DUSE_OMP=ON -DUSE_VC=OFF ..
     make
 
-Then you can run the GUI program with
+If you were able to build and install Vc, then you should set `-DUSE_VC=ON` in the above `cmake` command.
+
+Finally, you can run the GUI program with
 
     ./Omega3D.bin
 
