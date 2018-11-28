@@ -188,7 +188,7 @@ BlockOfRandom::init_particles(float _ips) const {
   // set up the random number generator
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-  static std::uniform_real_distribution<> zmean_dist(-1.0, 1.0);
+  static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
   static std::uniform_real_distribution<> zo_dist(0.0, 1.0);
 
   std::vector<float> x(7*m_num);
