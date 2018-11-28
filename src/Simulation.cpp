@@ -74,12 +74,16 @@ void Simulation::set_re_for_ips(const float _ips) {
 void Simulation::initGL(std::vector<float>& _projmat,
                         float*              _poscolor,
                         float*              _negcolor) {
+  // never gets called
   //bdry.initGL(_projmat, _poscolor, _negcolor);
   //vort.initGL(_projmat, _poscolor, _negcolor);
 }
 void Simulation::updateGL() {
   //bdry.updateGL();
   //vort.updateGL();
+  for (auto &coll : vort) {
+    std::visit([=](auto& elem) { elem.updateGL(); }, coll);
+  }
 }
 void Simulation::drawGL(std::vector<float>& _projmat,
                         float*              _poscolor,
@@ -139,8 +143,10 @@ bool Simulation::test_for_new_results() {
     // if we did, and it's ready to give us the results
     stepfuture.get();
 
+#ifdef USE_GL
     // tell flow objects to update their values to the GPU
-    //updateGL();
+    updateGL();
+#endif
 
     // set flag indicating that at least one step has been solved
     step_is_finished = true;

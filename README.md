@@ -5,8 +5,6 @@ High-performance 3D computational fluid dynamics solver with easy GUI
 
 Omega3D aims to be an accurate combined Lagrangian-Eulerian fluid flow solver for unsteady flows with complex boundaries, with a greatly reduced reliance on meshing and parameter tuning for achieving accuracy and speed.
 
-It currently contains a mere architectural skeleton onto which more complex behavior can be built.
-
 ## Build and run
 This code uses some C++17 features, so should compile on GCC 7, Clang 4, and MSVC 19.10 compilers.
 
@@ -58,9 +56,10 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
+* use the actual core function to draw the blobs - but what is the real core function?
 * add arcball rotation to the viewport - make my brain hurt
-* Rework the particle shader to read from all the various arrays - goal is to draw an inviscid sim
-* Rework the updateGL code to move all the appropriate arrays to the GPU
+* ~~Rework the particle shader to read from all the various arrays - goal is to draw an inviscid sim~~
+* ~~Rework the updateGL code to move all the appropriate arrays to the GPU~~
 * Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`

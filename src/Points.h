@@ -24,7 +24,8 @@ class Points: public ElementBase<S> {
 public:
   // flexible constructor - use input 7*n vector
   Points(const std::vector<S>& _in, const elem_t _e, const move_t _m)
-    : ElementBase<S>(_in.size()/7, _e, _m) {
+    : ElementBase<S>(_in.size()/7, _e, _m),
+      max_strength(-1.0) {
 
     std::cout << "  new collection with " << (_in.size()/7) << " particles..." << std::endl;
 
@@ -68,59 +69,6 @@ public:
       std::array<Vector<S>,Dimensions*Dimensions> new_ug;
       for (size_t d=0; d<Dimensions*Dimensions; ++d) {
         new_ug[d].resize(this->n);
-      }
-      ug = std::move(new_ug);
-    }
-  }
-
-  // alternative (old) constructor - assume random points in a cube
-  Points(const size_t _n, const elem_t _e, const move_t _m)
-    : ElementBase<S>(_n, _e, _m) {
-
-    std::cout << "  new collection with " << _n << " particles..." << std::endl;
-
-    // init random number generator
-    std::random_device rd;  //Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-    std::uniform_real_distribution<> zmean_dist(-1.0, 1.0);
-
-    // this initialization specific to Points
-    for (size_t d=0; d<Dimensions; ++d) {
-      this->x[d].resize(_n);
-      for (size_t i=0; i<_n; ++i) {
-        this->x[d][i] = zmean_dist(gen);
-      }
-    }
-    this->r.resize(_n);
-    this->elong.resize(_n);
-    for (size_t i=0; i<_n; ++i) {
-      this->r[i] = 0.01;
-      this->elong[i] = 1.0;
-    }
-
-    // optional strength in base class
-    if (_e != inert) {
-      // need to assign it a vector first!
-      std::array<Vector<S>,3> new_s;
-      for (size_t d=0; d<3; ++d) {
-        new_s[d].resize(_n);
-        for (size_t i=0; i<_n; ++i) {
-          new_s[d][i] = zmean_dist(gen) / (S)_n;
-        }
-      }
-      this->s = std::move(new_s);
-    }
-
-    // velocity in base class
-    for (size_t d=0; d<Dimensions; ++d) {
-      this->u[d].resize(_n);
-    }
-
-    // optional velgrads here
-    if (_m == lagrangian) {
-      std::array<Vector<S>,Dimensions*Dimensions> new_ug;
-      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
-        new_ug[d].resize(_n);
       }
       ug = std::move(new_ug);
     }
@@ -183,6 +131,7 @@ public:
     // and specialize
     if (this->M == lagrangian and ug and this->E != inert) {
       std::cout << "  Stretching" << to_string() << std::endl;
+      S thismax = 0.0;
 
       for (size_t i=0; i<this->n; ++i) {
         std::array<S,Dimensions*Dimensions> this_ug = {0.0};
@@ -214,6 +163,10 @@ public:
         (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
         (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
 
+        // check for max strength
+        S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
+        if (thisstr > thismax) thismax = thisstr;
+
         if (false) {
         //if (i == 0) {
         //if (i < 10) {
@@ -226,8 +179,15 @@ public:
           std::cout << std::endl;
         }
       }
+      if (max_strength < 0.0) {
+        max_strength = std::sqrt(thismax);
+      } else {
+        max_strength = 0.1*std::sqrt(thismax) + 0.9*max_strength;
+      }
+      //std::cout << "  New max_strength is " << max_strength << std::endl;
     } else {
       //std::cout << "  Not stretching" << to_string() << std::endl;
+      max_strength = 1.0;
     }
   }
 
@@ -250,25 +210,73 @@ public:
     // Load and create the blob-drawing shader program
     blob_program = create_particle_program();
 
-/*
     // Create seven Vector Buffer Objects that will store the vertices on video memory
     glGenBuffers(7, vbo);
 
     // Allocate space, but don't upload the data from CPU to GPU yet
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, 0, x.data(), GL_STATIC_DRAW);
+    for (size_t i=0; i<Dimensions; ++i) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo[i]);
+      glBufferData(GL_ARRAY_BUFFER, 0, this->x[i].data(), GL_STATIC_DRAW);
+      if (this->s) {
+        glBindBuffer(GL_ARRAY_BUFFER, vbo[i+3]);
+        glBufferData(GL_ARRAY_BUFFER, 0, (*this->s)[i].data(), GL_STATIC_DRAW);
+      }
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
+    glBufferData(GL_ARRAY_BUFFER, 0, this->r.data(), GL_STATIC_DRAW);
 
     // Get the location of the attributes that enters in the vertex shader
-    GLint position_attribute = glGetAttribLocation(blob_program, "position");
     projmat_attribute = glGetUniformLocation(blob_program, "Projection");
 
+    // Now do the seven arrays
+    GLint position_attribute;
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+    position_attribute = glGetAttribLocation(blob_program, "px");
+
     // Specify how the data for position can be accessed
-    glVertexAttribPointer(position_attribute, 4, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
 
     // Enable the attribute
     glEnableVertexAttribArray(position_attribute);
 
     // and tell it to advance two primitives per point
+    glVertexAttribDivisor(position_attribute, 1);
+
+    // do it for the rest
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+    position_attribute = glGetAttribLocation(blob_program, "py");
+    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(position_attribute);
+    glVertexAttribDivisor(position_attribute, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+    position_attribute = glGetAttribLocation(blob_program, "posz");
+    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(position_attribute);
+    glVertexAttribDivisor(position_attribute, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+    position_attribute = glGetAttribLocation(blob_program, "sx");
+    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(position_attribute);
+    glVertexAttribDivisor(position_attribute, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
+    position_attribute = glGetAttribLocation(blob_program, "sy");
+    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(position_attribute);
+    glVertexAttribDivisor(position_attribute, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[5]);
+    position_attribute = glGetAttribLocation(blob_program, "sz");
+    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(position_attribute);
+    glVertexAttribDivisor(position_attribute, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
+    position_attribute = glGetAttribLocation(blob_program, "r");
+    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     // upload the projection matrix
@@ -297,12 +305,11 @@ public:
     quad_attribute = glGetAttribLocation(blob_program, "quad_attr");
     glVertexAttribPointer(quad_attribute, 2, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(quad_attribute);
-*/
   }
 
   // this gets done every time we change the size of the positions array
   void updateGL() {
-    std::cout << "inside Points.updateGL" << std::endl;
+    //std::cout << "inside Points.updateGL" << std::endl;
 
     // has this been init'd yet?
     if (glIsVertexArray(vao) == GL_FALSE) return;
@@ -310,17 +317,19 @@ public:
     const size_t vlen = this->x[0].size()*sizeof(S);
     if (vlen > 0) {
       // Indicate and upload the data from CPU to GPU
-      //glBindBuffer(GL_ARRAY_BUFFER, vbo);
-      // the positions
-      //glBufferData(GL_ARRAY_BUFFER, vlen, this->x[0].data(), GL_DYNAMIC_DRAW);
-      //glBufferData(GL_ARRAY_BUFFER, vlen, this->x[1].data(), GL_DYNAMIC_DRAW);
-      //glBufferData(GL_ARRAY_BUFFER, vlen, this->x[2].data(), GL_DYNAMIC_DRAW);
+      for (size_t i=0; i<Dimensions; ++i) {
+        // the positions
+        glBindBuffer(GL_ARRAY_BUFFER, vbo[i]);
+        glBufferData(GL_ARRAY_BUFFER, vlen, this->x[i].data(), GL_DYNAMIC_DRAW);
+        // the strengths
+        if (this->s) {
+          glBindBuffer(GL_ARRAY_BUFFER, vbo[i+3]);
+          glBufferData(GL_ARRAY_BUFFER, vlen, (*this->s)[i].data(), GL_DYNAMIC_DRAW);
+        }
+      }
       // the radii
-      //glBufferData(GL_ARRAY_BUFFER, vlen, this->r.data(), GL_DYNAMIC_DRAW);
-      // the strengths
-      //if (this->s) {
-      //glBufferData(GL_ARRAY_BUFFER, vlen, (*this->s)[0].data(), GL_DYNAMIC_DRAW);
-      //}
+      glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
+      glBufferData(GL_ARRAY_BUFFER, vlen, this->r.data(), GL_DYNAMIC_DRAW);
     }
   }
 
@@ -329,12 +338,43 @@ public:
               float*              _poscolor,
               float*              _negcolor) {
 
-    std::cout << "inside Points.drawGL" << std::endl;
+    //std::cout << "inside Points.drawGL" << std::endl;
 
     // has this been init'd yet?
     if (glIsVertexArray(vao) == GL_FALSE) {
       initGL(_projmat, _poscolor, _negcolor);
       updateGL();
+    }
+
+    if (this->n > 0) {
+      glBindVertexArray(vao);
+
+      // get blending ready
+      glDisable(GL_DEPTH_TEST);
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_ONE, GL_ONE);
+
+      // draw as colored clouds
+      if (true) {
+        glUseProgram(blob_program);
+
+        glEnableVertexAttribArray(quad_attribute);
+
+        // upload the current projection matrix
+        glUniformMatrix4fv(projmat_attribute, 1, GL_FALSE, _projmat.data());
+
+        // upload the current color values
+        glUniform4fv(pos_color_attribute, 1, (const GLfloat *)_poscolor);
+        glUniform4fv(neg_color_attribute, 1, (const GLfloat *)_negcolor);
+        glUniform1f (str_scale_attribute, (const GLfloat)(0.4f/max_strength));
+
+        // the one draw call here
+        glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, this->n);
+      }
+
+      // return state
+      glEnable(GL_DEPTH_TEST);
+      glDisable(GL_BLEND);
     }
   }
 #endif
@@ -357,10 +397,10 @@ private:
 #ifdef USE_GL
   // OpenGL stuff
   GLuint vao, vbo[7];
-  GLuint blob_program, point_program;
-  GLint projmat_attribute, projmat_attribute2, quad_attribute;
+  GLuint blob_program;
+  GLint projmat_attribute, quad_attribute;
   GLint pos_color_attribute, neg_color_attribute, str_scale_attribute;
-  //float max_strength;
 #endif
+  float max_strength;
 };
 
