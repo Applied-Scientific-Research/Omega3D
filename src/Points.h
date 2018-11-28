@@ -3,6 +3,10 @@
 #include "VectorHelper.h"
 #include "ElementBase.h"
 
+#ifdef USE_GL
+#include "glad.h"
+#endif
+
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -226,6 +230,104 @@ public:
     }
   }
 
+#ifdef USE_GL
+  //
+  // OpenGL functions
+  //
+
+  // this gets done once - load the shaders, set up the vao
+  void initGL(std::vector<float>& _projmat,
+              float*              _poscolor,
+              float*              _negcolor) {
+
+    std::cout << "inside Points.initGL" << std::endl;
+
+    // Use a Vertex Array Object
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+/*
+    // Create a Vector Buffer Object that will store the vertices on video memory
+    glGenBuffers(1, &vbo);
+
+    // Allocate space, but don't upload the data from CPU to GPU yet
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, 0, x.data(), GL_STATIC_DRAW);
+
+    // Load and create the blob-drawing shader program
+    blob_program = create_particle_program();
+
+    // Get the location of the attributes that enters in the vertex shader
+    GLint position_attribute = glGetAttribLocation(blob_program, "position");
+    projmat_attribute = glGetUniformLocation(blob_program, "Projection");
+
+    // Specify how the data for position can be accessed
+    glVertexAttribPointer(position_attribute, 4, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+
+    // Enable the attribute
+    glEnableVertexAttribArray(position_attribute);
+
+    // and tell it to advance two primitives per point
+    glVertexAttribDivisor(position_attribute, 1);
+
+    // upload the projection matrix
+    glUniformMatrix4fv(projmat_attribute, 1, GL_FALSE, _projmat.data());
+
+    // locate where the colors and color scales go
+    pos_color_attribute = glGetUniformLocation(blob_program, "pos_color");
+    neg_color_attribute = glGetUniformLocation(blob_program, "neg_color");
+    str_scale_attribute = glGetUniformLocation(blob_program, "str_scale");
+
+    // send the current values
+    glUniform4fv(pos_color_attribute, 1, (const GLfloat *)_poscolor);
+    glUniform4fv(neg_color_attribute, 1, (const GLfloat *)_negcolor);
+    glUniform1f (str_scale_attribute, (const GLfloat)1.0);
+
+    // and indicate the fragment color output
+    glBindFragDataLocation(blob_program, 0, "frag_color");
+
+    // Initialize the quad attributes
+    std::vector<float> quadverts = {-1,-1, 1,-1, 1,1, -1,1};
+    GLuint qvbo;
+    glGenBuffers(1, &qvbo);
+    glBindBuffer(GL_ARRAY_BUFFER, qvbo);
+    glBufferData(GL_ARRAY_BUFFER, quadverts.size()*sizeof(float), quadverts.data(), GL_STATIC_DRAW);
+
+    quad_attribute = glGetAttribLocation(blob_program, "quad_attr");
+    glVertexAttribPointer(quad_attribute, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(quad_attribute);
+*/
+  }
+
+  // this gets done every time we change the size of the positions array
+  void updateGL() {
+    std::cout << "inside Points.updateGL" << std::endl;
+
+    // has this been init'd yet?
+    if (glIsVertexArray(vao) == GL_FALSE) return;
+
+    //if (x.size() > 0) {
+      // Indicate and upload the data from CPU to GPU
+    //  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    //  glBufferData(GL_ARRAY_BUFFER, x.size()*sizeof(S), x.data(), GL_DYNAMIC_DRAW);
+    //}
+  }
+
+  // OpenGL3 stuff to display points, called once per frame
+  void drawGL(std::vector<float>& _projmat,
+              float*              _poscolor,
+              float*              _negcolor) {
+
+    std::cout << "inside Points.drawGL" << std::endl;
+
+    // has this been init'd yet?
+    if (glIsVertexArray(vao) == GL_FALSE) {
+      initGL(_projmat, _poscolor, _negcolor);
+      updateGL();
+    }
+  }
+#endif
+
   std::string to_string() const {
     std::string retstr = ElementBase<S>::to_string() + " Points";
     if (ug) retstr += " with grads";
@@ -239,5 +341,15 @@ protected:
   std::vector<S> elong;   // scalar elongation, does not require register alignment
   // time derivative of state vector
   std::optional<std::array<Vector<S>,Dimensions*Dimensions>> ug;   // velocity gradients
+
+private:
+#ifdef USE_GL
+  // OpenGL stuff
+  GLuint vao, vbo;
+  GLuint blob_program, point_program;
+  GLint projmat_attribute, projmat_attribute2, quad_attribute;
+  GLint pos_color_attribute, neg_color_attribute, str_scale_attribute;
+  //float max_strength;
+#endif
 };
 

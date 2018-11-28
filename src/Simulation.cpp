@@ -70,6 +70,7 @@ void Simulation::set_re_for_ips(const float _ips) {
 //  diff.set_diffuse(true);
 //}
 
+#ifdef USE_GL
 void Simulation::initGL(std::vector<float>& _projmat,
                         float*              _poscolor,
                         float*              _negcolor) {
@@ -84,10 +85,14 @@ void Simulation::drawGL(std::vector<float>& _projmat,
                         float*              _poscolor,
                         float*              _negcolor) {
   if (step_is_finished) {
-    //bdry.drawGL(_projmat, _poscolor, _negcolor);
     //vort.drawGL(_projmat, _poscolor, _negcolor);
+    for (auto &coll : vort) {
+      std::visit([=, &_projmat](auto& elem) { elem.drawGL(_projmat, _poscolor, _negcolor); }, coll);
+    }
+    //bdry.drawGL(_projmat, _poscolor, _negcolor);
   }
 }
+#endif
 
 //
 // main must indicate that panels should be made
@@ -166,11 +171,6 @@ void Simulation::step() {
   //std::array<double,3> thisfs = reinterpret_cast<std::array<float,3>&>(fs);
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
-
-  //vort.push_back(Points<float>(5000, active, lagrangian));      // vortons
-  //fldpt.push_back(Points<float>(2000, inert, lagrangian));      // tracer particles
-  //fldpt.push_back(Points<float>(100, inert, fixed));            // static field points
-  //bdry.push_back(Panels<float>(500, reactive, bodybound));    // panels
 
   // need this for dispatching velocity influence calls, template param is accumulator type
   // should the solution_t be an argument to the constructor?
@@ -265,10 +265,6 @@ void Simulation::step() {
   //tbd
 
 
-
-
-
-
   // are panels even made? do this first
   //bdry.make_panels(get_ips());
 
@@ -311,6 +307,12 @@ void Simulation::add_particles(std::vector<float> _invec) {
   if (vort.size() == 0) {
     // make a new collection
     vort.push_back(Points<float>(_invec, active, lagrangian));      // vortons
+
+    // some examples of other collections
+    //vort.push_back(Points<float>(5000, active, lagrangian));      // vortons
+    //fldpt.push_back(Points<float>(2000, inert, lagrangian));      // tracer particles
+    //fldpt.push_back(Points<float>(100, inert, fixed));            // static field points
+    //bdry.push_back(Panels<float>(500, reactive, bodybound));    // panels
 
   } else {
     // THIS MUST USE A VISITOR

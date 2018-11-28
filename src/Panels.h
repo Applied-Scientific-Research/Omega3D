@@ -69,6 +69,31 @@ public:
     ElementBase<S>::add_new(_in);
   }
 
+  //
+  // OpenGL functions
+  //
+
+  // this gets done once - load the shaders, set up the vao
+  void initGL(std::vector<float>& _projmat,
+              float*              _poscolor,
+              float*              _negcolor) {
+
+    std::cout << "inside Panels.initGL" << std::endl;
+  }
+
+  // this gets done every time we change the size of the positions array
+  void updateGL() {
+    std::cout << "inside Panels.updateGL" << std::endl;
+  }
+
+  // stuff to display points, called once per frame
+  void drawGL(std::vector<float>& _projmat,
+              float*              _poscolor,
+              float*              _negcolor) {
+
+    std::cout << "inside Panels.drawGL" << std::endl;
+  }
+
   std::string to_string() const {
     return ElementBase<S>::to_string() + " Panels";
   }
