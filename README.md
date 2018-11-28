@@ -56,13 +56,14 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
-* use the actual core function to draw the blobs - but what is the real core function?
-* add arcball rotation to the viewport - make my brain hurt
-* ~~Rework the particle shader to read from all the various arrays - goal is to draw an inviscid sim~~
-* ~~Rework the updateGL code to move all the appropriate arrays to the GPU~~
+* Add second order convection - in a class?
+* Use the actual core function to draw the blobs - but what is the real core function?
+* Add arcball rotation to the viewport - make my brain hurt
 * Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
+* ~~Rework the particle shader to read from all the various arrays - goal is to draw an inviscid sim~~
+* ~~Rework the updateGL code to move all the appropriate arrays to the GPU~~
 * ~~Make the reset button actally reset~~
 * ~~Get new features to just add particles to the current Points object~~
 * ~~Have the GUI set up a vortex ring object~~
