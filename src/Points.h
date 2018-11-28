@@ -4,6 +4,7 @@
 #include "ElementBase.h"
 
 #ifdef USE_GL
+#include "ShaderHelper.h"
 #include "glad.h"
 #endif
 
@@ -246,16 +247,16 @@ public:
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
+    // Load and create the blob-drawing shader program
+    blob_program = create_particle_program();
+
 /*
-    // Create a Vector Buffer Object that will store the vertices on video memory
-    glGenBuffers(1, &vbo);
+    // Create seven Vector Buffer Objects that will store the vertices on video memory
+    glGenBuffers(7, vbo);
 
     // Allocate space, but don't upload the data from CPU to GPU yet
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, 0, x.data(), GL_STATIC_DRAW);
-
-    // Load and create the blob-drawing shader program
-    blob_program = create_particle_program();
 
     // Get the location of the attributes that enters in the vertex shader
     GLint position_attribute = glGetAttribLocation(blob_program, "position");
@@ -306,11 +307,21 @@ public:
     // has this been init'd yet?
     if (glIsVertexArray(vao) == GL_FALSE) return;
 
-    //if (x.size() > 0) {
+    const size_t vlen = this->x[0].size()*sizeof(S);
+    if (vlen > 0) {
       // Indicate and upload the data from CPU to GPU
-    //  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    //  glBufferData(GL_ARRAY_BUFFER, x.size()*sizeof(S), x.data(), GL_DYNAMIC_DRAW);
-    //}
+      //glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      // the positions
+      //glBufferData(GL_ARRAY_BUFFER, vlen, this->x[0].data(), GL_DYNAMIC_DRAW);
+      //glBufferData(GL_ARRAY_BUFFER, vlen, this->x[1].data(), GL_DYNAMIC_DRAW);
+      //glBufferData(GL_ARRAY_BUFFER, vlen, this->x[2].data(), GL_DYNAMIC_DRAW);
+      // the radii
+      //glBufferData(GL_ARRAY_BUFFER, vlen, this->r.data(), GL_DYNAMIC_DRAW);
+      // the strengths
+      //if (this->s) {
+      //glBufferData(GL_ARRAY_BUFFER, vlen, (*this->s)[0].data(), GL_DYNAMIC_DRAW);
+      //}
+    }
   }
 
   // OpenGL3 stuff to display points, called once per frame
@@ -345,7 +356,7 @@ protected:
 private:
 #ifdef USE_GL
   // OpenGL stuff
-  GLuint vao, vbo;
+  GLuint vao, vbo[7];
   GLuint blob_program, point_program;
   GLint projmat_attribute, projmat_attribute2, quad_attribute;
   GLint pos_color_attribute, neg_color_attribute, str_scale_attribute;
