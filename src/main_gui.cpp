@@ -336,11 +336,11 @@ int main(int argc, char const *argv[]) {
         ImGui::Combo("type", &item, items, 4);
 
         static float xc[3] = {0.0f, 0.0f, 0.0f};	// a center
-        //static float rad = 5.0 * sim.get_ips();		// a major radius
+        //static float rad = 5.0 * sim.get_ips();	// a major radius
         static float rad = 1.0;				// a major radius
         static float soft = sim.get_ips();		// a softness or minor radius
         static float vstr[3] = {0.0f, 0.0f, 1.0f};	// a vectorial strength
-        static float strmag = 0.01f;			// a scalar strength
+        static float strmag = 1.0f;			// a scalar strength
         static float circ = 1.0f;			// a circulation
         static int npart = 1000;
         static float xs[3] = {2.0f, 2.0f, 2.0f};	// a size
@@ -370,7 +370,7 @@ int main(int argc, char const *argv[]) {
             // random particles in a block
             ImGui::SliderInt("number", &npart, 10, 100000);
             ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
-            ImGui::SliderFloat("strength magnitude", &strmag, 0.00001f, 0.1f, "%.5f", 2.0f);
+            ImGui::SliderFloat("strength magnitude", &strmag, 0.01f, 10.0f, "%.3f", 2.0f);
             ImGui::TextWrapped("This feature will add %d particles", npart);
             if (ImGui::Button("Add random vorticies")) {
               ffeatures.emplace_back(std::make_unique<BlockOfRandom>(xc[0],xc[1],xc[2], xs[0],xs[1],xs[2], strmag, npart));
