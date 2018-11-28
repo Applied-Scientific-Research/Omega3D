@@ -65,6 +65,7 @@ int main(int argc, char const *argv[]) {
     // for testing: always break after one step
     break;
   }
+  std::cout << std::endl << "Done" << std::endl;
 
   return 0;
 }
