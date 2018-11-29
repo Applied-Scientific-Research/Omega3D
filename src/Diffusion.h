@@ -53,7 +53,8 @@ public:
 
 private:
   // the VRM algorithm, template params are storage, compute, max moments
-  //VRM<S,S,2> vrm;
+  // note that NNLS needs doubles for its compute type or else it will fail
+  VRM<S,double,2> vrm;
 
   // other necessary variables
   CoreType core_func;
@@ -114,8 +115,8 @@ void Diffusion<S,A,I>::step(const double               _dt,
   // ensure that we have a current h_nu
   vrm.reset_hnu(std::sqrt(_dt/_re));
 
-  // ensure that it knows to allow adaptive radii
-  if (adaptive_radii) vrm.enable_adaptive_radii();
+  // ensure that it knows to allow or disallow adaptive radii
+  vrm.set_adaptive_radii(adaptive_radii);
 
   for (auto& elem : _vort.get_collections()) {
     //std::cout << "    computing diffusion among " << elem->get_n() << " particles" << std::endl;
