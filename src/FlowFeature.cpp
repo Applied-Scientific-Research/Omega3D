@@ -247,6 +247,7 @@ SingularRing::init_particles(float _ips) const {
 
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
+  normalizeVec(norm);
   std::array<float,3> b1, b2;
   branchlessONB<float>(norm, b1, b2);
 

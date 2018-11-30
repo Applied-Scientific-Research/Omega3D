@@ -3,6 +3,15 @@
 #include <cmath>
 #include <array>
 
+// normalize a 3-vector
+template <class S>
+inline void normalizeVec (std::array<S,3>& in) {
+  const S len = 1.0 / std::sqrt(in[0]*in[0] + in[1]*in[1] + in[2]*in[2]);
+  in[0] *= len;
+  in[1] *= len;
+  in[2] *= len;
+}
+
 //
 // from a single 3D vector, generate a set of orthonormal basis vectors
 //   code is from https://graphics.pixar.com/library/OrthonormalB/paper.pdf
