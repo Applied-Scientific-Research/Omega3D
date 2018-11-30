@@ -92,11 +92,11 @@ void mouse_callback(GLFWwindow* /*_thiswin*/,
 // given coords at screen center and a measure of size
 // Also changes overall pixels-to-length scale
 //
-void compute_projection_matrix(GLFWwindow*         _thiswin,
-                               const float         _cx,
-                               const float         _cy,
-                               float*              _size,
-                               std::vector<float>& _projmat) {
+void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
+                            const float         _cx,
+                            const float         _cy,
+                            float*              _size,
+                            std::vector<float>& _projmat) {
 
   // track changes in window!
   static int last_w, last_h = -1;
@@ -181,7 +181,7 @@ int main(int argc, char const *argv[]) {
   float vcy = 0.0f;
   float vsize = 2.0f;
   std::vector<float> gl_projection;
-  compute_projection_matrix(window, vcx, vcy, &vsize, gl_projection);
+  compute_ortho_proj_mat(window, vcx, vcy, &vsize, gl_projection);
 
   // GUI and drawing parameters
   //bool show_stats_window = false;
@@ -472,7 +472,7 @@ int main(int argc, char const *argv[]) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     // draw the simulation: panels and particles
-    compute_projection_matrix(window, vcx, vcy, &vsize, gl_projection);
+    compute_ortho_proj_mat(window, vcx, vcy, &vsize, gl_projection);
     sim.drawGL(gl_projection, &pos_circ_color.x, &neg_circ_color.x);
 
     // draw the GUI
