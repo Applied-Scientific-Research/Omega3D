@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VectorHelper.h"
+#include "Omega3D.h"
 
 #include <iostream>
 #include <vector>
