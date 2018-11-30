@@ -11,8 +11,6 @@
 #include "Collection.h"
 #include "CollectionHelper.h"
 #include "Influence.h"
-//#include "Boundaries.h"
-//#include "Vorticity.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -29,21 +27,69 @@ template <class A>
 class Convection {
 public:
   Convection() {}
+  void solve_bem( const std::array<double,Dimensions>&,
+                  std::vector<Collection>&,
+                  std::vector<Collection>&);
   void advect_1st(const double,
                   const std::array<double,Dimensions>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&);
-  //void advect_2nd(const double,
-  //                const std::array<float,2>&,
-  //                Vorticity<S,I>&,
-  //                Boundaries<S,I>&);
+  void advect_2nd(const double,
+                  const std::array<double,Dimensions>&,
+                  std::vector<Collection>&,
+                  std::vector<Collection>&,
+                  std::vector<Collection>&);
 
 private:
   // local copies of particle data
   //Particles<S> temp;
 };
 
+
+//
+// helper function to solve BEM equations on given state
+//
+template <class A>
+void Convection<A>::solve_bem(const std::array<double,Dimensions>& _fs,
+                              std::vector<Collection>& _vort,
+                              std::vector<Collection>& _bdry) {
+
+  // no unknowns? no problem.
+  if (_bdry.size() == 0) return;
+
+  // need this for dispatching velocity influence calls, template param is accumulator type
+  // should the solution_t be an argument to the constructor?
+  InfluenceVisitor<A> visitor;
+
+  std::cout << std::endl << "Solving for BEM RHS" << std::endl << std::endl;
+
+  // loop over boundary collections
+  for (auto &targ : _bdry) {
+    std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
+    // zero velocities
+    std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
+    // accumulate from vorticity
+    for (auto &src : _vort) {
+      std::visit(visitor, src, targ);
+    }
+  }
+
+  std::cout << std::endl << "Solving for BEM matrix" << std::endl << std::endl;
+
+  // loop over boundary collections
+  for (auto &targ : _bdry) {
+    std::cout << "  Solving for influence coefficients on" << to_string(targ) << std::endl;
+    // assemble from all boundaries
+    for (auto &src : _bdry) {
+      std::visit(visitor, src, targ);
+    }
+  }
+
+  std::cout << std::endl << "Solving BEM for strengths" << std::endl << std::endl;
+
+  // soon...
+}
 
 //
 // first-order Euler forward integration
@@ -63,32 +109,7 @@ void Convection<A>::advect_1st(const double _dt,
 
   // part A - unknowns
 
-  if (_bdry.size() > 0) std::cout << std::endl << "Solving for BEM RHS" << std::endl << std::endl;
-
-  // loop over boundary collections
-  for (auto &targ : _bdry) {
-    std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
-    // zero velocities
-    std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
-    // accumulate from vorticity
-    for (auto &src : _vort) {
-      std::visit(visitor, src, targ);
-    }
-  }
-
-  if (_bdry.size() > 0) std::cout << std::endl << "Solving for BEM matrix" << std::endl << std::endl;
-
-  // loop over boundary collections
-  for (auto &targ : _bdry) {
-    std::cout << "  Solving for influence coefficients on" << to_string(targ) << std::endl;
-    // assemble from all boundaries
-    for (auto &src : _bdry) {
-      std::visit(visitor, src, targ);
-    }
-  }
-
-  //std::cout << std::endl << "Solving BEM for strengths" << std::endl << std::endl;
-
+  solve_bem(_fs, _vort, _bdry);
 
   // part B - knowns
 
@@ -144,10 +165,6 @@ void Convection<A>::advect_1st(const double _dt,
     std::visit([=](auto& elem) { elem.move(_dt); }, coll);
   }
 
-
-  // advect in place
-  //_vort.step_in_place((S)_dt);
-
   //std::cout << "After 1st order convection, particles are:" << std::endl;
   //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
 }
@@ -155,14 +172,16 @@ void Convection<A>::advect_1st(const double _dt,
 //
 // second-order RK2 forward integration
 //
-/*
-template <class S, class A, class I>
-void Convection<S,A,I>::advect_2nd(const double _dt,
-                                   const std::array<float,2>& _fs,
-                                   Vorticity<S,I>& _vort,
-                                   Boundaries<S,I>& _bdry) {
-  //std::cout << "  inside advect_2nd with dt=" << dt << std::endl;
+template <class A>
+void Convection<A>::advect_2nd(const double _dt,
+                               const std::array<double,Dimensions>& _fs,
+                               std::vector<Collection>& _vort,
+                               std::vector<Collection>& _bdry,
+                               std::vector<Collection>& _fldpt) {
 
+  std::cout << "  inside advect_2nd with dt=" << _dt << std::endl;
+
+/*
   // take the first Euler step
 
   // perform the first BEM
@@ -218,6 +237,6 @@ void Convection<S,A,I>::advect_2nd(const double _dt,
   //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
 
   //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
-}
 */
+}
 
