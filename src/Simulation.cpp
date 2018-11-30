@@ -12,6 +12,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <variant>
 
 // constructor
 Simulation::Simulation()
@@ -178,99 +179,6 @@ void Simulation::step() {
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
 
-  // need this for dispatching velocity influence calls, template param is accumulator type
-  // should the solution_t be an argument to the constructor?
-  InfluenceVisitor<float> visitor;
-
-
-  // one-half diffusion step
-  //tbd
-
-  // this is one Euler convection step - how would we do one 2nd order step?
-  // can we have an object for different forward integrators?
-
-  if (bdry.size() > 0) std::cout << std::endl << "Solving for BEM RHS" << std::endl << std::endl;
-
-  // loop over boundary collections
-  for (auto &targ : bdry) {
-    std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
-    // zero velocities
-    std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
-    // accumulate from vorticity
-    for (auto &src : vort) {
-      std::visit(visitor, src, targ);
-    }
-  }
-
-  if (bdry.size() > 0) std::cout << std::endl << "Solving for BEM matrix" << std::endl << std::endl;
-
-  // loop over boundary collections
-  for (auto &targ : bdry) {
-    std::cout << "  Solving for influence coefficients on" << to_string(targ) << std::endl;
-    // assemble from all boundaries
-    for (auto &src : bdry) {
-      std::visit(visitor, src, targ);
-    }
-  }
-
-  //std::cout << std::endl << "Solving BEM for strengths" << std::endl << std::endl;
-
-  if (vort.size()+fldpt.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
-
-  // TODO - can I temporarily join vort and fldpt for the loop below?
-
-  // find the influence on every vorticity element
-  for (auto &targ : vort) {
-    std::cout << "  Solving for velocities on" << to_string(targ) << std::endl << std::flush;
-    // zero velocities
-    std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
-    // accumulate from vorticity
-    for (auto &src : vort) {
-      // how do I specify the solver?
-      std::visit(visitor, src, targ);
-    }
-    // accumulate from boundaries
-    for (auto &src : bdry) {
-      std::visit(visitor, src, targ);
-    }
-    // add freestream and divide by 2pi
-    std::visit([=](auto& elem) { elem.finalize_vels(thisfs); }, targ);
-  }
-
-  // find the influence on every field point/tracer element
-  for (auto &targ : fldpt) {
-    std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
-    // zero velocities
-    std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
-    // accumulate from vorticity
-    for (auto &src : vort) {
-      std::visit(visitor, src, targ);
-    }
-    // accumulate from boundaries
-    for (auto &src : bdry) {
-      std::visit(visitor, src, targ);
-    }
-    // add freestream and divide by 2pi
-    std::visit([=](auto& elem) { elem.finalize_vels(thisfs); }, targ);
-  }
-
-  std::cout << std::endl << "Convection step" << std::endl;
-
-  // move every movable element
-  for (auto &coll : vort) {
-    std::visit([=](auto& elem) { elem.move(dt); }, coll);
-  }
-  for (auto &coll : bdry) {
-    std::visit([=](auto& elem) { elem.move(dt); }, coll);
-  }
-  for (auto &coll : fldpt) {
-    std::visit([=](auto& elem) { elem.move(dt); }, coll);
-  }
-
-  // one-half diffusion step
-  //tbd
-
-
   // are panels even made? do this first
   //bdry.make_panels(get_ips());
 
@@ -280,9 +188,10 @@ void Simulation::step() {
   // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
   //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry);
 
+
   // advect with no diffusion (must update BEM strengths)
-  //conv.advect_1st(dt, thisfs, vort, bdry);
-  //conv.advect_2nd(dt, thisfs, vort, bdry);
+  conv.advect_1st(dt, thisfs, vort, bdry, fldpt);
+  //conv.advect_2nd(dt, thisfs, vort, bdry, fldpt);
 
   // operator splitting requires another half-step diffuse (must compute new coefficients)
   //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry);

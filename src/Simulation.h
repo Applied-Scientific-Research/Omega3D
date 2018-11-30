@@ -9,6 +9,7 @@
 
 #include "Omega3D.h"
 #include "Collection.h"
+#include "Convection.h"
 #include "Diffusion.h"
 
 #include <vector>
@@ -73,7 +74,7 @@ private:
   float fs[3];
 
   std::vector<Collection> vort;         // the free vorticity
-  std::vector<Collection> bdry;         // all boundaries
+  std::vector<Collection> bdry;         // all boundaries (with unknown strengths)
   std::vector<Collection> fldpt;        // tracers and field points
 
   // Object to contain all Lagrangian elements
@@ -91,7 +92,8 @@ private:
   //   and performs 1st, 2nd, etc. RK forward integration
   //   inside here are non-drawing Particles objects used as temporaries in the multi-step methods
   //   also copies of the panels, which will be recreated for each step, and solutions to unknowns
-  //Convection<float,double,uint16_t> conv;
+  //   Template parameter is accumulator type (float is OK)
+  Convection<float> conv;
 
   // state
   double time;
