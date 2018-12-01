@@ -443,7 +443,7 @@ public:
         // upload the current color values
         glUniform4fv(pos_color_attribute, 1, (const GLfloat *)_poscolor);
         glUniform4fv(neg_color_attribute, 1, (const GLfloat *)_negcolor);
-        glUniform1f (str_scale_attribute, (const GLfloat)(0.4f/max_strength));
+        glUniform1f (str_scale_attribute, (const GLfloat)(0.15f/max_strength));
 
         // the one draw call here
         glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, this->n);
