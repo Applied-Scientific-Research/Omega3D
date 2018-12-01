@@ -112,7 +112,24 @@ public:
         }
       }
 
-      // update elongation
+      // update strengths (in derived class)
+    }
+  }
+  void move(const double _dt,
+            const double _wt1, ElementBase<S> const & _u1,
+            const double _wt2, ElementBase<S> const & _u2) {
+    // must confirm that incoming time derivates include velocity
+    // if this has vels, then lets advect it
+    if (M == lagrangian) {
+      std::cout << "  Moving" << to_string() << std::endl;
+
+      // update positions
+      for (size_t d=0; d<Dimensions; ++d) {
+        for (size_t i=0; i<n; ++i) {
+          x[d][i] += (S)_dt * (_wt1*_u1.u[d][i] + _wt2*_u2.u[d][i]);
+        }
+      }
+
       // update strengths (in derived class)
     }
   }

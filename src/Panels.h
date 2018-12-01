@@ -69,6 +69,18 @@ public:
     ElementBase<S>::add_new(_in);
   }
 
+  void move(const double _dt) {
+    // must explicitly call the method in the base class
+    ElementBase<S>::move(_dt);
+  }
+
+  void move(const double _dt,
+            const double _wt1, Panels<S> const & _u1,
+            const double _wt2, Panels<S> const & _u2) {
+    // must explicitly call the method in the base class
+    ElementBase<S>::move(_dt, _wt1, _u1, _wt2, _u2);
+  }
+
   //
   // OpenGL functions
   //
