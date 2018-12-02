@@ -49,7 +49,9 @@ ELSEIF( APPLE )
   #SET( FRAMEWORK_LIBS glfw3 )
   FIND_LIBRARY( FRAMEWORK_LIBS NAMES glfw3 glfw libglfw PATHS /usr/local/lib)
 
-  INCLUDE_DIRECTORIES ( "/usr/local/Cellar/eigen/3.3.4/include/eigen3" )
+  INCLUDE_DIRECTORIES ( "/usr/local/include" )
+  INCLUDE_DIRECTORIES ( "/usr/local/include/eigen3" )
+  #INCLUDE_DIRECTORIES ( "/usr/local/Cellar/eigen/3.3.4/include/eigen3" )
 
   SET(PLATFORM_LIBS ${FRAMEWORK_LIBS} ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${COREVIDEO_LIBRARY} ${OpenGL_LIBRARY})
 
