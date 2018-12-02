@@ -72,7 +72,7 @@ public:
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
 
-private:
+protected:
   float m_rad;
   float m_softness;
 };
@@ -104,7 +104,7 @@ public:
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
 
-private:
+protected:
   float m_xsize;
   float m_ysize;
   float m_zsize;
@@ -127,7 +127,7 @@ public:
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
 
-private:
+protected:
 };
 
 
@@ -157,7 +157,7 @@ public:
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
 
-private:
+protected:
   float m_nx;
   float m_ny;
   float m_nz;
@@ -169,16 +169,34 @@ private:
 //
 // Concrete class for a thick vortex ring
 //
-//class ThickRing : public SingularRing {
-//private:
-//  float m_minrad;
-//};
+class ThickRing : public SingularRing {
+public:
+  ThickRing(float _x,
+            float _y,
+            float _z,
+            float _nx,
+            float _ny,
+            float _nz,
+            float _majrad,
+            float _minrad,
+            float _circ)
+    : SingularRing(_x, _y, _z, _nx, _ny, _nz, _majrad, _circ),
+      m_minrad(_minrad)
+    {}
+
+  void debug(std::ostream& os) const override;
+  std::string to_string() const override;
+  std::vector<float> init_particles(float) const override;
+  std::vector<float> step_particles(float) const override;
+
+protected:
+  float m_minrad;
+};
 
 
 // how about an oval ring? requires no radii, but two basis vectors: long axis and short axis
 
 
-// vortex ring (thick)
 // vortex ring emitter (singular)
 
 // uniformly-spaced brick of particles

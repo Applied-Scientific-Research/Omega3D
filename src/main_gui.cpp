@@ -401,10 +401,10 @@ int main(int argc, char const *argv[]) {
             ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
             ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
             ImGui::SliderFloat("thickness", &soft, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
-            guess_n = 1 + (2.0f * 3.1416f * rad / sim.get_ips());
+            guess_n = (1 + (2.0f * 3.1416f * rad / sim.get_ips())) * std::pow(soft / sim.get_ips(), 2);
             ImGui::TextWrapped("This feature will add about %d particles", guess_n);
             if (ImGui::Button("Add thick vortex ring")) {
-              ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
+              ffeatures.emplace_back(std::make_unique<ThickRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft, circ));
               std::cout << "Added " << (*ffeatures.back()) << std::endl;
               ImGui::CloseCurrentPopup();
             }

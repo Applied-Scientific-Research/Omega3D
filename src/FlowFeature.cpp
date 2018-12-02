@@ -91,6 +91,21 @@ SingularRing::to_string() const {
 }
 
 
+// debug ThickRing
+void
+ThickRing::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+ThickRing::to_string() const {
+  std::stringstream ss;
+  ss << "thick vortex ring at " << m_x << " " << m_y << " " << m_z << ", radii " << m_majrad << " " << m_minrad << ", circulation " << m_circ;
+  ss << ", aimed along " << m_nx << " " << m_ny << " " << m_nz;
+  return ss.str();
+}
+
+
 //
 // important feature: convert flow feature definition into 1-D vector of values
 //
@@ -274,6 +289,91 @@ SingularRing::init_particles(float _ips) const {
 
 std::vector<float>
 SingularRing::step_particles(float _ips) const {
+  return std::vector<float>();
+}
+
+
+//
+// make a thick-cored vortex ring
+//
+std::vector<float>
+ThickRing::init_particles(float _ips) const {
+  // will need this
+  const double pi = std::acos(-1);
+
+
+  // make a temporary array of the particles at one station around the ring (a disk)
+  //   for each particle in the disk, this is the local x,y, and a length scale
+  //   where +x is pointing directly away from the center of the vortex ring,
+  //   and +y is along the ring's normal vector
+  std::vector<float> disk;
+  const int nlayers = 1 + m_minrad / _ips;
+  // the central particle
+  disk.emplace_back(0.0);
+  disk.emplace_back(0.0);
+  disk.emplace_back(1.0);
+  int nthisdisk = 1;
+  // and each ring of particles
+  for (int l=1; l<nlayers; ++l) {
+    const float thisrad = l * _ips;
+    const int nthislayer = 1 + (2.0 * pi * thisrad) / _ips;
+    for (int i=0; i<nthislayer; ++i) {
+      const float phi = 2.0 * pi * (float)i / (float)nthisdisk;
+      disk.emplace_back(thisrad * std::cos(phi));
+      disk.emplace_back(thisrad * std::sin(phi));
+      disk.emplace_back((m_majrad + thisrad*std::cos(phi)) / m_majrad);
+    }
+    nthisdisk += nthislayer;
+  }
+  std::cout << "  ring needs " << nthisdisk << " particles per azimuthal station" << std::endl;
+
+  // And how many stations around the ring?
+  const int ndiam = 1 + (2.0 * pi * m_majrad) / _ips;
+  std::cout << "  ring needs " << ndiam << " azimuthal stations" << std::endl;
+  const float this_ips = (2.0 * pi * m_majrad) / (float)ndiam;
+
+  // generate a set of orthogonal basis vectors for the given normal
+  std::array<float,3> norm = {m_nx, m_ny, m_nz};
+  normalizeVec(norm);
+  std::array<float,3> b1, b2;
+  branchlessONB<float>(norm, b1, b2);
+
+  // create a new vector with the particle values
+  std::vector<float> x;
+
+  // loop over integer indices
+  for (int i=0; i<ndiam; ++i) {
+    const float theta = 2.0 * pi * (float)i / (float)ndiam;
+    const float st = std::sin(theta);
+    const float ct = std::cos(theta);
+
+    for (int j=0; j<nthisdisk; ++j) {
+      // helper indices for the disk particles
+      const size_t ix = 3*j;
+      const size_t iy = 3*j+1;
+      const size_t il = 3*j+2;
+
+      // create a particle here
+      x.emplace_back(m_x + (m_majrad + disk[ix]) * (b1[0]*ct + b2[0]*st) + disk[iy]*norm[0]);
+      x.emplace_back(m_y + (m_majrad + disk[ix]) * (b1[1]*ct + b2[1]*st) + disk[iy]*norm[1]);
+      x.emplace_back(m_z + (m_majrad + disk[ix]) * (b1[2]*ct + b2[2]*st) + disk[iy]*norm[2]);
+
+      // set the strength
+      const float sscale = disk[il] * this_ips * m_circ / (float)nthisdisk;
+      x.emplace_back(sscale * (b2[0]*ct - b1[0]*st));
+      x.emplace_back(sscale * (b2[1]*ct - b1[1]*st));
+      x.emplace_back(sscale * (b2[2]*ct - b1[2]*st));
+
+      // this is the radius - still zero for now
+      x.emplace_back(0.0f);
+    }
+  }
+
+  return x;
+}
+
+std::vector<float>
+ThickRing::step_particles(float _ips) const {
   return std::vector<float>();
 }
 
