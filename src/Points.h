@@ -311,7 +311,7 @@ public:
     position_attribute = glGetAttribLocation(blob_program, "px");
 
     // Specify how the data for position can be accessed
-    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
 
     // Enable the attribute
     glEnableVertexAttribArray(position_attribute);
@@ -322,37 +322,37 @@ public:
     // do it for the rest
     glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
     position_attribute = glGetAttribLocation(blob_program, "py");
-    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
     position_attribute = glGetAttribLocation(blob_program, "posz");
-    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
     position_attribute = glGetAttribLocation(blob_program, "sx");
-    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
     position_attribute = glGetAttribLocation(blob_program, "sy");
-    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[5]);
     position_attribute = glGetAttribLocation(blob_program, "sz");
-    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
     position_attribute = glGetAttribLocation(blob_program, "r");
-    glVertexAttribPointer(position_attribute, 1, get_gl_float_type<S>(), GL_FALSE, 0, 0);
+    glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
