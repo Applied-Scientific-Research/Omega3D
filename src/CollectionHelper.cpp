@@ -1,4 +1,10 @@
-//#include "CollectionHelper.h"
+/*
+ * CollectionHelper.cpp - Not sure why I need this, but it won't compile without it, so here you go.
+ *
+ * (c)2018 Applied Scientific Research, Inc.
+ *         Written by Mark J Stock <markjstock@gmail.com>
+ */
+
 #include "Collection.h"
 
 #include <iostream>

@@ -1,3 +1,10 @@
+/*
+ * Points.h - Specialized class for 3D stretchable points with optional vel gradients
+ *
+ * (c)2018 Applied Scientific Research, Inc.
+ *         Written by Mark J Stock <markjstock@gmail.com>
+ */
+
 #pragma once
 
 #include "VectorHelper.h"

@@ -1,3 +1,10 @@
+/*
+ * FlowFeature.cpp - GUI-side descriptions of flow features
+ *
+ * (c)2017-8 Applied Scientific Research, Inc.
+ *           Written by Mark J Stock <markjstock@gmail.com>
+ */
+
 #include "FlowFeature.h"
 #include "MathHelper.h"
 

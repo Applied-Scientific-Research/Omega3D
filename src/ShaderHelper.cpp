@@ -1,10 +1,12 @@
-//
-// ShaderHelper.cpp
-//
-// These methods are from
-// https://solarianprogrammer.com/2013/05/13/opengl-101-drawing-primitives/
-// https://github.com/sol-prog/OpenGL-101
-//
+/*
+ * ShaderHelper.cpp - Methods for generating opengl programs
+ *
+ * These methods are from https://solarianprogrammer.com/2013/05/13/opengl-101-drawing-primitives/
+ * and https://github.com/sol-prog/OpenGL-101
+ *
+ * (c)2017-8 Applied Scientific Research, Inc.
+ *           Written by Mark J Stock <markjstock@gmail.com>
+ */
 
 #include "ShaderHelper.h"
 
@@ -14,7 +16,6 @@
 #include <vector>
 #include <iostream>
 //#include <fstream>
-
 
 // clang-format off
 

@@ -1,8 +1,11 @@
-//
-// Core.h
-//
-// NOTE: these numbers are probably for 2D !!!
-//
+/*
+ * Core.h - Useful values for diffusion for various core functions
+ *
+ * Note: These values are for 3D - must recalculate them for 3D
+ *
+ * (c)2018 Applied Scientific Research, Inc.
+ *         Written by Mark J Stock <markjstock@gmail.com>
+ */
 
 #pragma once
 

@@ -1,3 +1,10 @@
+/*
+ * Omega3D.h - Useful definitions for anywhere in the code
+ *
+ * (c)2018 Applied Scientific Research, Inc.
+ *         Written by Mark J Stock <markjstock@gmail.com>
+ */
+
 #pragma once
 
 #include <cstdlib>

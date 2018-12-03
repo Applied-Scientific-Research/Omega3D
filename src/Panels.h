@@ -1,3 +1,10 @@
+/*
+ * Panels.h - Specialized class for 3D panels (triangles)
+ *
+ * (c)2018 Applied Scientific Research, Inc.
+ *         Written by Mark J Stock <markjstock@gmail.com>
+ */
+
 #pragma once
 
 #include "VectorHelper.h"

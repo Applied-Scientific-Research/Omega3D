@@ -1,8 +1,8 @@
 /*
- * Simulation - a class to control a 3D vortex particle sim
+ * Simulation.cpp - a class to control a 3D vortex particle sim
  *
  * (c)2017-8 Applied Scientific Research, Inc.
- * Written by Mark J Stock <markjstock@gmail.com>
+ *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #include "Simulation.h"

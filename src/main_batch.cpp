@@ -1,8 +1,8 @@
 /*
- * Omega3D - The Vorticity Flow Solver
+ * main_batch.cpp - Driver program for batch version of Omega3D - The Vorticity Flow Solver
  *
  * (c)2017-8 Applied Scientific Research, Inc.
- * Written by Mark J Stock <markjstock@gmail.com>
+ *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #include "Omega3D.h"

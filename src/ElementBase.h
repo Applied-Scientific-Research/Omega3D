@@ -1,3 +1,10 @@
+/*
+ * ElementBase.h - abstract class for arrays of any computational elements
+ *
+ * (c)2018 Applied Scientific Research, Inc.
+ *         Written by Mark J Stock <markjstock@gmail.com>
+ */
+
 #pragma once
 
 #include "VectorHelper.h"

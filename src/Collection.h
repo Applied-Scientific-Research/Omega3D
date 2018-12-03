@@ -1,3 +1,10 @@
+/*
+ * Collection.h - definition of variant type for element collections
+ *
+ * (c)2018 Applied Scientific Research, Inc.
+ *         Written by Mark J Stock <markjstock@gmail.com>
+ */
+
 #pragma once
 
 #include "Points.h"

@@ -1,3 +1,10 @@
+/*
+ * MathHelper.h - Useful functions to operate on 3-tuples ("vectors", not "std::vector")
+ *
+ * (c)2018 Applied Scientific Research, Inc.
+ *         Written by Mark J Stock <markjstock@gmail.com>
+ */
+
 #pragma once
 
 #include <cmath>
@@ -6,6 +13,7 @@
 // normalize a 3-vector
 template <class S>
 inline void normalizeVec (std::array<S,3>& in) {
+  // note there is no std::rsqrt()
   const S len = 1.0 / std::sqrt(in[0]*in[0] + in[1]*in[1] + in[2]*in[2]);
   in[0] *= len;
   in[1] *= len;

@@ -1,5 +1,5 @@
 /*
- * Diffusion - a class for diffusion of strength from bodies to particles and among particles
+ * Diffusion.h - a class for diffusion of strength from bodies to particles and among particles
  *
  * (c)2017-8 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
