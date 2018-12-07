@@ -237,13 +237,26 @@ int main(int argc, char const *argv[]) {
         sim.set_initialized();
       }
 
-      // generate new particles from emitters
-      for (auto const& ff : ffeatures) {
-        sim.add_particles( ff->step_particles(sim.get_ips()) );
-      }
+      // check flow for blow-up or errors
+      if (false) {
+        // the last step had some difficulty
 
-      // begin a dynamic step: convection and diffusion
-      sim.async_step();
+        // stop the run
+        sim_is_running = false;
+
+        // write a warning/error message
+
+      } else {
+        // the last simulation step was fine, OK to continue
+
+        // generate new particles from emitters
+        for (auto const& ff : ffeatures) {
+          sim.add_particles( ff->step_particles(sim.get_ips()) );
+        }
+
+        // begin a new dynamic step: convection and diffusion
+        sim.async_step();
+      }
 
       begin_single_step = false;
     }
