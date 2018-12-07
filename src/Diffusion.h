@@ -10,7 +10,7 @@
 #include "Omega3D.h"
 #include "Core.h"
 //#include "Body.h"
-//#include "Merge.h"
+#include "Merge.h"
 //#include "Panels.h"
 //#include "Particles.h"
 //#include "Reflect.h"
@@ -130,7 +130,6 @@ void Diffusion<S,A,I>::step(const float                 _dt,
       std::array<Vector<S>,Dimensions>& x = pts.get_pos();
       Vector<S>&                        r = pts.get_rad();
       std::array<Vector<S>,Dimensions>& s = pts.get_str();
-      //auto& s = pts.get_str();
 
       // and make vectors for the new values
       Vector<S> newr = r;
@@ -188,18 +187,28 @@ void Diffusion<S,A,I>::step(const float                 _dt,
   //
   // merge any close particles to clean up potentially-dense areas
   //
-/*
-  for (auto& elem : _vort.get_collections()) {
-    //std::cout << "    merging among " << elem->get_n() << " particles" << std::endl;
+  for (auto &coll: _vort) {
 
-    // last two arguments are: relative distance, allow variable core radii
-    (void)merge_close_particles<S>(elem->get_x(),
-                                   elem->get_u(),
-                                   particle_overlap,
-                                   0.3,
-                                   adaptive_radii);
+    // but only check particles ("Points")
+    if (std::holds_alternative<Points<float>>(coll)) {
+
+      Points<float>& pts = std::get<Points<float>>(coll);
+      std::cout << "    merging among " << pts.getn() << " particles" << std::endl;
+
+      // none of these are passed as const, because both may be extended with new particles
+      std::array<Vector<S>,Dimensions>& x = pts.get_pos();
+      Vector<S>&                        r = pts.get_rad();
+      std::array<Vector<S>,Dimensions>& s = pts.get_str();
+
+      // last two arguments are: relative distance, allow variable core radii
+      (void)merge_close_particles<S>(x[0], x[1], x[2], r, s[0], s[1], s[2], 
+                                     particle_overlap,
+                                     0.3);
+
+      // we probably have a different number of particles now, resize the u, ug, elong arrays
+      pts.resize(r.size());
     }
-*/
+  }
 
   //
   // clean up by removing the innermost layer - the one that will be represented by boundary strengths
