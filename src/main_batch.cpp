@@ -23,6 +23,7 @@ int main(int argc, char const *argv[]) {
   std::vector< std::unique_ptr<FlowFeature> > ffeatures;
   //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
 
+  size_t nsteps = 0;
   //static bool sim_is_running = false;
   //static bool begin_single_step = false;
   //const solution_t solver = direct_cpu;
@@ -55,15 +56,17 @@ int main(int argc, char const *argv[]) {
 
       // initialize panels
       //sim.init_bcs();
-      //sim.set_initialized();
+      sim.set_initialized();
     }
 
     // begin a dynamic step: convection and diffusion
     // no need for async call in the batch program
     sim.step();
 
-    // for testing: always break after one step
-    break;
+    nsteps++;
+
+    // for testing: always break after a few steps
+    if (nsteps == 2) break;
   }
   std::cout << std::endl << "Done" << std::endl;
 
