@@ -360,7 +360,8 @@ bool NNLS<MatrixType>::solve(const ColVectorType &b, Heuristic heuristic)
 
       // Check feasability...
       bool feasable = true;
-      Scalar alpha = std::numeric_limits<Scalar>::max(); Index remIdx;
+      Scalar alpha = std::numeric_limits<Scalar>::max();
+      Index remIdx = -1;
       for (Index i=0; i<_Np; i++) {
         Index idx = _P.indices()(i);
         if (_y(idx) <= 0) {
