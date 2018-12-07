@@ -90,14 +90,14 @@ private:
 
 // delegating ctor
 template <class ST, class CT, uint8_t MAXMOM>
-VRM<ST,CT,MAXMOM>::VRM() :
-  VRM(1.0)
-  { }
+VRM<ST,CT,MAXMOM>::VRM()
+  : VRM(1.0)
+  {}
 
 // primary constructor
 template <class ST, class CT, uint8_t MAXMOM>
-VRM<ST,CT,MAXMOM>::VRM(const CT _hnu) :
-  h_nu(_hnu) {
+VRM<ST,CT,MAXMOM>::VRM(const CT _hnu)
+  : h_nu(_hnu) {
 
   initialize_sites();
 }
