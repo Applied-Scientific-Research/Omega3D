@@ -13,7 +13,7 @@
 //#include "Panels.h"
 //#include "Particles.h"
 //#include "Reflect.h"
-//#include "VRM.h"
+#include "VRM.h"
 
 #include <cstdlib>
 //#include <iostream>
@@ -29,7 +29,7 @@ template <class S, class A, class I>
 class Diffusion {
 public:
   Diffusion()
-    : //vrm(),
+    : vrm(),
       core_func(gaussian),
       is_inviscid(false),
       adaptive_radii(false),
@@ -38,7 +38,7 @@ public:
     {}
 
   void set_diffuse(const bool _do_diffuse) { is_inviscid = not _do_diffuse; }
-  void set_amr(const bool _do_amr) { adaptive_radii = _do_amr; }
+  //void set_amr(const bool _do_amr) { adaptive_radii = _do_amr; }
   S get_nom_sep_scaled() const { return nom_sep_scaled; }
   S get_particle_overlap() const { return particle_overlap; }
 
@@ -54,7 +54,7 @@ public:
 private:
   // the VRM algorithm, template params are storage, compute, max moments
   // note that NNLS needs doubles for its compute type or else it will fail
-  //VRM<S,double,2> vrm;
+  VRM<S,double,2> vrm;
 
   // other necessary variables
   CoreType core_func;
@@ -113,15 +113,16 @@ void Diffusion<S,A,I>::step(const double               _dt,
   _vort.reset_vels();
 
   // ensure that we have a current h_nu
-  vrm.reset_hnu(std::sqrt(_dt/_re));
+  vrm.set_hnu(std::sqrt(_dt/_re));
 
   // ensure that it knows to allow or disallow adaptive radii
-  vrm.set_adaptive_radii(adaptive_radii);
+  //vrm.set_adaptive_radii(adaptive_radii);
 
   for (auto& elem : _vort.get_collections()) {
     //std::cout << "    computing diffusion among " << elem->get_n() << " particles" << std::endl;
 
     // neither of these are passed as const, because both may be extended with new particles
+    // x, y, z, r, newr, sx, sy, sz, dsx, dsy, sdz, core func, overlap
     vrm.diffuse_all(elem->get_x(), elem->get_u(), core_func, particle_overlap);
 
     // apply the strength change to the particles
