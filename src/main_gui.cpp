@@ -299,7 +299,7 @@ int main(int argc, char const *argv[]) {
 
       ImGui::Separator();
       ImGui::Text("Simulation globals");
-      ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 1.0f, "%.4f", 1.0f);
+      ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 1.0f, "%.4f", 2.0f);
       ImGui::Checkbox("Fluid is viscous (diffuses)", &is_viscous);
       if (is_viscous) {
         // show the toggle for AMR
@@ -308,11 +308,11 @@ int main(int argc, char const *argv[]) {
         //sim.set_amr(use_amr);
         sim.set_diffuse(true);
         // and let user choose Reynolds number
-        ImGui::SliderFloat("Reynolds number", sim.addr_re(), 1.0f, 10000.0f, "%.1f", 2.0f);
+        ImGui::SliderFloat("Reynolds number", sim.addr_re(), 1.0f, 2000.0f, "%.0f", 2.0f);
         ImGui::Text("Particle spacing %g", sim.get_ips());
       } else {
         static float my_ips = 0.03141;
-        ImGui::SliderFloat("Particle spacing", &my_ips, 0.001f, 1.0f, "%.3f", 2.0f);
+        ImGui::SliderFloat("Particle spacing", &my_ips, 0.001f, 0.1f, "%.3f", 2.0f);
         // change underlying Re when this changes
         sim.set_re_for_ips(my_ips);
       }
