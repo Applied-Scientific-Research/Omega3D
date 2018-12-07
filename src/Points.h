@@ -23,6 +23,7 @@
 #include <cassert>
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <algorithm>
 
 
 // 0-D elements
@@ -273,6 +274,14 @@ public:
       //std::cout << "  Not stretching" << to_string() << std::endl;
       max_strength = 1.0;
     }
+  }
+
+  // find largest elongation in this collection
+  S get_max_elong() {
+    // max_element returns an iterator
+    auto imax = std::max_element(this->elong.begin(), this->elong.end());
+    //std::cout << "  max elong " << *imax << std::endl;
+    return *imax;
   }
 
 #ifdef USE_GL

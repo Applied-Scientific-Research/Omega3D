@@ -151,7 +151,12 @@ std::string Simulation::check_simulation() {
   // Check for excessive elongation
   float max_elong = 0.0;
   for (auto &coll: vort) {
-    //std::visit([&](auto& elem) { max_elong = std::max(max_elong, elem.get_max_elong(); }, coll);
+    // only check particles ("Points")
+    if (std::holds_alternative<Points<float>>(coll)) {
+      Points<float>& pts = std::get<Points<float>>(coll);
+      max_elong = std::max(max_elong, pts.get_max_elong());
+    }
+    //std::visit([&](auto& elem) { max_elong = std::max(max_elong, elem.get_max_elong()); }, coll);
   }
   if (max_elong > 2.0) retstr.append("Elongation threshold exceeded! Reset and reduce the time step size.\n");
 

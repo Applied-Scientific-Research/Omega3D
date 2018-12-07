@@ -56,7 +56,7 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
-* Add a check on stretch and pause simulation if it goes too far in one step
+* ~~Add a check on stretch and pause simulation if it goes too far in one step~~
 * Add particle splitting to maintain resolution
 * ~~Make a thick-cored vortex ring~~
 * Pull in NNLS VRM algorithm from o2d, put in our Diffusion class - no amr yet
