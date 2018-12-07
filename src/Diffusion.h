@@ -7,17 +7,22 @@
 
 #pragma once
 
-//#include "Body.h"
+#include "Omega3D.h"
 #include "Core.h"
+//#include "Body.h"
 //#include "Merge.h"
 //#include "Panels.h"
 //#include "Particles.h"
 //#include "Reflect.h"
+#include "Collection.h"
+#include "CollectionHelper.h"
+#include "VectorHelper.h"
 #include "VRM.h"
 
 #include <cstdlib>
 //#include <iostream>
-//#include <vector>
+#include <vector>
+#include <cassert>
 
 
 //
@@ -42,14 +47,11 @@ public:
   S get_nom_sep_scaled() const { return nom_sep_scaled; }
   S get_particle_overlap() const { return particle_overlap; }
 
-/*
-  void step(const double,
-            const S,
-            const S,
-            const std::array<float,2>&,
-            Vorticity<S,I>&,
-            Boundaries<S,I>&);
-*/
+  void step(const float,
+            const float,
+            const std::array<double,3>&,
+            std::vector<Collection>&,
+            std::vector<Collection>&);
 
 private:
   // the VRM algorithm, template params are storage, compute, max moments
@@ -76,19 +78,18 @@ private:
 //
 // take a diffusion step
 //
-/*
 template <class S, class A, class I>
-void Diffusion<S,A,I>::step(const double               _dt,
-                            const S                    _re,
-                            const S                    _vdelta,
-                            const std::array<float,2>& _fs,
-                            Vorticity<S,I>&            _vort,
-                            Boundaries<S,I>&           _bdry) {
+void Diffusion<S,A,I>::step(const float                 _dt,
+                            const float                 _re,
+                            const std::array<double,3>& _fs,
+                            std::vector<Collection>&    _vort,
+                            std::vector<Collection>&    _bdry) {
 
   if (is_inviscid) return;
 
   std::cout << "  inside Diffusion::step with dt=" << _dt << std::endl;
 
+/*
   // always re-run the BEM calculation before shedding
   if (_bdry.exists()) {
 
@@ -104,13 +105,11 @@ void Diffusion<S,A,I>::step(const double               _dt,
     // add those particles to the main particle list
     _vort.add_new(newparts);
   }
+*/
 
   //
   // diffuse strength among existing particles
   //
-
-  // zero out the time derivative vector - only do this once, here
-  _vort.reset_vels();
 
   // ensure that we have a current h_nu
   vrm.set_hnu(std::sqrt(_dt/_re));
@@ -118,24 +117,60 @@ void Diffusion<S,A,I>::step(const double               _dt,
   // ensure that it knows to allow or disallow adaptive radii
   //vrm.set_adaptive_radii(adaptive_radii);
 
-  for (auto& elem : _vort.get_collections()) {
-    //std::cout << "    computing diffusion among " << elem->get_n() << " particles" << std::endl;
+  // loop over active vorticity
+  for (auto &coll: _vort) {
 
-    // neither of these are passed as const, because both may be extended with new particles
-    // x, y, z, r, newr, sx, sy, sz, dsx, dsy, sdz, core func, overlap
-    vrm.diffuse_all(elem->get_x(), elem->get_u(), core_func, particle_overlap);
+    // but only check particles ("Points")
+    if (std::holds_alternative<Points<float>>(coll)) {
 
-    // apply the strength change to the particles
-    elem->increment_in_place();
+      Points<float>& pts = std::get<Points<float>>(coll);
+      std::cout << "    computing diffusion among " << pts.getn() << " particles" << std::endl;
 
-    // and update the strength
-    elem->update_max_str();
+      // none of these are passed as const, because both may be extended with new particles
+      std::array<Vector<S>,Dimensions>& x = pts.get_pos();
+      Vector<S>&                        r = pts.get_rad();
+      std::array<Vector<S>,Dimensions>& s = pts.get_str();
+      //auto& s = pts.get_str();
+
+      // and make vectors for the new values
+      Vector<S> newr = r;
+      Vector<S> dsx, dsy, dsz;
+      dsx.resize(r.size());
+      dsy.resize(r.size());
+      dsz.resize(r.size());
+
+      // finally call VRM
+      vrm.diffuse_all(x[0], x[1], x[2], r, newr, s[0], s[1], s[2], dsx, dsy, dsz, core_func, particle_overlap);
+
+      // apply the strength change to the particles
+      //elem->increment_in_place();
+      assert(dsx.size()==s[0].size());
+      for (size_t i=0; i<s[0].size(); ++i) {
+        s[0][i] += dsx[i];
+      }
+      assert(dsx.size()==s[1].size());
+      for (size_t i=0; i<s[1].size(); ++i) {
+        s[1][i] += dsy[i];
+      }
+      assert(dsx.size()==s[2].size());
+      for (size_t i=0; i<s[2].size(); ++i) {
+        s[2][i] += dsz[i];
+      }
+
+      // and update the strength
+      //elem->update_max_str();
+
+      // we probably have a different number of particles now, resize the u, ug, elong arrays
+      pts.resize(r.size());
+    }
   }
 
   // reflect interior particles to exterior because VRM does not account for panels
+/*
   if (_bdry.exists()) {
     (void) reflect<S,I>(_bdry, _vort);
   }
+*/
 
   //
   // diffuse strength from boundaries/bodies
@@ -153,6 +188,7 @@ void Diffusion<S,A,I>::step(const double               _dt,
   //
   // merge any close particles to clean up potentially-dense areas
   //
+/*
   for (auto& elem : _vort.get_collections()) {
     //std::cout << "    merging among " << elem->get_n() << " particles" << std::endl;
 
@@ -163,10 +199,12 @@ void Diffusion<S,A,I>::step(const double               _dt,
                                    0.3,
                                    adaptive_radii);
     }
+*/
 
   //
   // clean up by removing the innermost layer - the one that will be represented by boundary strengths
   //
+/*
   if (_bdry.exists()) {
     // may need to do this multiple times to clear out concave zones!
 
@@ -179,8 +217,8 @@ void Diffusion<S,A,I>::step(const double               _dt,
       //_p.modify_particles(partmod);
     //}
   }
+*/
 
   //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
 }
-*/
 

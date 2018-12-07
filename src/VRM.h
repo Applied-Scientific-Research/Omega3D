@@ -11,6 +11,7 @@
 #include "nanoflann.hpp"
 #include "Core.h"
 #include "Icosahedron.h"
+#include "VectorHelper.h"
 
 #include <Eigen/Dense>
 
@@ -38,28 +39,28 @@ public:
   ST get_hnu();
 
   // all-to-all diffuse; can change array sizes
-  void diffuse_all(std::vector<ST>&, std::vector<ST>&, std::vector<ST>&,
-                   std::vector<ST>&, std::vector<ST>&, std::vector<ST>&,
-                   std::vector<ST>&, std::vector<ST>&, std::vector<ST>&,
-                   std::vector<ST>&, std::vector<ST>&,
+  void diffuse_all(Vector<ST>&, Vector<ST>&, Vector<ST>&,
+                   Vector<ST>&, Vector<ST>&, Vector<ST>&,
+                   Vector<ST>&, Vector<ST>&, Vector<ST>&,
+                   Vector<ST>&, Vector<ST>&,
                    const CoreType, const ST);
 
 protected:
   // search for new target location
   std::array<ST,3> fill_neighborhood_search(const int32_t,
-                                            const std::vector<ST>&,
-                                            const std::vector<ST>&,
-                                            const std::vector<ST>&,
+                                            const Vector<ST>&,
+                                            const Vector<ST>&,
+                                            const Vector<ST>&,
                                             const std::vector<int32_t>&,
                                             const ST);
 
   bool attempt_solution(const int32_t,
                         std::vector<int32_t>&,
-                        std::vector<ST>&,
-                        std::vector<ST>&,
-                        std::vector<ST>&,
-                        std::vector<ST>&,
-                        std::vector<ST>&,
+                        Vector<ST>&,
+                        Vector<ST>&,
+                        Vector<ST>&,
+                        Vector<ST>&,
+                        Vector<ST>&,
                         const CoreType,
                         Eigen::Matrix<CT, Eigen::Dynamic, 1>&);
 
@@ -80,7 +81,7 @@ private:
 
   // do not perform VRM if source particle strength is less than
   //   this fraction of max particle strength
-  const ST ignore_thresh = 1.e-6;
+  const ST ignore_thresh = 1.e-4;
   // are thresholds absolute or relative to strongest particle?
   const bool thresholds_are_relative = true;
 
@@ -173,9 +174,9 @@ ST VRM<ST,CT,MAXMOM>::get_hnu() {
 //
 template <class ST, class CT, uint8_t MAXMOM>
 std::array<ST,3> VRM<ST,CT,MAXMOM>::fill_neighborhood_search(const int32_t idx,
-                                                             const std::vector<ST>& x,
-                                                             const std::vector<ST>& y,
-                                                             const std::vector<ST>& z,
+                                                             const Vector<ST>& x,
+                                                             const Vector<ST>& y,
+                                                             const Vector<ST>& z,
                                                              const std::vector<int32_t>& inear,
                                                              const ST nom_sep) {
 
@@ -220,10 +221,10 @@ std::array<ST,3> VRM<ST,CT,MAXMOM>::fill_neighborhood_search(const int32_t idx,
 // Find the change in strength and radius that would occur over one dt
 //
 template <class ST, class CT, uint8_t MAXMOM>
-void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std::vector<ST>& z,
-                                    std::vector<ST>& r, std::vector<ST>& newr,
-                                    std::vector<ST>& sx, std::vector<ST>& sy, std::vector<ST>& sz,
-                                    std::vector<ST>& dsx, std::vector<ST>& dsy, std::vector<ST>& dsz,
+void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
+                                    Vector<ST>& r, Vector<ST>& newr,
+                                    Vector<ST>& sx, Vector<ST>& sy, Vector<ST>& sz,
+                                    Vector<ST>& dsx, Vector<ST>& dsy, Vector<ST>& dsz,
                                     const CoreType core_func,
                                     const ST particle_overlap) {
 
@@ -238,7 +239,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
   assert(x.size()==dsx.size());
   assert(x.size()==dsy.size());
   assert(x.size()==dsz.size());
-  int32_t n = x.size();
+  size_t n = x.size();
 
   std::cout << "  Running VRM with n " << n << std::endl;
 
@@ -250,12 +251,12 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
   // create the matrix elements, reusable, and dynamically allocated
   Eigen::Matrix<CT, Eigen::Dynamic, 1> fractions;
 
-  const int32_t minNearby = 11;
-  const int32_t maxNewParts = num_moments*12 - 4;
+  const size_t minNearby = 11;
+  const size_t maxNewParts = num_moments*12 - 4;
 
   // what is maximum strength of all particles?
   ST maxStr = 0.0;
-  for (int32_t i=0; i<n; ++i) {
+  for (size_t i=0; i<n; ++i) {
     const ST thisstr = sx[i]*sx[i] + sy[i]*sy[i] + sz[i]*sz[i];
     if (thisstr > maxStr) maxStr = thisstr;
   }
@@ -282,13 +283,13 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
   newr = r;
 
   // for each particle (can parallelize this part)
-  const int32_t initial_n = n;
-  int32_t nsolved = 0;
-  int32_t nneibs = 0;
-  //int32_t ntooclose = 0;
-  int32_t minneibs = 999999;
-  int32_t maxneibs = 0;
-  for (int32_t i=0; i<initial_n; ++i) {
+  const size_t initial_n = n;
+  size_t nsolved = 0;
+  size_t nneibs = 0;
+  //size_t ntooclose = 0;
+  size_t minneibs = 999999;
+  size_t maxneibs = 0;
+  for (size_t i=0; i<initial_n; ++i) {
 
     // find the nearest neighbor particles
     //std::cout << "\nDiffusing particle " << i << " with strength " << s[i] << std::endl;
@@ -315,14 +316,15 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
       // tree-based search with nanoflann
       const ST distsq_thresh = std::pow(search_rad, 2);
       const ST query_pt[3] = { x[i], y[i], z[i] };
-      const size_t nMatches = mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
+      (void) mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
+      //const size_t nMatches = mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
       //std::cout << "radiusSearch(): radius " << search_rad << " found " << nMatches;
 
       // copy the indexes into my vector
-      for (int32_t j=0; j<ret_matches.size(); ++j) inear.push_back(ret_matches[j].first);
+      for (size_t j=0; j<ret_matches.size(); ++j) inear.push_back(ret_matches[j].first);
 
       // now direct search over all newer particles
-      for (int32_t j=initial_n; j<n; ++j) {
+      for (size_t j=initial_n; j<n; ++j) {
         ST distsq = std::pow(x[i]-x[j], 2) + std::pow(y[i]-y[j], 2) + std::pow(z[i]-z[j], 2);
         if (distsq < distsq_thresh) inear.push_back(j);
       }
@@ -332,12 +334,12 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
       //if (std::sqrt(ret_matches[1].second) < 0.5*nom_sep) ntooclose++;
 
       //std::cout << std::endl;
-      //for (int32_t j=0; j<ret_matches.size(); ++j) std::cout << "   " << ret_matches[j].first << "\t" << ret_matches[j].second << std::endl;
+      //for (size_t j=0; j<ret_matches.size(); ++j) std::cout << "   " << ret_matches[j].first << "\t" << ret_matches[j].second << std::endl;
     } else {
       // direct search: look for all neighboring particles, include newly-created ones
       //   ideally this would be a tree search
       const ST distsq_thresh = std::pow(search_rad, 2);
-      for (int32_t j=0; j<n; ++j) {
+      for (size_t j=0; j<n; ++j) {
         ST distsq = std::pow(x[i]-x[j], 2) + std::pow(y[i]-y[j], 2) + std::pow(z[i]-z[j], 2);
         if (distsq < distsq_thresh) inear.push_back(j);
       }
@@ -346,7 +348,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
     }
     //std::cout << "  found " << inear.size() << " particles close to particle " << i << std::endl;
     //std::cout << " :";
-    //for (int32_t j=0; j<inear.size(); ++j) std::cout << " " << inear[j];
+    //for (size_t j=0; j<inear.size(); ++j) std::cout << " " << inear[j];
     //std::cout << std::endl;
 
     // if there are less than, say, 6, we should just add some now
@@ -373,7 +375,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
     }
 
     bool haveSolution = false;
-    int32_t numNewParts = 0;
+    size_t numNewParts = 0;
 
     // assemble the underdetermined system
     while (not haveSolution and ++numNewParts < maxNewParts) {
@@ -418,7 +420,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
     // apply those fractions to the delta vector
     //std::cout << "Added strengths" << std::endl;
     for (size_t j=0; j<inear.size(); ++j) {
-      int32_t idx = inear[j];
+      size_t idx = inear[j];
       if (idx == i) {
         // self-influence
         dsx[idx] += sx[i] * (fractions(j) - 1.0);
@@ -445,11 +447,11 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::vector<ST>& x, std::vector<ST>& y, std:
 template <class ST, class CT, uint8_t MAXMOM>
 bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
                                          std::vector<int32_t>& inear,
-                                         std::vector<ST>& x,
-                                         std::vector<ST>& y,
-                                         std::vector<ST>& z,
-                                         std::vector<ST>& r,
-                                         std::vector<ST>& newr,
+                                         Vector<ST>& x,
+                                         Vector<ST>& y,
+                                         Vector<ST>& z,
+                                         Vector<ST>& r,
+                                         Vector<ST>& newr,
                                          const CoreType core_func,
                                          Eigen::Matrix<CT, Eigen::Dynamic, 1>& fracout) {
 

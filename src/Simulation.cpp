@@ -216,6 +216,7 @@ void Simulation::step() {
 
   // for simplicity's sake, just run one full diffusion step here
   //diff.step(dt, re, get_vdelta(), thisfs, vort, bdry);
+  diff.step(dt, re, thisfs, vort, bdry);
 
   // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
   //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry);
