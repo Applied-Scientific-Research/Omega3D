@@ -73,17 +73,16 @@ private:
   float dt;
   float fs[3];
 
-  std::vector<Collection> vort;         // the free vorticity
-  std::vector<Collection> bdry;         // all boundaries (with unknown strengths)
-  std::vector<Collection> fldpt;        // tracers and field points
-
   // Object to contain all Lagrangian elements
-  //Vorticity<float,uint16_t> vort;
+  std::vector<Collection> vort;         // the free vorticity
 
   // Object to contain all Reactive elements
   //   inside is the vector of bodies and inlets and liftinglines/kuttapoints
   //   and the Panels list of all unknowns discretized representations
-  //Boundaries<float,uint16_t> bdry;
+  std::vector<Collection> bdry;         // all boundaries (with unknown strengths)
+
+  // Object with all of the non-reactive, non-active (inert) points
+  std::vector<Collection> fldpt;        // tracers and field points
 
   // Diffusion will resolve exchange of strength among particles and between panels and particles
   Diffusion<float,double,uint16_t> diff;
