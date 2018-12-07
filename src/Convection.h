@@ -104,7 +104,8 @@ void Convection<A>::find_vels(const std::array<double,Dimensions>& _fs,
                               std::vector<Collection>& _bdry,
                               std::vector<Collection>& _fldpt) {
 
-  if (_vort.size()+_fldpt.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
+  //if (_vort.size()+_fldpt.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
+  if (_vort.size()+_fldpt.size() > 0) std::cout << std::endl;
 
   // need this for dispatching velocity influence calls, template param is accumulator type
   // should the solution_t be an argument to the constructor?
