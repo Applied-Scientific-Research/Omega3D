@@ -107,6 +107,31 @@ public:
     }
   }
 
+  // up-size all arrays to the new size, filling with sane values
+  void resize(const size_t _nnew) {
+    const size_t currn = this->n;
+    //std::cout << "  inside Points::resize with " << currn << " " << _nnew << std::endl;
+
+    // must explicitly call the method in the base class - this sets n
+    ElementBase<S>::resize(_nnew);
+
+    if (_nnew == currn) return;
+
+    // elongations here
+    const size_t thisn = elong.size();
+    elong.resize(_nnew);
+    for (size_t i=thisn; i<_nnew; ++i) {
+      elong[i] = 1.0;
+    }
+
+    // vel grads ((no need to set it)
+    if (ug) {
+      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+        (*ug)[d].resize(_nnew);
+      }
+    }
+  }
+
   void zero_vels() {
     // must explicitly call the method in the base class to zero the vels
     ElementBase<S>::zero_vels();

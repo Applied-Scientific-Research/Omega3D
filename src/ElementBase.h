@@ -31,8 +31,11 @@ public:
 
   size_t getn() const { return n; }
   const std::array<Vector<S>,Dimensions>& get_pos() const { return x; }
+  std::array<Vector<S>,Dimensions>&       get_pos()       { return x; }
   const Vector<S>&                        get_rad() const { return r; }
+  Vector<S>&                              get_rad()       { return r; }
   const std::array<Vector<S>,Dimensions>& get_str() const { return *s; }
+  std::array<Vector<S>,Dimensions>&       get_str()       { return *s; }
   std::array<Vector<S>,Dimensions>&       get_vel()       { return u; }
 
   void add_new(std::vector<float>& _in) {
@@ -92,6 +95,48 @@ public:
 
     // finally, update n
     n += nnew;
+  }
+
+  // up-size all arrays to the new size, filling with sane values
+  void resize(const size_t _nnew) {
+    const size_t currn = n;
+    //std::cout << "  inside ElementBase::resize with " << currn << " " << _nnew << std::endl;
+    if (_nnew == currn) return;
+
+    // positions first
+    for (size_t d=0; d<Dimensions; ++d) {
+      const size_t thisn = x[d].size();
+      x[d].resize(_nnew);
+      for (size_t i=thisn; i<_nnew; ++i) {
+        x[d][i] = 0.0;
+      }
+    }
+
+    // then radius
+    const size_t thisn = r.size();
+    r.resize(_nnew);
+    for (size_t i=thisn; i<_nnew; ++i) {
+      r[i] = 1.0;
+    }
+
+    // strength
+    if (s) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        const size_t thisn = (*s)[d].size();
+        (*s)[d].resize(_nnew);
+        for (size_t i=thisn; i<_nnew; ++i) {
+          (*s)[d][i] = 0.0;
+        }
+      }
+    }
+
+    // and finally velocity (no need to set it)
+    for (size_t d=0; d<Dimensions; ++d) {
+      u[d].resize(_nnew);
+    }
+
+    // lastly, update n
+    n = _nnew;
   }
 
   void zero_vels() {
