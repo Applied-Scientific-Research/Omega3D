@@ -17,7 +17,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
   # support Core2 at a minimum, haswell ideally
-  SET (CMAKE_CXX_FLAGS "-Wall -Wformat -std=c++17 -march=core2 -mtune=haswell")
+  SET (CMAKE_CXX_FLAGS "-Wall -Wformat -Wno-int-in-bool-context -std=c++17 -march=core2 -mtune=haswell")
   SET (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -ggdb")
   SET (CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
 ELSEIF (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
