@@ -176,6 +176,9 @@ int main(int argc, char const *argv[]) {
   ImGuiIO& io = ImGui::GetIO();
   io.IniFilename = ".omega3d.ini";
 
+  // a string to hold any error messages
+  std::string sim_err_msg;
+
   // projection matrix for the particles
   float vcx = -0.5f;
   float vcy = 0.0f;
@@ -238,15 +241,9 @@ int main(int argc, char const *argv[]) {
       }
 
       // check flow for blow-up or errors
-      if (false) {
-        // the last step had some difficulty
+      sim_err_msg = sim.check_simulation();
 
-        // stop the run
-        sim_is_running = false;
-
-        // write a warning/error message
-
-      } else {
+      if (sim_err_msg.empty()) {
         // the last simulation step was fine, OK to continue
 
         // generate new particles from emitters
@@ -256,10 +253,36 @@ int main(int argc, char const *argv[]) {
 
         // begin a new dynamic step: convection and diffusion
         sim.async_step();
+
+      } else {
+        // the last step had some difficulty
+        std::cout << std::endl << "ERROR: " << sim_err_msg;
+
+        // stop the run
+        sim_is_running = false;
       }
 
       begin_single_step = false;
     }
+
+    // check the error message and display if there is one
+    if (not sim_err_msg.empty()) {
+      // write a warning/error message
+      ImGui::OpenPopup("Simulation error occurred");
+      ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
+      if (ImGui::BeginPopupModal("Simulation error occurred")) {
+        ImGui::Spacing();
+        ImGui::TextWrapped(sim_err_msg.c_str());
+        ImGui::Spacing();
+        if (ImGui::Button("Got it.", ImVec2(120,0))) {
+          // clear out the error message first
+          sim_err_msg.clear();
+          ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+      }
+    }
+
 
     // check mouse for drag and rescaling!
     if (not io.WantCaptureMouse) {

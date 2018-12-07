@@ -12,6 +12,7 @@
 #include "Convection.h"
 #include "Diffusion.h"
 
+#include <string>
 #include <vector>
 #include <future>
 #include <chrono>
@@ -60,6 +61,7 @@ public:
   //void init_bcs();
   bool is_initialized();
   void set_initialized();
+  std::string check_simulation();
   bool test_for_new_results();
 
   // graphics pass-through calls
