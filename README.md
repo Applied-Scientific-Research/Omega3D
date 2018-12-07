@@ -56,17 +56,18 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
-* ~~Add a check on stretch and pause simulation if it goes too far in one step~~
-* Add particle splitting to maintain resolution
-* ~~Make a thick-cored vortex ring~~
-* Pull in NNLS VRM algorithm from o2d, put in our Diffusion class - no amr yet
+* Add merging operation to avoid over-resolution
+* Add particle splitting to avoid under-resolution
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
-* ~~Add second order convection - in a class?~~
 * Use the actual core function to draw the blobs - but what is the real core function?
 * Add arcball rotation to the viewport - see [here](https://www.3dgep.com/understanding-the-view-matrix/) for some glm code
 * Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
+* ~~Add a check on stretch and pause simulation if it goes too far in one step~~
+* ~~Make a thick-cored vortex ring~~
+* ~~Pull in NNLS VRM algorithm from o2d, put in our Diffusion class - no amr yet~~
+* ~~Add second order convection - in a class?~~
 * ~~Rework the particle shader to read from all the various arrays - goal is to draw an inviscid sim~~
 * ~~Rework the updateGL code to move all the appropriate arrays to the GPU~~
 * ~~Make the reset button actally reset~~
