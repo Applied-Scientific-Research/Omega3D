@@ -84,11 +84,11 @@ public:
     for (size_t d=0; d<Dimensions; ++d) {
       u[d].resize(n+nnew);
     }
-    if (dsdt) {
-      for (size_t d=0; d<Dimensions; ++d) {
-        (*dsdt)[d].resize(n+nnew);
-      }
-    }
+    //if (dsdt) {
+    //  for (size_t d=0; d<Dimensions; ++d) {
+    //    (*dsdt)[d].resize(n+nnew);
+    //  }
+    //}
 
     // finally, update n
     n += nnew;
@@ -180,6 +180,6 @@ protected:
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity
   //Vector<S> dr;                                       // thickness/radius
-  std::optional<std::array<Vector<S>,Dimensions>> dsdt; // strength change
+  //std::optional<std::array<Vector<S>,Dimensions>> dsdt; // strength change
 };
 
