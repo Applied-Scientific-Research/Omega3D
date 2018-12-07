@@ -11,15 +11,15 @@ This code uses some C++17 features, so should compile on GCC 7, Clang 4, and MSV
 #### Prerequisites
 Both the GUI and batch versions require CMake to compile.  To build the GUI version, users will also need GLFW3. These can be installed in Red Hat/Fedora with
 
-    sudo yum install cmake glfw3-devel
+    sudo yum install cmake glfw3-devel eigen3-devel
 
 or on Ubuntu with
 
-    sudo apt-get install cmake glfw3-dev
+    sudo apt-get install cmake glfw3-dev libeigen3-dev
 
-or on OSX with
+or on OSX via [Homebrew](https://docs.brew.sh/Installation) with
 
-    brew install cmake glfw3
+    brew install cmake glfw eigen
 
 #### Optional libraries
 [Vc](https://github.com/VcDevel/Vc) is a vectorization library, and Omega3D uses it to greatly accelerate the velocity evaluations. This package can be built and installed external to Omega3D with
@@ -84,5 +84,10 @@ Tasks to consider or implement:
 * ~~move rand() to std::random (see Omega2D)~~
 
 ## Thanks
+This project is funded by the [National Institutes of Health (NIH)](https://www.nih.gov/) under grant number 1 R01 EB022180-01A1 ("A Fast High-Order CFD for Turbulent Flow Simulation in Cardio-Devices").
+
+Thanks to [Omar Cornut](http://www.miracleworld.net/) for his [dear imgui](https://github.com/ocornut/imgui) library, sol-prog's [OpenGL Tutorials](https://github.com/sol-prog/OpenGL-101), and Jim Susinno's [OpenGL-Boilerplate](https://github.com/jimbo00000/OpenGL-Boilerplate).
+
+VRM code is functional thanks to jlblancoc for [Nanoflann](https://github.com/jlblancoc/nanoflann) (a header-only tree search library), and to all of the developers of [Eigen](http://eigen.tuxfamily.org/) (a C++ matrix/vector library). The BEM code also relies heavily on [Eigen](http://eigen.tuxfamily.org/).
 
 Many thanks to NBL for valuable discussions of architecture and C++ syntax and idioms.
