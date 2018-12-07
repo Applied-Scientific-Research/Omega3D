@@ -24,6 +24,7 @@
 #include <array>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 
 //
 // Class to hold VRM parameters and temporaries
@@ -241,6 +242,11 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
   assert(x.size()==dsz.size());
   size_t n = x.size();
 
+  // start timers
+  std::chrono::system_clock::time_point start, end;
+  std::chrono::duration<double> elapsed_seconds;
+  start = std::chrono::system_clock::now();
+
   std::cout << "  Running VRM with n " << n << std::endl;
 
   // zero out delta vector
@@ -439,6 +445,12 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
   std::cout << "    neighbors: min/avg/max " << minneibs << "/" << ((ST)nneibs / (ST)nsolved) << "/" << maxneibs << std::endl;
   //std::cout << "  number of close pairs " << (ntooclose/2) << std::endl;
   std::cout << "    after VRM, n is " << n << std::endl;
+
+  end = std::chrono::system_clock::now();
+  elapsed_seconds = end-start;
+  //const float gflops = (flops / 1.e+9) / (float)elapsed_seconds.count();
+  //printf("    diffuse_all:\t[%.6f] seconds at [%.3f] GFlop/s\n", (float)elapsed_seconds.count(), gflops);
+  printf("    diffuse_all:\t[%.4f] seconds\n", (float)elapsed_seconds.count());
 }
 
 //
