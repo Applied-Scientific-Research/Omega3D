@@ -66,7 +66,7 @@ int main(int argc, char const *argv[]) {
     nsteps++;
 
     // for testing: always break after a few steps
-    if (nsteps == 2) break;
+    if (nsteps == 3) break;
   }
   std::cout << std::endl << "Done" << std::endl;
 
