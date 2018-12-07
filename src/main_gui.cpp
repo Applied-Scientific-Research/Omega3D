@@ -306,6 +306,7 @@ int main(int argc, char const *argv[]) {
         //static bool use_amr = false;
         //ImGui::Checkbox("Allow adaptive resolution", &use_amr);
         //sim.set_amr(use_amr);
+        sim.set_diffuse(true);
         // and let user choose Reynolds number
         ImGui::SliderFloat("Reynolds number", sim.addr_re(), 1.0f, 10000.0f, "%.1f", 2.0f);
         ImGui::Text("Particle spacing %g", sim.get_ips());

@@ -67,6 +67,10 @@ void Simulation::set_re_for_ips(const float _ips) {
   diff.set_diffuse(false);
 }
 
+void Simulation::set_diffuse(const bool _do_diffuse) {
+  diff.set_diffuse(_do_diffuse);
+}
+
 //void Simulation::set_amr(const bool _do_amr) {
 //  diff.set_amr(_do_amr);
 //  diff.set_diffuse(true);
