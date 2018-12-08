@@ -148,11 +148,11 @@ void Diffusion<S,A,I>::step(const float                 _dt,
       for (size_t i=0; i<s[0].size(); ++i) {
         s[0][i] += dsx[i];
       }
-      assert(dsx.size()==s[1].size());
+      assert(dsy.size()==s[1].size());
       for (size_t i=0; i<s[1].size(); ++i) {
         s[1][i] += dsy[i];
       }
-      assert(dsx.size()==s[2].size());
+      assert(dsz.size()==s[2].size());
       for (size_t i=0; i<s[2].size(); ++i) {
         s[2][i] += dsz[i];
       }
@@ -205,7 +205,7 @@ void Diffusion<S,A,I>::step(const float                 _dt,
       // last two arguments are: relative distance, allow variable core radii
       (void)merge_close_particles<S>(x[0], x[1], x[2], r, s[0], s[1], s[2], 
                                      particle_overlap,
-                                     0.3);
+                                     0.1);
 
       // we probably have a different number of particles now, resize the u, ug, elong arrays
       pts.resize(r.size());
