@@ -97,8 +97,8 @@ size_t merge_close_particles(Vector<S>& x, Vector<S>& y, Vector<S>& z,
               // we've already account for this one
             } else {
               //std::cout << "  particles " << i << " and " << iother << " will merge" << std::endl;
-              //std::cout << "    first at " << x[i] << " " << y[i] << " with str " << s[i] << " and rad " << r[i] << std::endl;
-              //std::cout << "    other at " << x[iother] << " " << y[iother] << " with str " << s[iother] << " and rad " << r[iother] << std::endl;
+              //std::cout << "    first at " << x[i] << " " << y[i] << " " << z[i] << " with str " << sx[i] << " and rad " << r[i] << std::endl;
+              //std::cout << "    other at " << x[iother] << " " << y[iother] << " " << z[iother] << " with str " << sx[iother] << " and rad " << r[iother] << std::endl;
               const S str1 = std::sqrt(sx[i]*sx[i] + sy[i]*sy[i] + sz[i]*sz[i]);
               const S str2 = std::sqrt(sx[iother]*sx[iother] + sy[iother]*sy[iother] + sz[iother]*sz[iother]);
               const S strength_mag = str1 + str2;
