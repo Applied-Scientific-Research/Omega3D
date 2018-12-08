@@ -46,6 +46,7 @@ public:
   //void set_amr(const bool _do_amr) { adaptive_radii = _do_amr; }
   S get_nom_sep_scaled() const { return nom_sep_scaled; }
   S get_particle_overlap() const { return particle_overlap; }
+  CoreType get_core_func() const { return core_func; }
 
   void step(const float,
             const float,
@@ -193,7 +194,8 @@ void Diffusion<S,A,I>::step(const float                 _dt,
     if (std::holds_alternative<Points<float>>(coll)) {
 
       Points<float>& pts = std::get<Points<float>>(coll);
-      std::cout << "    merging among " << pts.getn() << " particles" << std::endl;
+      //std::cout << "    merging among " << pts.getn() << " particles" << std::endl;
+      std::cout << std::endl;
 
       // none of these are passed as const, because both may be extended with new particles
       std::array<Vector<S>,Dimensions>& x = pts.get_pos();

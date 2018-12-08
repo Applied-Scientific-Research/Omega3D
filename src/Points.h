@@ -8,6 +8,7 @@
 #pragma once
 
 #include "VectorHelper.h"
+#include "MathHelper.h"
 #include "ElementBase.h"
 
 #ifdef USE_GL
@@ -17,6 +18,7 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
 #include <memory>
 #include <optional>
 #include <random>
@@ -82,6 +84,7 @@ public:
     }
   }
 
+  Vector<S>& get_elong() { return elong; }
   std::optional<std::array<Vector<S>,Dimensions*Dimensions>>& get_velgrad() { return ug; }
 
   void add_new(std::vector<float>& _in) {
@@ -158,6 +161,9 @@ public:
     }
   }
 
+  //
+  // 1st order Euler advection and stretch
+  //
   void move(const double _dt) {
     // must explicitly call the method in the base class
     ElementBase<S>::move(_dt);
@@ -224,6 +230,9 @@ public:
     }
   }
 
+  //
+  // 2nd order RK advection and stretch
+  //
   void move(const double _dt,
             const double _wt1, Points<S> const & _u1,
             const double _wt2, Points<S> const & _u2) {
@@ -273,9 +282,11 @@ public:
         wdu[2] = _wt1*wdu1[2] + _wt2*wdu2[2];
 
         // update elongation
-        const S circmag = std::sqrt(this_s[0]*this_s[0] + this_s[1]*this_s[1] + this_s[2]*this_s[2]);
-        const S elongfactor = (S)_dt * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmag;
-        elong[i] *= 1.0 + elongfactor;
+        const S circmagsqrd = this_s[0]*this_s[0] + this_s[1]*this_s[1] + this_s[2]*this_s[2];
+        if (circmagsqrd > 0.0) {
+          const S elongfactor = (S)_dt * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmagsqrd;
+          elong[i] *= 1.0 + elongfactor;
+        }
 
         // add Cottet SFS into stretch term (after elongation)
 
@@ -287,6 +298,11 @@ public:
         // check for max strength
         S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
         if (thisstr > thismax) thismax = thisstr;
+
+        if (false) {
+          std::array<S,3> thisx = {this->x[0][i], this->x[1][i], this->x[2][i]};
+          std::cout << "  p " << i << " at rad " << length(thisx) << " has circmag " << std::sqrt(thisstr) << " and new elong " << elong[i] << std::endl;
+        }
       }
 
       if (max_strength < 0.0) {
@@ -507,7 +523,7 @@ protected:
   // movement
   //std::optional<Body&> b;
   // state vector
-  std::vector<S> elong;   // scalar elongation, does not require register alignment
+  Vector<S> elong;   // scalar elongation, does not require register alignment
   // time derivative of state vector
   std::optional<std::array<Vector<S>,Dimensions*Dimensions>> ug;   // velocity gradients
 

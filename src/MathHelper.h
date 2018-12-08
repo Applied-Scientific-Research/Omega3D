@@ -20,6 +20,18 @@ inline void normalizeVec (std::array<S,3>& in) {
   in[2] *= len;
 }
 
+// basic dot product, like Fortran
+template <class S>
+inline S dot_product (std::array<S,3> const & v1, std::array<S,3> const & v2) {
+  return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
+}
+
+// length of a 3-tuple
+template <class S>
+inline S length (std::array<S,3> const & vec) {
+  return std::sqrt(dot_product<S>(vec, vec));
+}
+
 //
 // from a single 3D vector, generate a set of orthonormal basis vectors
 //   code is from https://graphics.pixar.com/library/OrthonormalB/paper.pdf
