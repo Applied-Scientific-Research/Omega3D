@@ -322,21 +322,21 @@ ThickRing::init_particles(float _ips) const {
   int nthisdisk = 1;
   // and each ring of particles
   for (int l=1; l<nlayers; ++l) {
-    const float thisrad = l * _ips;
+    const float thisrad = (float)l * _ips;
     const int nthislayer = 1 + (2.0 * pi * thisrad) / _ips;
     for (int i=0; i<nthislayer; ++i) {
-      const float phi = 2.0 * pi * (float)i / (float)nthisdisk;
+      const float phi = 2.0 * pi * (float)i / (float)nthislayer;
       disk.emplace_back(thisrad * std::cos(phi));
       disk.emplace_back(thisrad * std::sin(phi));
       disk.emplace_back((m_majrad + thisrad*std::cos(phi)) / m_majrad);
     }
     nthisdisk += nthislayer;
   }
-  std::cout << "  ring needs " << nthisdisk << " particles per azimuthal station" << std::endl;
+  std::cout << "  ring needs " << nlayers << " layers and " << nthisdisk << " particles per azimuthal station" << std::endl;
 
   // And how many stations around the ring?
   const int ndiam = 1 + (2.0 * pi * m_majrad) / _ips;
-  std::cout << "  ring needs " << ndiam << " azimuthal stations" << std::endl;
+  //std::cout << "  ring needs " << ndiam << " azimuthal stations" << std::endl;
   const float this_ips = (2.0 * pi * m_majrad) / (float)ndiam;
 
   // generate a set of orthogonal basis vectors for the given normal
