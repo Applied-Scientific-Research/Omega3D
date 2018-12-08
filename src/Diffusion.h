@@ -205,7 +205,7 @@ void Diffusion<S,A,I>::step(const float                 _dt,
       // last two arguments are: relative distance, allow variable core radii
       (void)merge_close_particles<S>(x[0], x[1], x[2], r, s[0], s[1], s[2], 
                                      particle_overlap,
-                                     0.1);
+                                     0.3);
 
       // we probably have a different number of particles now, resize the u, ug, elong arrays
       pts.resize(r.size());
