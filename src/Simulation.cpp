@@ -160,7 +160,7 @@ std::string Simulation::check_simulation() {
     }
     //std::visit([&](auto& elem) { max_elong = std::max(max_elong, elem.get_max_elong()); }, coll);
   }
-  if (max_elong > 2.0) retstr.append("Elongation threshold exceeded! Reset and reduce the time step size.\n");
+  if (max_elong > 1.5) retstr.append("Elongation threshold exceeded! Reset and reduce the time step size.\n");
 
   return retstr;
 }
