@@ -35,9 +35,9 @@ int main(int argc, char const *argv[]) {
   *(sim.addr_dt()) = 0.1;
 
   // for starters, generate some vortons, particles, and field points
-  ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, 0.1, 0.0, 0.0, -1.0, 1.0, 1.0));
-  ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, -0.1, 0.0, 0.0, 1.0, 1.0, 1.0));
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1000.0, 10000));
+  //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, 0.1, 0.0, 0.0, -1.0, 1.0, 1.0));
+  //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, -0.1, 0.0, 0.0, 1.0, 1.0, 1.0));
+  ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1000.0, 30000));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(10000, active, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(2000, inert, fixed));
@@ -71,7 +71,7 @@ int main(int argc, char const *argv[]) {
     nsteps++;
 
     // for testing: always break after a few steps
-    if (nsteps == 10) break;
+    if (nsteps == 2) break;
   }
   std::cout << std::endl << "Done" << std::endl;
 
