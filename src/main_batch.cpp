@@ -34,6 +34,9 @@ int main(int argc, char const *argv[]) {
   sim.set_re_for_ips(0.1);
   *(sim.addr_dt()) = 0.1;
 
+  // a string to hold any error messages
+  std::string sim_err_msg;
+
   // for starters, generate some vortons, particles, and field points
   //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, 0.1, 0.0, 0.0, -1.0, 1.0, 1.0));
   //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, -0.1, 0.0, 0.0, 1.0, 1.0, 1.0));
@@ -64,9 +67,28 @@ int main(int argc, char const *argv[]) {
       sim.set_initialized();
     }
 
-    // begin a dynamic step: convection and diffusion
-    // no need for async call in the batch program
-    sim.step();
+    // check flow for blow-up or errors
+    sim_err_msg = sim.check_simulation(ffeatures.size());
+
+    if (sim_err_msg.empty()) {
+      // no errors, OK to continue
+
+      // generate new particles from emitters
+      //for (auto const& ff : ffeatures) {
+      //  sim.add_particles( ff->step_particles(sim.get_ips()) );
+      //}
+
+      // begin a dynamic step: convection and diffusion
+      // no need for async call in the batch program
+      sim.step();
+
+    } else {
+      // the last step had some difficulty
+      std::cout << std::endl << "ERROR: " << sim_err_msg;
+
+      // stop the run
+      break;
+    }
 
     nsteps++;
 
