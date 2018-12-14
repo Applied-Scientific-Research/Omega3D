@@ -111,7 +111,7 @@ template <class ST, class CT, uint8_t MAXMOM>
 void VRM<ST,CT,MAXMOM>::initialize_sites() {
 
   if (MAXMOM <= 2) {
-    std::cout << "Creating one layer of insertion sites" << std::endl;
+    //std::cout << "Creating one layer of insertion sites" << std::endl;
 
     // for first and second-moment VRM, one layer only
     if (true) {
@@ -128,7 +128,7 @@ void VRM<ST,CT,MAXMOM>::initialize_sites() {
     }
 
   } else {
-    std::cout << "Creating two layers of insertion sites" << std::endl;
+    //std::cout << "Creating two layers of insertion sites" << std::endl;
 
     if (true) {
       // pull data from a two-level refinement of an r=0.5 icosahedron
