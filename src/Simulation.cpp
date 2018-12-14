@@ -141,11 +141,15 @@ void Simulation::reset() {
 //
 // Check all aspects of the simulation for conditions that should stop the run
 //
-std::string Simulation::check_simulation() {
+//std::string Simulation::check_simulation(const size_t _nff, const size_t _nbf) {
+std::string Simulation::check_simulation(const size_t _nff) {
   std::string retstr;
 
   // Check for no bodies and no particles
-  // retstr.append("No flow features and no bodies - try adding one or both.\n");
+  if (_nff == 0) {
+    //retstr.append("No flow features and no bodies - try adding one or both.\n");
+    retstr.append("No flow features. Add one, reset, and run.\n");
+  }
 
   // Check for a body and no particles and no freestream
   // retstr.append("No flow features and zero freestream speed - try adding one or both.\n");
@@ -161,6 +165,9 @@ std::string Simulation::check_simulation() {
     //std::visit([&](auto& elem) { max_elong = std::max(max_elong, elem.get_max_elong()); }, coll);
   }
   if (max_elong > 1.5) retstr.append("Elongation threshold exceeded! Reset and reduce the time step size.\n");
+
+  // Check for vorticity-based Courant number - too high and we're probably messing up
+  // later
 
   return retstr;
 }
