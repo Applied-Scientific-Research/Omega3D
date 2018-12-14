@@ -73,7 +73,7 @@ void mouse_callback(GLFWwindow* /*_thiswin*/,
 
     // change the size
     const float oldsize = (*_size);
-    (*_size) *= pow(1.05f, io.MouseWheel);
+    (*_size) *= pow(1.1f, io.MouseWheel);
 
     // and adjust the center such that the zoom occurs about the pointer!
     //const float ar = (float)display_h / (float)display_w;
@@ -189,21 +189,13 @@ int main(int argc, char const *argv[]) {
   // GUI and drawing parameters
   //bool show_stats_window = false;
   //bool show_terminal_window = false;
-  //bool show_test_window = false;
+  bool show_test_window = false;
   ImVec4 clear_color = ImColor(15, 15, 15);
   ImVec4 pos_circ_color = ImColor(207, 47, 47);
   ImVec4 neg_circ_color = ImColor(63, 63, 255);
   //static bool show_origin = true;
   static bool is_viscous = false;
 
-
-  // for starters, generate some vortons, particles, and field points
-  // eventually use the GUI to generate these elements
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.01, 5000));
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(10000, active, lagrangian));
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(2000, inert, fixed));
- 
   // Main loop
   while (!glfwWindowShouldClose(window))
   {
@@ -297,9 +289,10 @@ int main(int argc, char const *argv[]) {
       ImGui::Begin("Omega3D");
       ImGui::TextWrapped("Welcome to Omega3D. First set your simulation globals, then add one or more flow structures, then press RUN. Have fun!");
 
-      ImGui::Separator();
-      ImGui::Text("Simulation globals");
-      ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 1.0f, "%.4f", 2.0f);
+    ImGui::Spacing();
+    if (ImGui::CollapsingHeader("Simulation globals", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+      ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 0.1f, "%.4f", 2.0f);
       ImGui::Checkbox("Fluid is viscous (diffuses)", &is_viscous);
       if (is_viscous) {
         // show the toggle for AMR
@@ -308,7 +301,7 @@ int main(int argc, char const *argv[]) {
         //sim.set_amr(use_amr);
         sim.set_diffuse(true);
         // and let user choose Reynolds number
-        ImGui::SliderFloat("Reynolds number", sim.addr_re(), 1.0f, 2000.0f, "%.0f", 2.0f);
+        ImGui::SliderFloat("Reynolds number", sim.addr_re(), 10.0f, 2000.0f, "%.0f", 2.0f);
         ImGui::Text("Particle spacing %g", sim.get_ips());
       } else {
         static float my_ips = 0.03141;
@@ -317,9 +310,10 @@ int main(int argc, char const *argv[]) {
         sim.set_re_for_ips(my_ips);
       }
       ImGui::InputFloat3("Freestream speed", sim.addr_fs());
+    }
 
-      ImGui::Separator();
-      ImGui::Text("Flow structures");
+    ImGui::Spacing();
+    if (ImGui::CollapsingHeader("Flow structures", ImGuiTreeNodeFlags_DefaultOpen)) {
 
       int buttonIDs = 10;
 
@@ -459,10 +453,10 @@ int main(int argc, char const *argv[]) {
       //if (ImGui::Button("Add new boundary structure")) ImGui::OpenPopup("New boundary structure");
       //ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
 
+    } // end flow structures
 
-      // colors and stuff
-      ImGui::Separator();
-      ImGui::Text("Rendering parameters");
+    ImGui::Spacing();
+    if (ImGui::CollapsingHeader("Rendering parameters")) {
       ImGui::ColorEdit3("positive circulation", (float*)&pos_circ_color);
       ImGui::ColorEdit3("negative circulation", (float*)&neg_circ_color);
       ImGui::ColorEdit3("background color", (float*)&clear_color);
@@ -475,15 +469,25 @@ int main(int argc, char const *argv[]) {
         vsize = 2.0f;
       }
 
+      // add button to recenter on all vorticity?
+
+      // help separate this from the final info
       ImGui::Separator();
+    }
+    ImGui::Spacing();
+
+    // all the other stuff
+    {
       if (sim_is_running) {
         ImGui::Text("Simulation is running...time = %g", sim.get_time());
         if (ImGui::Button("PAUSE", ImVec2(200,0))) sim_is_running = false;
+        if (ImGui::IsKeyPressed(32)) sim_is_running = false;
       } else {
         ImGui::Text("Simulation is not running, time = %g", sim.get_time());
         if (ImGui::Button("RUN", ImVec2(200,0))) sim_is_running = true;
         ImGui::SameLine();
         if (ImGui::Button("Step", ImVec2(120,0))) begin_single_step = true;
+        if (ImGui::IsKeyPressed(32)) sim_is_running = true;
       }
       ImGui::SameLine();
       if (ImGui::Button("Reset", ImVec2(120,0))) {
@@ -493,12 +497,24 @@ int main(int argc, char const *argv[]) {
         std::cout << "Reset complete" << std::endl;
       }
 
-      ImGui::Separator();
-      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+      ImGui::Spacing();
+      //if (ImGui::Button("ImGui Samples")) show_test_window ^= 1;
+
+      ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
       //ImGui::Text("Number of panels: %ld  Number of particles: %ld", sim.get_npanels(), sim.get_nparts());
       ImGui::Text("Number of particles: %ld", sim.get_nparts());
+    }
 
-      ImGui::End();
+    // done drawing the Omega3D UI window
+    ImGui::End();
+    }
+
+    // Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
+    if (show_test_window)
+    {
+      ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
+      ImGui::ShowTestWindow(&show_test_window);
     }
 
     // Rendering
