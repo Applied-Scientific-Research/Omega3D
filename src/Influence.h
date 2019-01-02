@@ -25,6 +25,8 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   std::cout << "    0_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
 
+  // is this where we dispatch the OpenGL compute shader?
+
   // get references to use locally
   const std::array<Vector<S>,Dimensions>&     sx = src.get_pos();
   const Vector<S>&                            sr = src.get_rad();

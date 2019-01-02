@@ -342,7 +342,7 @@ public:
     glBindVertexArray(vao);
 
     // Load and create the blob-drawing shader program
-    blob_program = create_particle_program();
+    draw_blob_program = create_particle_program();
 
     // Create seven Vector Buffer Objects that will store the vertices on video memory
     glGenBuffers(7, vbo);
@@ -360,7 +360,7 @@ public:
     glBufferData(GL_ARRAY_BUFFER, 0, this->r.data(), GL_STATIC_DRAW);
 
     // Get the location of the attributes that enters in the vertex shader
-    projmat_attribute = glGetUniformLocation(blob_program, "Projection");
+    projmat_attribute = glGetUniformLocation(draw_blob_program, "Projection");
 
     // need something like
     //prepare_opengl_buffer(draw_blob_program, 0, this->x[0], "px");
@@ -371,50 +371,47 @@ public:
     // Now do the seven arrays
     GLint position_attribute;
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-    position_attribute = glGetAttribLocation(blob_program, "px");
-
+    position_attribute = glGetAttribLocation(draw_blob_program, "px");
     // Specify how the data for position can be accessed
     glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
-
     // Enable the attribute
     glEnableVertexAttribArray(position_attribute);
-
     // and tell it to advance two primitives per point
     glVertexAttribDivisor(position_attribute, 1);
 
     // do it for the rest
     glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-    position_attribute = glGetAttribLocation(blob_program, "py");
+    position_attribute = glGetAttribLocation(draw_blob_program, "py");
     glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
-    position_attribute = glGetAttribLocation(blob_program, "posz");
+    position_attribute = glGetAttribLocation(draw_blob_program, "posz");
     glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
-    position_attribute = glGetAttribLocation(blob_program, "sx");
+    position_attribute = glGetAttribLocation(draw_blob_program, "sx");
     glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
-    position_attribute = glGetAttribLocation(blob_program, "sy");
+    position_attribute = glGetAttribLocation(draw_blob_program, "sy");
     glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[5]);
-    position_attribute = glGetAttribLocation(blob_program, "sz");
+    position_attribute = glGetAttribLocation(draw_blob_program, "sz");
     glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
-    position_attribute = glGetAttribLocation(blob_program, "r");
+    position_attribute = glGetAttribLocation(draw_blob_program, "r");
     glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(position_attribute);
     glVertexAttribDivisor(position_attribute, 1);
@@ -423,9 +420,9 @@ public:
     glUniformMatrix4fv(projmat_attribute, 1, GL_FALSE, _projmat.data());
 
     // locate where the colors and color scales go
-    pos_color_attribute = glGetUniformLocation(blob_program, "pos_color");
-    neg_color_attribute = glGetUniformLocation(blob_program, "neg_color");
-    str_scale_attribute = glGetUniformLocation(blob_program, "str_scale");
+    pos_color_attribute = glGetUniformLocation(draw_blob_program, "pos_color");
+    neg_color_attribute = glGetUniformLocation(draw_blob_program, "neg_color");
+    str_scale_attribute = glGetUniformLocation(draw_blob_program, "str_scale");
 
     // send the current values
     glUniform4fv(pos_color_attribute, 1, (const GLfloat *)_poscolor);
@@ -433,7 +430,7 @@ public:
     glUniform1f (str_scale_attribute, (const GLfloat)1.0);
 
     // and indicate the fragment color output
-    glBindFragDataLocation(blob_program, 0, "frag_color");
+    glBindFragDataLocation(draw_blob_program, 0, "frag_color");
 
     // Initialize the quad attributes
     std::vector<float> quadverts = {-1,-1, 1,-1, 1,1, -1,1};
@@ -442,7 +439,7 @@ public:
     glBindBuffer(GL_ARRAY_BUFFER, qvbo);
     glBufferData(GL_ARRAY_BUFFER, quadverts.size()*sizeof(float), quadverts.data(), GL_STATIC_DRAW);
 
-    quad_attribute = glGetAttribLocation(blob_program, "quad_attr");
+    quad_attribute = glGetAttribLocation(draw_blob_program, "quad_attr");
     glVertexAttribPointer(quad_attribute, 2, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(quad_attribute);
   }
@@ -496,7 +493,7 @@ public:
 
       // draw as colored clouds
       if (true) {
-        glUseProgram(blob_program);
+        glUseProgram(draw_blob_program);
 
         glEnableVertexAttribArray(quad_attribute);
 
@@ -537,7 +534,7 @@ private:
 #ifdef USE_GL
   // OpenGL stuff
   GLuint vao, vbo[7];
-  GLuint blob_program;
+  GLuint draw_blob_program;
   GLint projmat_attribute, quad_attribute;
   GLint pos_color_attribute, neg_color_attribute, str_scale_attribute;
 #endif
