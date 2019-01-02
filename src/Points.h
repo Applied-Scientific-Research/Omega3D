@@ -362,6 +362,12 @@ public:
     // Get the location of the attributes that enters in the vertex shader
     projmat_attribute = glGetUniformLocation(blob_program, "Projection");
 
+    // need something like
+    //prepare_opengl_buffer(draw_blob_program, 0, this->x[0], "px");
+    //prepare_opengl_buffer(draw_blob_program, 1, this->x[1], "py");
+    //etc
+    // and for the compute shaders!
+
     // Now do the seven arrays
     GLint position_attribute;
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
