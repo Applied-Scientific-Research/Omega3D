@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "Omega3D.h"
 #include "Collection.h"
 #include "Convection.h"
 #include "Diffusion.h"

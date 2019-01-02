@@ -23,7 +23,7 @@ enum solution_t {
 // element type
 enum elem_t {
   active   = 1,  // active vorticity
-  reactive = 2,  // does not affect flow
+  reactive = 2,  // active once strength is solved
   inert    = 3   // does not affect flow
 };
 
