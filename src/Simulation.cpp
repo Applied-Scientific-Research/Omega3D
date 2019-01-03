@@ -217,7 +217,6 @@ void Simulation::step() {
   std::cout << std::endl << "Taking step at t=" << time << " with n=" << get_n(vort) << std::endl;
 
   // we wind up using this a lot
-  //std::array<double,3> thisfs = reinterpret_cast<std::array<float,3>&>(fs);
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
 
