@@ -87,17 +87,15 @@ void Simulation::initGL(std::vector<float>& _projmat,
   //vort.initGL(_projmat, _poscolor, _negcolor);
 }
 void Simulation::updateGL() {
-  //bdry.updateGL();
-  //vort.updateGL();
   for (auto &coll : vort) {
     std::visit([=](auto& elem) { elem.updateGL(); }, coll);
   }
+  //bdry.updateGL();
 }
 void Simulation::drawGL(std::vector<float>& _projmat,
                         float*              _poscolor,
                         float*              _negcolor) {
   if (step_is_finished) {
-    //vort.drawGL(_projmat, _poscolor, _negcolor);
     for (auto &coll : vort) {
       std::visit([=, &_projmat](auto& elem) { elem.drawGL(_projmat, _poscolor, _negcolor); }, coll);
     }
