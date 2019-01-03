@@ -33,7 +33,7 @@ or on OSX via [Homebrew](https://docs.brew.sh/Installation) with
     sudo make install
     cd ../..
 
-#### Compilation
+#### Compile and run
 Upon installation of the prerequisites, the following commands should build Omega3D.
 
     git clone git@github.com:Applied-Scientific-Research/Omega3D.git
@@ -63,6 +63,7 @@ Tasks to consider or implement:
 * Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
+* ~~Move radius from ElementBase into Points~~
 * ~~Add merging operation to avoid over-resolution~~
 * ~~Add particle splitting to avoid under-resolution~~
 * ~~Add a check on stretch and pause simulation if it goes too far in one step~~

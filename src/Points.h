@@ -49,15 +49,27 @@ public:
         this->x[d][i] = _in[7*i+d];
       }
     }
-    this->r.resize(this->n);
+
     this->elong.resize(this->n);
     for (size_t i=0; i<this->n; ++i) {
-      this->r[i] = _in[7*i+6];
       this->elong[i] = 1.0;
     }
 
-    // optional strength in base class
-    if (_e != inert) {
+    if (_e == inert) {
+      // field points need no radius, but we must set one anyway so that vel evals work
+      r.resize(this->n);
+      for (size_t i=0; i<this->n; ++i) {
+        r[i] = 0.0;
+      }
+
+    } else {
+      // active vortons need a radius
+      r.resize(this->n);
+      for (size_t i=0; i<this->n; ++i) {
+        r[i] = _in[7*i+6];
+      }
+
+      // optional strength in base class
       // need to assign it a vector first!
       std::array<Vector<S>,3> new_s;
       for (size_t d=0; d<3; ++d) {
@@ -86,6 +98,8 @@ public:
 
   Vector<S>& get_elong() { return elong; }
   std::optional<std::array<Vector<S>,Dimensions*Dimensions>>& get_velgrad() { return ug; }
+  const Vector<S>& get_rad() const { return r; }
+  Vector<S>&       get_rad()       { return r; }
 
   void add_new(std::vector<float>& _in) {
     // remember old size and incoming size
@@ -97,6 +111,11 @@ public:
     ElementBase<S>::add_new(_in);
 
     // then do local stuff
+    r.resize(nold+nnew);
+    for (size_t i=0; i<nnew; ++i) {
+      r[nold+i] = _in[7*i+6];
+    }
+
     elong.resize(nold+nnew);
     for (size_t i=nold; i<nold+nnew; ++i) {
       elong[i] = 1.0;
@@ -120,8 +139,14 @@ public:
 
     if (_nnew == currn) return;
 
+    // radii here
+    const size_t thisn = r.size();
+    r.resize(_nnew);
+    for (size_t i=thisn; i<_nnew; ++i) {
+      r[i] = 1.0;
+    }
+
     // elongations here
-    const size_t thisn = elong.size();
     elong.resize(_nnew);
     for (size_t i=thisn; i<_nnew; ++i) {
       elong[i] = 1.0;
@@ -351,13 +376,15 @@ public:
     for (size_t i=0; i<Dimensions; ++i) {
       glBindBuffer(GL_ARRAY_BUFFER, vbo[i]);
       glBufferData(GL_ARRAY_BUFFER, 0, this->x[i].data(), GL_STATIC_DRAW);
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
+    glBufferData(GL_ARRAY_BUFFER, 0, r.data(), GL_STATIC_DRAW);
+    for (size_t i=0; i<Dimensions; ++i) {
       if (this->s) {
         glBindBuffer(GL_ARRAY_BUFFER, vbo[i+3]);
         glBufferData(GL_ARRAY_BUFFER, 0, (*this->s)[i].data(), GL_STATIC_DRAW);
       }
     }
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
-    glBufferData(GL_ARRAY_BUFFER, 0, this->r.data(), GL_STATIC_DRAW);
 
     // Get the location of the attributes that enters in the vertex shader
     projmat_attribute = glGetUniformLocation(draw_blob_program, "Projection");
@@ -466,7 +493,7 @@ public:
       }
       // the radii
       glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
-      glBufferData(GL_ARRAY_BUFFER, vlen, this->r.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, vlen, r.data(), GL_DYNAMIC_DRAW);
     }
   }
 
@@ -525,9 +552,12 @@ public:
 protected:
   // movement
   //std::optional<Body&> b;
+
   // state vector
-  Vector<S> elong;   // scalar elongation, does not require register alignment
-  // time derivative of state vector
+  Vector<S> r;		// thickness/radius
+  Vector<S> elong;	// scalar elongation, does not require register alignment
+
+  // derivatives of state vector
   std::optional<std::array<Vector<S>,Dimensions*Dimensions>> ug;   // velocity gradients
 
 private:

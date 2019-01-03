@@ -32,8 +32,6 @@ public:
   size_t getn() const { return n; }
   const std::array<Vector<S>,Dimensions>& get_pos() const { return x; }
   std::array<Vector<S>,Dimensions>&       get_pos()       { return x; }
-  const Vector<S>&                        get_rad() const { return r; }
-  Vector<S>&                              get_rad()       { return r; }
   const std::array<Vector<S>,Dimensions>& get_str() const { return *s; }
   std::array<Vector<S>,Dimensions>&       get_str()       { return *s; }
   std::array<Vector<S>,Dimensions>&       get_vel()       { return u; }
@@ -59,18 +57,6 @@ public:
       }
       // finally, replace the master with this new vector
       //x[d] = std::move(new_x);
-    }
-
-    // do radius now
-    {
-      //Vector<S> new_r = r;
-      //new_r.resize(n+nnew);
-      r.resize(n+nnew);
-      for (size_t i=0; i<nnew; ++i) {
-        //new_r[n+i] = _in[7*i+6];
-        r[n+i] = _in[7*i+6];
-      }
-      //r = std::move(new_r);
     }
 
     // strength
@@ -110,13 +96,6 @@ public:
       for (size_t i=thisn; i<_nnew; ++i) {
         x[d][i] = 0.0;
       }
-    }
-
-    // then radius
-    const size_t thisn = r.size();
-    r.resize(_nnew);
-    for (size_t i=thisn; i<_nnew; ++i) {
-      r[i] = 1.0;
     }
 
     // strength
@@ -219,12 +198,10 @@ protected:
 
   // state vector
   std::array<Vector<S>,Dimensions> x;                   // position
-  Vector<S> r;                                          // thickness/radius
   std::optional<std::array<Vector<S>,Dimensions>> s;    // strength
 
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity
-  //Vector<S> dr;                                       // thickness/radius
   //std::optional<std::array<Vector<S>,Dimensions>> dsdt; // strength change
 };
 
