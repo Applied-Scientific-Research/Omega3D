@@ -132,7 +132,8 @@ void Simulation::reset() {
   // now reset everything else
   time = 0.0;
   vort.clear();
-  //bdry.clear();
+  bdry.clear();
+  fldpt.clear();
   sim_is_initialized = false;
   step_has_started = false;
   step_is_finished = false;
