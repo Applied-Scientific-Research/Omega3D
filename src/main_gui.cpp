@@ -1,7 +1,7 @@
 /*
  * main_gui.cpp - Driver program for GUI version of Omega3D - The Vorticity Flow Solver
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
@@ -9,8 +9,6 @@
 #include "Simulation.h"
 #include "FlowFeature.h"
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw_gl3.h"
 #ifdef _WIN32
   // for glad
   #define APIENTRY __stdcall
@@ -18,6 +16,9 @@
   #include <ciso646>
 #endif
 #include "glad.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw_gl3.h"
+
 #include <GLFW/glfw3.h>
 
 #include <cstdio>
@@ -137,13 +138,10 @@ int main(int argc, char const *argv[]) {
   Simulation sim;
   std::vector< std::unique_ptr<FlowFeature> > ffeatures;
   //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
-
+  //std::vector< std::unique_ptr<MeasureFeature> > mfeatures;
   static bool sim_is_running = false;
   static bool begin_single_step = false;
   //const solution_t solver = direct_cpu;
-  //std::array<double,Dimensions> fs = {0.0, 0.0, 0.0};
-  //double time = 0.0;
-  //const double dt = 0.01;
 
   // Set up primary OpenGL window
   glfwSetErrorCallback(error_callback);
@@ -158,6 +156,8 @@ int main(int argc, char const *argv[]) {
   GLFWwindow* window = glfwCreateWindow(1280, 720, "Omega3D GUI", nullptr, nullptr);
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1); // Enable vsync
+
+  //gl3wInit();
 
   if (!gladLoadGL()) {
     printf("Something went wrong!\n");
@@ -190,11 +190,14 @@ int main(int argc, char const *argv[]) {
   //bool show_stats_window = false;
   //bool show_terminal_window = false;
   bool show_test_window = false;
-  ImVec4 clear_color = ImColor(15, 15, 15);
   ImVec4 pos_circ_color = ImColor(207, 47, 47);
   ImVec4 neg_circ_color = ImColor(63, 63, 255);
+  //ImVec4 default_color = ImColor(204, 204, 204);
+  ImVec4 clear_color = ImColor(15, 15, 15);
+  //float tracer_size = 0.15;
   //static bool show_origin = true;
   static bool is_viscous = false;
+
 
   // Main loop
   while (!glfwWindowShouldClose(window))
@@ -226,8 +229,6 @@ int main(int argc, char const *argv[]) {
         //  sim.add_boundary( bf->get_type(), bf->get_params() );
         //}
 
-        // initialize panels
-        //sim.init_bcs();
 
         sim.set_initialized();
       }
@@ -286,11 +287,140 @@ int main(int argc, char const *argv[]) {
     //
     {
 
-      ImGui::Begin("Omega3D");
-      ImGui::TextWrapped("Welcome to Omega3D. First set your simulation globals, then add one or more flow structures, then press RUN. Have fun!");
-
+    ImGui::Begin("Omega3D");
+    ImGui::TextWrapped("Welcome to Omega3D. Select a simulation from the drop-down, or manually set your simulation globals, then add one or more flow structures. Space bar starts and stops the run. Have fun!");
     ImGui::Spacing();
-    if (ImGui::CollapsingHeader("Simulation globals", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+    // Select pre-populated simulations
+    {
+      static int sim_item = 0;
+      const char* sim_items[] = { "Select a simulation...", "single vortex ring - no viscosity", "leapfrogging vortex rings - no viscosity", "colliding vortex rings - no viscosity", "single viscous vortex ring" };
+      ImGui::Combo("", &sim_item, sim_items, 5);
+
+      float* dt = sim.addr_dt();
+      float* fs = sim.addr_fs();
+      float* re = sim.addr_re();
+
+      switch(sim_item) {
+        case 0:
+          // nothing
+          break;
+        case 1:
+          // one singular vortex ring
+          sim.reset();
+          //bfeatures.clear();
+          ffeatures.clear();
+          //mfeatures.clear();
+          *dt = 0.002;
+          fs[0] = 0.0; fs[1] = 0.0;
+          sim.set_re_for_ips(0.015);
+          // generate the features
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 0.9,0.05,0.1, 0.5, 1.0));
+          is_viscous = false;
+          sim.set_diffuse(false);
+          // start it up
+          sim_is_running = true;
+          // and make sure we don't keep re-entering this
+          sim_item = 0;
+          break;
+        case 2:
+          // leapfrogging vortex rings
+          sim.reset();
+          //bfeatures.clear();
+          ffeatures.clear();
+          //mfeatures.clear();
+          *dt = 0.002;
+          fs[0] = 0.0; fs[1] = 0.0;
+          sim.set_re_for_ips(0.02);
+          // generate the features
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 0.9,0.05,0.1, 0.5, 1.0));
+          ffeatures.emplace_back(std::make_unique<SingularRing>(-0.18,-0.01,-0.02, 0.9,0.05,0.1, 0.5, 1.0));
+          is_viscous = false;
+          sim.set_diffuse(false);
+          // start it up
+          sim_is_running = true;
+          // and make sure we don't keep re-entering this
+          sim_item = 0;
+          break;
+        case 3:
+          // colliding vortex rings
+          sim.reset();
+          //bfeatures.clear();
+          ffeatures.clear();
+          //mfeatures.clear();
+          *dt = 0.002;
+          fs[0] = 0.0; fs[1] = 0.0;
+          sim.set_re_for_ips(0.02);
+          // generate the features
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.4,0.0,0.0, -0.9,-0.05,-0.1, 0.5, 1.0));
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.04,-0.02,-0.04, 0.9,0.05,0.1, 0.5, 1.0));
+          is_viscous = false;
+          sim.set_diffuse(false);
+          // start it up
+          sim_is_running = true;
+          // and make sure we don't keep re-entering this
+          sim_item = 0;
+          break;
+        case 4:
+          // Re=100 vortex ring
+          sim.reset();
+          //bfeatures.clear();
+          ffeatures.clear();
+          //mfeatures.clear();
+          *dt = 0.01;
+          fs[0] = 0.0; fs[1] = 0.0;
+          *re = 100.0;
+          // generate the features
+          //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.5, 1.0));
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 0.9,0.05,0.1, 0.5, 1.0));
+          is_viscous = true;
+          sim.set_diffuse(true);
+          // start it up
+          sim_is_running = true;
+          // and make sure we don't keep re-entering this
+          sim_item = 0;
+          break;
+      } // end switch
+    }
+
+/*
+    // or load a simulation from a JSON file
+    ImGui::SameLine();
+    if (ImGui::Button("Or load a json file", ImVec2(160,0))) show_file_input_window = true;
+
+    if (show_file_input_window) {
+
+      bool try_it = false;
+      std::string infile = "input.json";
+
+      if (fileIOWindow( try_it, infile, recent_files, "Open", {"*.json", "*.*"}, true, ImVec2(500,250))) {
+
+        show_file_input_window = false;
+        if (try_it and !infile.empty()) {
+          // remember
+          recent_files.push_back( infile );
+
+          // stop and clear before loading
+          sim.reset();
+          bfeatures.clear();
+          ffeatures.clear();
+
+          // load and report
+          read_json(sim, ffeatures, bfeatures, mfeatures, infile);
+
+          // we have to manually set this variable
+          is_viscous = sim.get_diffuse();
+          // run one step so we know what we have
+          begin_single_step = true;
+        }
+      }
+    }
+*/
+    ImGui::Spacing();
+
+
+    //if (ImGui::CollapsingHeader("Simulation globals", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Simulation globals")) {
 
       ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 0.1f, "%.4f", 2.0f);
       ImGui::Checkbox("Fluid is viscous (diffuses)", &is_viscous);
@@ -308,12 +438,14 @@ int main(int argc, char const *argv[]) {
         ImGui::SliderFloat("Particle spacing", &my_ips, 0.001f, 0.1f, "%.3f", 2.0f);
         // change underlying Re when this changes
         sim.set_re_for_ips(my_ips);
+        my_ips = sim.get_ips();
       }
       ImGui::InputFloat3("Freestream speed", sim.addr_fs());
     }
 
     ImGui::Spacing();
-    if (ImGui::CollapsingHeader("Flow structures", ImGuiTreeNodeFlags_DefaultOpen)) {
+    //if (ImGui::CollapsingHeader("Flow structures", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Flow structures")) {
 
       int buttonIDs = 10;
 
@@ -459,6 +591,7 @@ int main(int argc, char const *argv[]) {
     if (ImGui::CollapsingHeader("Rendering parameters")) {
       ImGui::ColorEdit3("positive circulation", (float*)&pos_circ_color);
       ImGui::ColorEdit3("negative circulation", (float*)&neg_circ_color);
+      //ImGui::ColorEdit3("feature color", (float*)&default_color);
       ImGui::ColorEdit3("background color", (float*)&clear_color);
       //ImGui::Checkbox("show origin", &show_origin);
 
@@ -481,12 +614,14 @@ int main(int argc, char const *argv[]) {
       if (sim_is_running) {
         ImGui::Text("Simulation is running...time = %g", sim.get_time());
         if (ImGui::Button("PAUSE", ImVec2(200,0))) sim_is_running = false;
+        // space bar pauses
         if (ImGui::IsKeyPressed(32)) sim_is_running = false;
       } else {
         ImGui::Text("Simulation is not running, time = %g", sim.get_time());
         if (ImGui::Button("RUN", ImVec2(200,0))) sim_is_running = true;
         ImGui::SameLine();
         if (ImGui::Button("Step", ImVec2(120,0))) begin_single_step = true;
+        // and space bar resumes
         if (ImGui::IsKeyPressed(32)) sim_is_running = true;
       }
       ImGui::SameLine();
@@ -500,7 +635,8 @@ int main(int argc, char const *argv[]) {
       ImGui::Spacing();
       //if (ImGui::Button("ImGui Samples")) show_test_window ^= 1;
 
-      ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+      ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)",
+                  1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
       //ImGui::Text("Number of panels: %ld  Number of particles: %ld", sim.get_npanels(), sim.get_nparts());
       ImGui::Text("Number of particles: %ld", sim.get_nparts());
