@@ -1,12 +1,14 @@
 /*
- * Simulation.h - a class to control a 3D vortex particle sim
+ * Simulation.h - a class to control a 3d vortex particle sim
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
 
+#include "Omega3D.h"
+//#include "Body.h"
 #include "Collection.h"
 #include "Convection.h"
 #include "Diffusion.h"
@@ -15,6 +17,14 @@
 #include <vector>
 #include <future>
 #include <chrono>
+
+#ifdef USE_VC
+#define STORE float
+#define ACCUM float
+#else
+#define STORE float
+#define ACCUM double
+#endif
 
 template <class T>
 bool is_future_ready(std::future<T> const& f) {
@@ -39,11 +49,21 @@ public:
   float get_hnu();
   float get_vdelta();
   float get_time();
+  float get_end_time();
+  bool using_end_time();
+  size_t get_max_steps();
+  bool using_max_steps();
+  float get_output_dt();
+
+  // setters
+  void set_end_time(const double);
+  void set_max_steps(const size_t);
+  void set_output_dt(const double);
 
   // get runtime status
   //size_t get_npanels();
   size_t get_nparts();
-  size_t get_n(std::vector<Collection>&);
+  //size_t get_nfldpts();
 
   // inviscid case needs this
   void set_re_for_ips(float);
@@ -64,16 +84,18 @@ public:
   std::string check_simulation(const size_t);
   bool test_for_new_results();
 
+#ifdef USE_GL
   // graphics pass-through calls
   void initGL(std::vector<float>&, float*, float*);
   void updateGL();
   void drawGL(std::vector<float>&, float*, float*);
+#endif
 
 private:
   // primary simulation params
   float re;
   float dt;
-  float fs[3];
+  float fs[Dimensions];
 
   // Object to contain all Lagrangian elements
   std::vector<Collection> vort;         // the free vorticity
@@ -98,6 +120,11 @@ private:
 
   // state
   double time;
+  double output_dt;
+  double end_time;
+  bool use_end_time;
+  size_t max_steps;
+  bool use_max_steps;
   bool sim_is_initialized;
   bool step_has_started;
   bool step_is_finished;

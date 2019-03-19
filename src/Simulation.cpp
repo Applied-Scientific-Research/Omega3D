@@ -1,7 +1,7 @@
 /*
- * Simulation.cpp - a class to control a 3D vortex particle sim
+ * Simulation.cpp - a class to control a 3d vortex particle sim
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
@@ -27,6 +27,11 @@ Simulation::Simulation()
     diff(),
     conv(),
     time(0.0),
+    output_dt(0.0),
+    end_time(0.0),
+    use_end_time(false),
+    max_steps(0),
+    use_max_steps(false),
     sim_is_initialized(false),
     step_has_started(false),
     step_is_finished(false)
@@ -42,26 +47,34 @@ float Simulation::get_hnu() { return std::sqrt(dt/re); }
 float Simulation::get_ips() { return diff.get_nom_sep_scaled() * get_hnu(); }
 float Simulation::get_vdelta() { return diff.get_particle_overlap() * get_ips(); }
 float Simulation::get_time() { return (float)time; }
+float Simulation::get_end_time() { return (float)end_time; }
+bool Simulation::using_end_time() { return use_end_time; }
+size_t Simulation::get_max_steps() { return max_steps; }
+bool Simulation::using_max_steps() { return use_max_steps; }
+float Simulation::get_output_dt() { return (float)output_dt; }
+
+// setters
+void Simulation::set_end_time(const double net) { end_time = net; use_end_time = true; }
+void Simulation::set_max_steps(const size_t nms) { max_steps = nms; use_max_steps = true; }
+void Simulation::set_output_dt(const double nodt) { output_dt = nodt; }
 
 // status
 //size_t Simulation::get_npanels() { return bdry.get_npanels(); }
 size_t Simulation::get_nparts() {
   size_t n = 0;
-  for (auto &targ: vort) {
-    //n += std::visit([=](auto& elem) { return elem.getn(); }, targ);
-    std::visit([&n](auto& elem) { n += elem.getn(); }, targ);
+  for (auto &coll: vort) {
+    std::visit([&n](auto& elem) { n += elem.get_n(); }, coll);
   }
   return n;
 }
 
-size_t Simulation::get_n(std::vector<Collection>& _collect) {
-  size_t n = 0;
-  for (auto &targ: _collect) {
-    //n += std::visit([=](auto& elem) { return elem.getn(); }, targ);
-    std::visit([&n](auto& elem) { n += elem.getn(); }, targ);
-  }
-  return n;
-}
+//size_t Simulation::get_nfldpts() {
+//  size_t n = 0;
+//  for (auto &coll : fldpt) {
+//    std::visit([&n](auto& elem) { n += elem.get_n(); }, coll);
+//  }
+//  return n;
+//}
 
 // like a setter
 void Simulation::set_re_for_ips(const float _ips) {
@@ -86,12 +99,14 @@ void Simulation::initGL(std::vector<float>& _projmat,
   //bdry.initGL(_projmat, _poscolor, _negcolor);
   //vort.initGL(_projmat, _poscolor, _negcolor);
 }
+
 void Simulation::updateGL() {
   for (auto &coll : vort) {
     std::visit([=](auto& elem) { elem.updateGL(); }, coll);
   }
   //bdry.updateGL();
 }
+
 void Simulation::drawGL(std::vector<float>& _projmat,
                         float*              _poscolor,
                         float*              _negcolor) {
@@ -103,17 +118,6 @@ void Simulation::drawGL(std::vector<float>& _projmat,
   }
 }
 #endif
-
-//
-// main must indicate that panels should be made
-//   because initGL and updateGL need to send data soon
-//
-/*
-void Simulation::init_bcs() {
-  // are panels even made? do this first
-  bdry.make_panels(get_ips());
-}
-*/
 
 bool Simulation::is_initialized() { return sim_is_initialized; }
 
@@ -212,14 +216,10 @@ void Simulation::async_step() {
 // here's the vortex method: convection and diffusion with operator splitting
 //
 void Simulation::step() {
-  std::cout << std::endl << "Taking step at t=" << time << " with n=" << get_n(vort) << std::endl;
+  std::cout << std::endl << "Taking step at t=" << time << " with n=" << get_nparts() << std::endl;
 
   // we wind up using this a lot
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
-
-
-  // are panels even made? do this first
-  //bdry.make_panels(get_ips());
 
   // for simplicity's sake, just run one full diffusion step here
   //diff.step(dt, re, get_vdelta(), thisfs, vort, bdry);
@@ -243,7 +243,7 @@ void Simulation::step() {
     if (std::holds_alternative<Points<float>>(coll)) {
 
       Points<float>& pts = std::get<Points<float>>(coll);
-      //std::cout << "    check split for " << pts.getn() << " particles" << std::endl;
+      //std::cout << "    check split for " << pts.get_n() << " particles" << std::endl;
       std::cout << std::endl;
 
       // none of these are passed as const, because both may be extended with new particles

@@ -1,13 +1,13 @@
 /*
- * main_batch.cpp - Driver program for batch version of Omega3D - The Vorticity Flow Solver
+ * main_batch.cpp - Driver code for Omega3D + Vc vortex particle method
+ *                  and boundary element method solver, batch version
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
-#include "Omega3D.h"
-#include "Simulation.h"
 #include "FlowFeature.h"
+#include "Simulation.h"
 
 #include <iostream>
 #include <vector>
@@ -16,7 +16,7 @@
 // execution starts here
 
 int main(int argc, char const *argv[]) {
-  std::cout << std::endl << "Omega3D Batch Solver" << std::endl;
+  std::cout << std::endl << "Omega3D Batch" << std::endl;
 
   // Set up vortex particle simulation
   Simulation sim;
@@ -24,12 +24,6 @@ int main(int argc, char const *argv[]) {
   //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
 
   size_t nsteps = 0;
-  //static bool sim_is_running = false;
-  //static bool begin_single_step = false;
-  //const solution_t solver = direct_cpu;
-  //std::array<double,Dimensions> fs = {0.0, 0.0, 0.0};
-  //double time = 0.0;
-  //const double dt = 0.01;
   sim.set_diffuse(false);
   sim.set_re_for_ips(0.1);
   *(sim.addr_dt()) = 0.1;
@@ -45,41 +39,44 @@ int main(int argc, char const *argv[]) {
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(2000, inert, fixed));
  
+
+  std::cout << std::endl << "Initializing simulation" << std::endl;
+
+  // initialize particle distributions
+  for (auto const& ff: ffeatures) {
+    sim.add_particles( ff->init_particles(sim.get_ips()) );
+  }
+
+  // initialize solid objects
+  //for (auto const& bf : bfeatures) {
+  //  sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
+  //}
+
+  // initialize measurement features
+  //for (auto const& mf: mfeatures) {
+  //  sim.add_fldpts( mf->init_particles(0.1*sim.get_ips()), mf->moves() );
+  //}
+
+  sim.set_initialized();
+
+  //
   // Main loop
+  //
+
   while (true) {
-
-    // if particles are not yet created, make them
-    if (not sim.is_initialized()) {
-      std::cout << std::endl << "Initializing simulation" << std::endl;
-
-      // initialize particle distributions
-      for (auto const& ff: ffeatures) {
-        sim.add_particles( ff->init_particles(sim.get_ips()) );
-      }
-
-      // initialize solid objects
-      //for (auto const& bf : bfeatures) {
-      //  sim.add_boundary( bf->get_type(), bf->get_params() );
-      //}
-
-      // initialize panels
-      //sim.init_bcs();
-      sim.set_initialized();
-    }
 
     // check flow for blow-up or errors
     sim_err_msg = sim.check_simulation(ffeatures.size());
 
     if (sim_err_msg.empty()) {
-      // no errors, OK to continue
+      // the last simulation step was fine, OK to continue
 
       // generate new particles from emitters
       //for (auto const& ff : ffeatures) {
       //  sim.add_particles( ff->step_particles(sim.get_ips()) );
       //}
 
-      // begin a dynamic step: convection and diffusion
-      // no need for async call in the batch program
+      // begin a new dynamic step: convection and diffusion
       sim.step();
 
     } else {
@@ -94,8 +91,15 @@ int main(int argc, char const *argv[]) {
 
     // for testing: always break after a few steps
     if (nsteps == 2) break;
-  }
-  std::cout << std::endl << "Done" << std::endl;
+
+    // check vs. stopping conditions
+    if (sim.using_max_steps() and sim.get_max_steps() == nsteps) break;
+    if (sim.using_end_time() and sim.get_end_time() <= sim.get_time()) break;
+
+  } // end step
+
+  sim.reset();
+  std::cout << "Quitting" << std::endl;
 
   return 0;
 }

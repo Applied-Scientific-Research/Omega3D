@@ -1,13 +1,13 @@
 /*
- * main_gui.cpp - Driver program for GUI version of Omega3D - The Vorticity Flow Solver
+ * main_gui.cpp - Driver code for Omega3D + ImGui + Vc vortex particle method
+ *                and boundary element method solver, GUI version
  *
  * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
-#include "Omega3D.h"
-#include "Simulation.h"
 #include "FlowFeature.h"
+#include "Simulation.h"
 
 #ifdef _WIN32
   // for glad
@@ -16,9 +16,13 @@
   #include <ciso646>
 #endif
 #include "glad.h"
+
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw_gl3.h"
 
+//#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL
+// functions (because it is small). You may use glew/glad/glLoadGen/etc.
+// whatever already works for you.
 #include <GLFW/glfw3.h>
 
 #include <cstdio>
@@ -74,7 +78,7 @@ void mouse_callback(GLFWwindow* /*_thiswin*/,
 
     // change the size
     const float oldsize = (*_size);
-    (*_size) *= pow(1.1f, io.MouseWheel);
+    (*_size) *= std::pow(1.1f, io.MouseWheel);
 
     // and adjust the center such that the zoom occurs about the pointer!
     //const float ar = (float)display_h / (float)display_w;
@@ -139,9 +143,9 @@ int main(int argc, char const *argv[]) {
   std::vector< std::unique_ptr<FlowFeature> > ffeatures;
   //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
   //std::vector< std::unique_ptr<MeasureFeature> > mfeatures;
+  size_t nsteps = 0;
   static bool sim_is_running = false;
   static bool begin_single_step = false;
-  //const solution_t solver = direct_cpu;
 
   // Set up primary OpenGL window
   glfwSetErrorCallback(error_callback);
@@ -169,27 +173,29 @@ int main(int argc, char const *argv[]) {
 
   //glfwSetKeyCallback(keyboard_callback);
 
+  //glfwSetWindowCloseCallback(window, window_close_callback);
+
   // Load Fonts
   // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
 
   // Get and set some IO functions
   ImGuiIO& io = ImGui::GetIO();
   io.IniFilename = ".omega3d.ini";
+  std::vector<std::string> recent_files;
 
   // a string to hold any error messages
   std::string sim_err_msg;
 
-  // projection matrix for the particles
-  float vcx = -0.5f;
-  float vcy = 0.0f;
-  float vsize = 2.0f;
-  std::vector<float> gl_projection;
-  compute_ortho_proj_mat(window, vcx, vcy, &vsize, gl_projection);
-
   // GUI and drawing parameters
-  //bool show_stats_window = false;
-  //bool show_terminal_window = false;
+  //RenderParams rparams;
+  bool export_vtk_this_frame = false;	// write a vtk with the current data
+  bool draw_this_frame = false;		// draw the frame immediately
+  bool record_all_frames = false;	// save a frame when a new one is ready
+  bool show_stats_window = false;
+  bool show_terminal_window = false;
   bool show_test_window = false;
+  bool show_file_input_window = false;
+  bool show_file_output_window = false;
   ImVec4 pos_circ_color = ImColor(207, 47, 47);
   ImVec4 neg_circ_color = ImColor(63, 63, 255);
   //ImVec4 default_color = ImColor(204, 204, 204);
@@ -197,6 +203,13 @@ int main(int argc, char const *argv[]) {
   //float tracer_size = 0.15;
   //static bool show_origin = true;
   static bool is_viscous = false;
+
+  // projection matrix for the particles
+  float vcx = -0.5f;
+  float vcy = 0.0f;
+  float vsize = 2.0f;
+  std::vector<float> gl_projection;
+  compute_ortho_proj_mat(window, vcx, vcy, &vsize, gl_projection);
 
 
   // Main loop
@@ -226,9 +239,13 @@ int main(int argc, char const *argv[]) {
 
         // initialize solid objects
         //for (auto const& bf : bfeatures) {
-        //  sim.add_boundary( bf->get_type(), bf->get_params() );
+        //  sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
         //}
 
+        // initialize measurement features
+        //for (auto const& mf: mfeatures) {
+        //  sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
+        //}
 
         sim.set_initialized();
       }
@@ -243,6 +260,9 @@ int main(int argc, char const *argv[]) {
         for (auto const& ff : ffeatures) {
           sim.add_particles( ff->step_particles(sim.get_ips()) );
         }
+        //for (auto const& mf: mfeatures) {
+        //  sim.add_fldpts( mf->step_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
+        //}
 
         // begin a new dynamic step: convection and diffusion
         sim.async_step();
@@ -282,8 +302,13 @@ int main(int argc, char const *argv[]) {
       mouse_callback(window, io, &vcx, &vcy, &vsize);
     }
 
+    // check for keypresses to toggle state
+    //if (not io.WantCaptureKeyboard) {
+      //keyboard_callback(
+    //}
+
     //
-    // The main Omega2D window
+    // The main Omega3D window
     //
     {
 
@@ -646,6 +671,24 @@ int main(int argc, char const *argv[]) {
     ImGui::End();
     }
 
+    // Show the simulation stats as 2D plots
+    if (show_stats_window)
+    {
+      ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
+      ImGui::Begin("Statistics", &show_stats_window);
+      ImGui::Text("Hello");
+      ImGui::End();
+    }
+
+    // Show the terminal output of the program
+    if (show_terminal_window)
+    {
+      ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
+      ImGui::Begin("Terminal", &show_terminal_window);
+      ImGui::Text("Hello");
+      ImGui::End();
+    }
+
     // Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
     if (show_test_window)
     {
@@ -672,6 +715,9 @@ int main(int argc, char const *argv[]) {
   }
 
   // Cleanup
+  std::cout << "Starting shutdown procedure" << std::endl;
+  sim.reset();
+  std::cout << "Quitting" << std::endl;
   ImGui_ImplGlfwGL3_Shutdown();
   glfwTerminate();
 
