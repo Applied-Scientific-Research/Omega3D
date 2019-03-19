@@ -1,8 +1,8 @@
 /*
  * ElementBase.h - abstract class for arrays of any computational elements
  *
- * (c)2018 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2018-9 Applied Scientific Research, Inc.
+ *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -25,15 +25,19 @@
 template <class S>
 class ElementBase {
 public:
-  ElementBase<S>(const size_t _n, const elem_t _e, const move_t _m) :
+  ElementBase<S>(const size_t _n,
+                 const elem_t _e,
+                 const move_t _m) :
       E(_e), M(_m), n(_n) {
   }
 
   size_t get_n() const { return n; }
+  bool is_inert() const { return E==inert; }
   const std::array<Vector<S>,Dimensions>& get_pos() const { return x; }
   std::array<Vector<S>,Dimensions>&       get_pos()       { return x; }
   const std::array<Vector<S>,Dimensions>& get_str() const { return *s; }
   std::array<Vector<S>,Dimensions>&       get_str()       { return *s; }
+  const std::array<Vector<S>,Dimensions>& get_vel() const { return u; }
   std::array<Vector<S>,Dimensions>&       get_vel()       { return u; }
 
   void add_new(std::vector<float>& _in) {
@@ -84,6 +88,7 @@ public:
   }
 
   // up-size all arrays to the new size, filling with sane values
+  // this only happens right after diffusion
   void resize(const size_t _nnew) {
     const size_t currn = n;
     //std::cout << "  inside ElementBase::resize with " << currn << " " << _nnew << std::endl;
@@ -126,9 +131,10 @@ public:
     }
   }
   void finalize_vels(const std::array<double,Dimensions>& _fs) {
+    const double factor = 0.25/M_PI;
     for (size_t d=0; d<Dimensions; ++d) {
       for (size_t i=0; i<get_n(); ++i) {
-        u[d][i] = _fs[d] + u[d][i] * 0.25/M_PI;
+        u[d][i] = _fs[d] + u[d][i] * factor;
       }
     }
   }
@@ -185,13 +191,14 @@ public:
   }
 
 protected:
+  // if you add anything here, you need to wipe out all build files and run cmake again!
+
   // active, reactive, or inert?
   elem_t E;
-  // how does it move? use move_t or Body*
+  // how does it move? use move_t and Body*
   move_t M;
-  //Body* b = nullptr;
-  //Move_t get_move_type() {
-  //}
+  // if attached to a body, which one?
+  //std::shared_ptr<Body> B;
 
   // common arrays for all derived types
   size_t n;

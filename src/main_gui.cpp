@@ -218,6 +218,12 @@ int main(int argc, char const *argv[]) {
     // get results of latest step, if it just completed
     bool is_ready = sim.test_for_new_results();
 
+    // before we start again, write the vtu output
+    if (sim.get_nparts() > 0 and export_vtk_this_frame) {
+      sim.write_vtk();
+      export_vtk_this_frame = false;
+    }
+
     // see if we should start a new step
     if (is_ready and (sim_is_running || begin_single_step)) {
 
@@ -424,7 +430,7 @@ int main(int argc, char const *argv[]) {
           ffeatures.clear();
 
           // load and report
-          read_json(sim, ffeatures, bfeatures, mfeatures, infile);
+          read_json(sim, ffeatures, bfeatures, mfeatures, rparams, infile);
 
           // we have to manually set this variable
           is_viscous = sim.get_diffuse();
@@ -664,6 +670,13 @@ int main(int argc, char const *argv[]) {
 
       //ImGui::Text("Number of panels: %ld  Number of particles: %ld", sim.get_npanels(), sim.get_nparts());
       ImGui::Text("Number of particles: %ld", sim.get_nparts());
+
+      // save the simulation to a JSON or VTK file
+      ImGui::Spacing();
+      //if (ImGui::Button("Save setup to json", ImVec2(180,0))) show_file_output_window = true;
+      //ImGui::SameLine();
+      if (ImGui::Button("Save parts to vtk", ImVec2(170,0))) export_vtk_this_frame = true;
+
     }
 
     // done drawing the Omega3D UI window

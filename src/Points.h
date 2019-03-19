@@ -34,7 +34,9 @@ template <class S>
 class Points: public ElementBase<S> {
 public:
   // flexible constructor - use input 7*n vector
-  Points(const std::vector<S>& _in, const elem_t _e, const move_t _m)
+  Points(const std::vector<S>& _in,
+         const elem_t _e,
+         const move_t _m)
     : ElementBase<S>(_in.size()/7, _e, _m),
       max_strength(-1.0) {
 

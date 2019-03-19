@@ -1,6 +1,6 @@
 #
 # Omega3D
-# (c)2017-2018 Applied Scientific Research, Inc.
+# (c)2017-2019 Applied Scientific Research, Inc.
 #
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
 PROJECT( Omega3D )
@@ -12,8 +12,8 @@ SET (CMAKE_CONFIGURATION_TYPES "Debug" "Release")
 SET (CMAKE_BUILD_TYPE "Release" CACHE STRING "Select which configuration to build" )
 SET (USE_OMP FALSE CACHE BOOL "Use OpenMP multithreading")
 SET (USE_VC FALSE CACHE BOOL "Use Vc for vector arithmetic")
-set(CMAKE_VERBOSE_MAKEFILE on)
-set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+SET (CMAKE_VERBOSE_MAKEFILE on)
+SET (CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
   # support Core2 at a minimum, haswell ideally
@@ -109,12 +109,17 @@ ELSEIF( UNIX )
 ENDIF()
 
 ADD_DEFINITIONS (${CPREPROCDEFS})
-set(GLADSRC "src/glad/glad.c" )
+
+SET(GLADSRC "src/glad/glad.c" )
 INCLUDE_DIRECTORIES( "src/glad" )
+FILE(GLOB IMGUISOURCES "src/imgui/*.cpp" )
+INCLUDE_DIRECTORIES( "src/tinyxml2" )
+#INCLUDE_DIRECTORIES( "src/tinyexpr" )
+
 SET(SOURCES "src/Simulation.cpp"
             "src/FlowFeature.cpp"
-            "src/CollectionHelper.cpp")
-file(GLOB IMGUISOURCES "src/imgui/*.cpp" )
+            "src/CollectionHelper.cpp"
+            "src/tinyxml2/tinyxml2.cpp")
 
 # create a binary for the GUI version
 ADD_EXECUTABLE( ${PROJECT_NAME} ${GLADSRC} ${IMGUISOURCES} ${SOURCES} "src/ShaderHelper.cpp" "src/main_gui.cpp" )
