@@ -8,6 +8,7 @@
 
 #include "FlowFeature.h"
 #include "Simulation.h"
+#include "RenderParams.h"
 
 #include <iostream>
 #include <vector>
@@ -24,6 +25,8 @@ int main(int argc, char const *argv[]) {
   //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
 
   size_t nsteps = 0;
+  RenderParams rparams;
+
   sim.set_diffuse(false);
   sim.set_re_for_ips(0.1);
   *(sim.addr_dt()) = 0.1;

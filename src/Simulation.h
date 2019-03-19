@@ -13,6 +13,10 @@
 #include "Convection.h"
 #include "Diffusion.h"
 
+#ifdef USE_GL
+#include "RenderParams.h"
+#endif
+
 #include <string>
 #include <vector>
 #include <future>
@@ -88,7 +92,7 @@ public:
   // graphics pass-through calls
   void initGL(std::vector<float>&, float*, float*);
   void updateGL();
-  void drawGL(std::vector<float>&, float*, float*);
+  void drawGL(std::vector<float>&, RenderParams&);
 #endif
 
 private:
@@ -97,19 +101,28 @@ private:
   float dt;
   float fs[Dimensions];
 
+  // List of independent rigid bodies (and one for ground)
+  //std::vector< std::shared_ptr<Body> > bodies;
+
   // Object to contain all Lagrangian elements
-  std::vector<Collection> vort;         // the free vorticity
+  std::vector<Collection> vort;		// active elements
 
   // Object to contain all Reactive elements
   //   inside is the vector of bodies and inlets and liftinglines/kuttapoints
   //   and the Panels list of all unknowns discretized representations
-  std::vector<Collection> bdry;         // all boundaries (with unknown strengths)
+  std::vector<Collection> bdry;		// reactive-active elements like BEM surfaces
 
   // Object with all of the non-reactive, non-active (inert) points
-  std::vector<Collection> fldpt;        // tracers and field points
+  std::vector<Collection> fldpt;	// tracers and field points
+
+  // The need to solve for the unknown strengths of reactive elements inside both the
+  //   diffusion and convection steps necessitates a BEM object here
+  //BEM<STORE,Int> bem;
 
   // Diffusion will resolve exchange of strength among particles and between panels and particles
-  Diffusion<float,double,uint16_t> diff;
+  // Note that NNLS needs doubles for its compute type or else it will fail
+  //   but velocity evaluations using Vc need S=A=float
+  Diffusion<STORE,ACCUM,Int> diff;
 
   // Convection class takes bodies, panels, and vector of Particles objects
   //   and performs 1st, 2nd, etc. RK forward integration

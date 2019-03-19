@@ -1,14 +1,20 @@
 /*
  * Panels.h - Specialized class for 3D panels (triangles)
  *
- * (c)2018 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2018-9 Applied Scientific Research, Inc.
+ *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
 
 #include "VectorHelper.h"
 #include "ElementBase.h"
+
+#ifdef USE_GL
+#include "RenderParams.h"
+//#include "ShaderHelper.h"
+//#include "glad.h"
+#endif
 
 #include <iostream>
 #include <vector>
@@ -88,6 +94,7 @@ public:
     ElementBase<S>::move(_dt, _wt1, _u1, _wt2, _u2);
   }
 
+#ifdef USE_GL
   //
   // OpenGL functions
   //
@@ -107,11 +114,11 @@ public:
 
   // stuff to display points, called once per frame
   void drawGL(std::vector<float>& _projmat,
-              float*              _poscolor,
-              float*              _negcolor) {
+              RenderParams&       _rparams) {
 
     std::cout << "inside Panels.drawGL" << std::endl;
   }
+#endif
 
   std::string to_string() const {
     return ElementBase<S>::to_string() + " Panels";

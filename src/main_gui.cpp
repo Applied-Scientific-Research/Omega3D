@@ -8,6 +8,7 @@
 
 #include "FlowFeature.h"
 #include "Simulation.h"
+#include "RenderParams.h"
 
 #ifdef _WIN32
   // for glad
@@ -187,7 +188,6 @@ int main(int argc, char const *argv[]) {
   std::string sim_err_msg;
 
   // GUI and drawing parameters
-  //RenderParams rparams;
   bool export_vtk_this_frame = false;	// write a vtk with the current data
   bool draw_this_frame = false;		// draw the frame immediately
   bool record_all_frames = false;	// save a frame when a new one is ready
@@ -196,20 +196,13 @@ int main(int argc, char const *argv[]) {
   bool show_test_window = false;
   bool show_file_input_window = false;
   bool show_file_output_window = false;
-  ImVec4 pos_circ_color = ImColor(207, 47, 47);
-  ImVec4 neg_circ_color = ImColor(63, 63, 255);
-  //ImVec4 default_color = ImColor(204, 204, 204);
-  ImVec4 clear_color = ImColor(15, 15, 15);
-  //float tracer_size = 0.15;
   //static bool show_origin = true;
   static bool is_viscous = false;
 
-  // projection matrix for the particles
-  float vcx = -0.5f;
-  float vcy = 0.0f;
-  float vsize = 2.0f;
+  // colors and projection matrix for the 3d view
+  RenderParams rparams;
   std::vector<float> gl_projection;
-  compute_ortho_proj_mat(window, vcx, vcy, &vsize, gl_projection);
+  compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
 
 
   // Main loop
@@ -299,7 +292,7 @@ int main(int argc, char const *argv[]) {
 
     // check mouse for drag and rescaling!
     if (not io.WantCaptureMouse) {
-      mouse_callback(window, io, &vcx, &vcy, &vsize);
+      mouse_callback(window, io, &rparams.vcx, &rparams.vcy, &rparams.vsize);
     }
 
     // check for keypresses to toggle state
@@ -614,17 +607,17 @@ int main(int argc, char const *argv[]) {
 
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Rendering parameters")) {
-      ImGui::ColorEdit3("positive circulation", (float*)&pos_circ_color);
-      ImGui::ColorEdit3("negative circulation", (float*)&neg_circ_color);
-      //ImGui::ColorEdit3("feature color", (float*)&default_color);
-      ImGui::ColorEdit3("background color", (float*)&clear_color);
+      ImGui::ColorEdit3("positive circulation", rparams.pos_circ_color);
+      ImGui::ColorEdit3("negative circulation", rparams.neg_circ_color);
+      ImGui::ColorEdit3("feature color",        rparams.default_color);
+      ImGui::ColorEdit3("background color",     rparams.clear_color);
       //ImGui::Checkbox("show origin", &show_origin);
 
       if (ImGui::Button("Recenter")) {
         // put everything back to center
-        vcx = -0.5f;
-        vcy = 0.0f;
-        vsize = 2.0f;
+        rparams.vcx = -0.5f;
+        rparams.vcy = 0.0f;
+        rparams.vsize = 2.0f;
       }
 
       // add button to recenter on all vorticity?
@@ -633,6 +626,12 @@ int main(int argc, char const *argv[]) {
       ImGui::Separator();
     }
     ImGui::Spacing();
+
+    nsteps++;
+
+    // check vs. end conditions
+    if (sim.using_max_steps() and sim.get_max_steps() == nsteps) sim_is_running = false;
+    if (sim.using_end_time() and sim.get_end_time() <= sim.get_time()) sim_is_running = false;
 
     // all the other stuff
     {
@@ -700,12 +699,12 @@ int main(int argc, char const *argv[]) {
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
-    glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+    glClearColor(rparams.clear_color[0], rparams.clear_color[1], rparams.clear_color[2], rparams.clear_color[3]);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // draw the simulation: panels and particles
-    compute_ortho_proj_mat(window, vcx, vcy, &vsize, gl_projection);
-    sim.drawGL(gl_projection, &pos_circ_color.x, &neg_circ_color.x);
+    compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
+    sim.drawGL(gl_projection, rparams);
 
     // draw the GUI
     ImGui::Render();
