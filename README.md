@@ -56,6 +56,7 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
+* Keep updated with Omega2D development and features: vtk, png, json, etc.
 * Add some pics, maybe aGIF, to this readme
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
 * Use the actual core function to draw the blobs - but what is the real core function?
