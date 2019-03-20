@@ -19,99 +19,6 @@ std::ostream& operator<<(std::ostream& os, FlowFeature const& ff) {
   return os;
 }
 
-// various debug print methods for the subclasses
-
-// debug SingleParticle
-void
-SingleParticle::debug(std::ostream& os) const {
-  os << to_string();
-}
-
-std::string
-SingleParticle::to_string() const {
-  std::stringstream ss;
-  ss << "single particle at " << m_x << " " << m_y << " " << m_z;
-  ss << " with strength " << m_sx << " " << m_sy << " " << m_sz;
-  return ss.str();
-}
-
-
-// debug VortexBlob
-void
-VortexBlob::debug(std::ostream& os) const {
-  os << to_string();
-}
-
-std::string
-VortexBlob::to_string() const {
-  std::stringstream ss;
-  ss << "vortex blob at " << m_x << " " << m_y << " " << m_z << ", radius " << m_rad << ", softness " << m_softness;
-  ss << ", and strength " << m_sx << " " << m_sy << " " << m_sz;
-  return ss.str();
-}
-
-
-// debug BlockOfRandom
-void
-BlockOfRandom::debug(std::ostream& os) const {
-  os << to_string();
-}
-
-std::string
-BlockOfRandom::to_string() const {
-  std::stringstream ss;
-  ss << "block of " << m_num << " particles in [" << (m_x-0.5*m_xsize) << " " << (m_x+0.5*m_xsize) << "] ["
-                                                  << (m_y-0.5*m_ysize) << " " << (m_y+0.5*m_ysize) << "] ["
-                                                  << (m_z-0.5*m_zsize) << " " << (m_z+0.5*m_zsize) <<
-                                               "] with max str mag " << m_maxstr;
-  return ss.str();
-}
-
-
-// debug ParticleEmitter
-void
-ParticleEmitter::debug(std::ostream& os) const {
-  os << to_string();
-}
-
-std::string
-ParticleEmitter::to_string() const {
-  std::stringstream ss;
-  ss << "particle emitter at " << m_x << " " << m_y << " " << m_z << " spawning particles";
-  ss << " with strength " << m_sx << " " << m_sy << " " << m_sz;
-  return ss.str();
-}
-
-
-// debug SingularRing
-void
-SingularRing::debug(std::ostream& os) const {
-  os << to_string();
-}
-
-std::string
-SingularRing::to_string() const {
-  std::stringstream ss;
-  ss << "singular vortex ring at " << m_x << " " << m_y << " " << m_z << ", radius " << m_majrad << ", circulation " << m_circ;
-  ss << ", aimed along " << m_nx << " " << m_ny << " " << m_nz;
-  return ss.str();
-}
-
-
-// debug ThickRing
-void
-ThickRing::debug(std::ostream& os) const {
-  os << to_string();
-}
-
-std::string
-ThickRing::to_string() const {
-  std::stringstream ss;
-  ss << "thick vortex ring at " << m_x << " " << m_y << " " << m_z << ", radii " << m_majrad << " " << m_minrad << ", circulation " << m_circ;
-  ss << ", aimed along " << m_nx << " " << m_ny << " " << m_nz;
-  return ss.str();
-}
-
 
 //
 // important feature: convert flow feature definition into 1-D vector of values
@@ -132,6 +39,28 @@ SingleParticle::step_particles(float _ips) const {
   return std::vector<float>();
 }
 
+void
+SingleParticle::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+SingleParticle::to_string() const {
+  std::stringstream ss;
+  ss << "single particle at " << m_x << " " << m_y << " " << m_z;
+  ss << " with strength " << m_sx << " " << m_sy << " " << m_sz;
+  return ss.str();
+}
+
+nlohmann::json
+SingleParticle::to_json() const {
+  nlohmann::json j;
+  j["type"] = "single particle";
+  j["center"] = {m_x, m_y, m_z};
+  j["strength"] = {m_sx, m_sy, m_sz};
+  return j;
+}
+
 
 //
 // make a circular vortex blob with soft transition
@@ -147,9 +76,6 @@ VortexBlob::init_particles(float _ips) const {
 
   // and a counter for the total circulation
   double tot_wgt = 0.0;
-
-  // will need this
-  const double pi = std::acos(-1);
 
   // loop over integer indices
   for (int i=-irad; i<=irad; ++i) {
@@ -169,7 +95,7 @@ VortexBlob::init_particles(float _ips) const {
       double this_wgt = 1.0;
       if (dr > m_rad - 0.5*m_softness) {
         // create a weaker particle
-        this_wgt = 0.5 - 0.5*std::sin(pi * (dr - m_rad) / m_softness);
+        this_wgt = 0.5 - 0.5*std::sin(M_PI * (dr - m_rad) / m_softness);
       }
       tot_wgt += this_wgt;
       x.emplace_back(m_sx * (float)this_wgt);
@@ -201,12 +127,37 @@ VortexBlob::step_particles(float _ips) const {
   return std::vector<float>();
 }
 
+void
+VortexBlob::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+VortexBlob::to_string() const {
+  std::stringstream ss;
+  ss << "vortex blob at " << m_x << " " << m_y << " " << m_z << ", radius " << m_rad << ", softness " << m_softness;
+  ss << ", and strength " << m_sx << " " << m_sy << " " << m_sz;
+  return ss.str();
+}
+
+nlohmann::json
+VortexBlob::to_json() const {
+  nlohmann::json j;
+  j["type"] = "vortex blob";
+  j["center"] = {m_x, m_y, m_z};
+  j["radius"] = m_rad;
+  j["softness"] = m_softness;
+  j["strength"] = {m_sx, m_sy, m_sz};
+  return j;
+}
+
 
 //
 // make the block of randomly-placed and random-strength particles
 //
 std::vector<float>
 BlockOfRandom::init_particles(float _ips) const {
+
   // set up the random number generator
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
@@ -236,6 +187,32 @@ BlockOfRandom::step_particles(float _ips) const {
   return std::vector<float>();
 }
 
+void
+BlockOfRandom::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+BlockOfRandom::to_string() const {
+  std::stringstream ss;
+  ss << "block of " << m_num << " particles in [" << (m_x-0.5*m_xsize) << " " << (m_x+0.5*m_xsize) << "] ["
+                                                  << (m_y-0.5*m_ysize) << " " << (m_y+0.5*m_ysize) << "] ["
+                                                  << (m_z-0.5*m_zsize) << " " << (m_z+0.5*m_zsize) <<
+                                               "] with max str mag " << m_maxstr;
+  return ss.str();
+}
+
+nlohmann::json
+BlockOfRandom::to_json() const {
+  nlohmann::json j;
+  j["type"] = "block of random";
+  j["center"] = {m_x, m_y, m_z};
+  j["size"] = {m_xsize, m_ysize, m_zsize};
+  j["max strength"] = m_maxstr;
+  j["num"] = m_num;
+  return j;
+}
+
 
 //
 // drop a single particle from the emitter
@@ -250,6 +227,28 @@ ParticleEmitter::step_particles(float _ips) const {
   return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
 }
 
+void
+ParticleEmitter::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+ParticleEmitter::to_string() const {
+  std::stringstream ss;
+  ss << "particle emitter at " << m_x << " " << m_y << " " << m_z << " spawning particles";
+  ss << " with strength " << m_sx << " " << m_sy << " " << m_sz;
+  return ss.str();
+}
+
+nlohmann::json
+ParticleEmitter::to_json() const {
+  nlohmann::json j;
+  j["type"] = "particle emitter";
+  j["center"] = {m_x, m_y, m_z};
+  j["strength"] = {m_sx, m_sy, m_sz};
+  return j;
+}
+
 
 //
 // make a singular (one row) vortex ring
@@ -259,13 +258,10 @@ SingularRing::init_particles(float _ips) const {
   // create a new vector to pass on
   std::vector<float> x;
 
-  // will need this
-  const double pi = std::acos(-1);
-
   // what size 2D integer array will we loop over
-  const int ndiam = 1 + (2.0 * pi * m_majrad) / _ips;
+  const int ndiam = 1 + (2.0 * M_PI * m_majrad) / _ips;
   std::cout << "  ring needs " << ndiam << " particles" << std::endl;
-  const float this_ips = (2.0 * pi * m_majrad) / (float)ndiam;
+  const float this_ips = (2.0 * M_PI * m_majrad) / (float)ndiam;
 
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
@@ -275,7 +271,7 @@ SingularRing::init_particles(float _ips) const {
 
   // loop over integer indices
   for (int i=0; i<ndiam; ++i) {
-    const float theta = 2.0 * pi * (float)i / (float)ndiam;
+    const float theta = 2.0 * M_PI * (float)i / (float)ndiam;
 
     // create a particle here
     x.emplace_back(m_x + m_majrad * (b1[0]*std::cos(theta) + b2[0]*std::sin(theta)));
@@ -299,15 +295,36 @@ SingularRing::step_particles(float _ips) const {
   return std::vector<float>();
 }
 
+void
+SingularRing::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+SingularRing::to_string() const {
+  std::stringstream ss;
+  ss << "singular vortex ring at " << m_x << " " << m_y << " " << m_z << ", radius " << m_majrad << ", circulation " << m_circ;
+  ss << ", aimed along " << m_nx << " " << m_ny << " " << m_nz;
+  return ss.str();
+}
+
+nlohmann::json
+SingularRing::to_json() const {
+  nlohmann::json j;
+  j["type"] = "singular ring";
+  j["center"] = {m_x, m_y, m_z};
+  j["normal"] = {m_nx, m_ny, m_nz};
+  j["major radius"] = m_majrad;
+  j["circulation"] = m_circ;
+  return j;
+}
+
 
 //
 // make a thick-cored vortex ring
 //
 std::vector<float>
 ThickRing::init_particles(float _ips) const {
-  // will need this
-  const double pi = std::acos(-1);
-
 
   // make a temporary array of the particles at one station around the ring (a disk)
   //   for each particle in the disk, this is the local x,y, and a length scale
@@ -323,9 +340,9 @@ ThickRing::init_particles(float _ips) const {
   // and each ring of particles
   for (int l=1; l<nlayers; ++l) {
     const float thisrad = (float)l * _ips;
-    const int nthislayer = 1 + (2.0 * pi * thisrad) / _ips;
+    const int nthislayer = 1 + (2.0 * M_PI * thisrad) / _ips;
     for (int i=0; i<nthislayer; ++i) {
-      const float phi = 2.0 * pi * (float)i / (float)nthislayer;
+      const float phi = 2.0 * M_PI * (float)i / (float)nthislayer;
       disk.emplace_back(thisrad * std::cos(phi));
       disk.emplace_back(thisrad * std::sin(phi));
       disk.emplace_back((m_majrad + thisrad*std::cos(phi)) / m_majrad);
@@ -335,9 +352,9 @@ ThickRing::init_particles(float _ips) const {
   std::cout << "  ring needs " << nlayers << " layers and " << nthisdisk << " particles per azimuthal station" << std::endl;
 
   // And how many stations around the ring?
-  const int ndiam = 1 + (2.0 * pi * m_majrad) / _ips;
+  const int ndiam = 1 + (2.0 * M_PI * m_majrad) / _ips;
   //std::cout << "  ring needs " << ndiam << " azimuthal stations" << std::endl;
-  const float this_ips = (2.0 * pi * m_majrad) / (float)ndiam;
+  const float this_ips = (2.0 * M_PI * m_majrad) / (float)ndiam;
 
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
@@ -350,7 +367,7 @@ ThickRing::init_particles(float _ips) const {
 
   // loop over integer indices
   for (int i=0; i<ndiam; ++i) {
-    const float theta = 2.0 * pi * (float)i / (float)ndiam;
+    const float theta = 2.0 * M_PI * (float)i / (float)ndiam;
     const float st = std::sin(theta);
     const float ct = std::cos(theta);
 
@@ -382,6 +399,31 @@ ThickRing::init_particles(float _ips) const {
 std::vector<float>
 ThickRing::step_particles(float _ips) const {
   return std::vector<float>();
+}
+
+void
+ThickRing::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+ThickRing::to_string() const {
+  std::stringstream ss;
+  ss << "thick vortex ring at " << m_x << " " << m_y << " " << m_z << ", radii " << m_majrad << " " << m_minrad << ", circulation " << m_circ;
+  ss << ", aimed along " << m_nx << " " << m_ny << " " << m_nz;
+  return ss.str();
+}
+
+nlohmann::json
+ThickRing::to_json() const {
+  nlohmann::json j;
+  j["type"] = "thick ring";
+  j["center"] = {m_x, m_y, m_z};
+  j["normal"] = {m_nx, m_ny, m_nz};
+  j["major radius"] = m_majrad;
+  j["minor radius"] = m_minrad;
+  j["circulation"] = m_circ;
+  return j;
 }
 
 

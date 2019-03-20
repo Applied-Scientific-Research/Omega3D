@@ -28,6 +28,7 @@ struct RenderParams {
   // world space
   float vcx = -0.5f;
   float vcy = 0.0f;
+  float vcz = 0.0f;
   float vsize = 2.0f;
 
   // colors

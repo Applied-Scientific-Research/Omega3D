@@ -45,7 +45,7 @@ SinglePoint::to_string() const {
   ss << "single field point at " << m_x << " " << m_y << " " << m_z;
   return ss.str();
 }
-/*
+
 nlohmann::json
 SinglePoint::to_json() const {
   nlohmann::json j;
@@ -53,7 +53,7 @@ SinglePoint::to_json() const {
   j["center"] = {m_x, m_y, m_z};
   return j;
 }
-*/
+
 
 //
 // Create a single, stable point which emits Lagrangian points
@@ -82,7 +82,7 @@ TracerEmitter::to_string() const {
   ss << "tracer emitter at " << m_x << " " << m_y << " " << m_z << " spawning tracers every step";
   return ss.str();
 }
-/*
+
 nlohmann::json
 TracerEmitter::to_json() const {
   nlohmann::json j;
@@ -90,7 +90,7 @@ TracerEmitter::to_json() const {
   j["center"] = {m_x, m_y, m_z};
   return j;
 }
-*/
+
 
 //
 // Create a blob of tracer points
@@ -142,7 +142,7 @@ TracerBlob::to_string() const {
   ss << "tracer blob at " << m_x << " " << m_y << " " << m_z << " with radius " << m_rad;
   return ss.str();
 }
-/*
+
 nlohmann::json
 TracerBlob::to_json() const {
   nlohmann::json j;
@@ -151,7 +151,7 @@ TracerBlob::to_json() const {
   j["rad"] = m_rad;
   return j;
 }
-*/
+
 
 //
 // Create a line of tracer points
@@ -198,7 +198,7 @@ TracerLine::to_string() const {
   ss << "tracer line from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << " " << m_zf;
   return ss.str();
 }
-/*
+
 nlohmann::json
 TracerLine::to_json() const {
   nlohmann::json j;
@@ -207,7 +207,7 @@ TracerLine::to_json() const {
   j["end"] = {m_xf, m_yf, m_zf};
   return j;
 }
-*/
+
 
 //
 // Create a line of static measurement points
@@ -254,7 +254,7 @@ MeasurementLine::to_string() const {
   ss << "measurement line from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << " " << m_zf;
   return ss.str();
 }
-/*
+
 nlohmann::json
 MeasurementLine::to_json() const {
   nlohmann::json j;
@@ -263,4 +263,4 @@ MeasurementLine::to_json() const {
   j["end"] = {m_xf, m_yf, m_zf};
   return j;
 }
-*/
+
