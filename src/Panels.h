@@ -11,7 +11,9 @@
 #include "ElementBase.h"
 
 #ifdef USE_GL
+#include "GlState.h"
 #include "RenderParams.h"
+#include "OglHelper.h"
 //#include "ShaderHelper.h"
 //#include "glad.h"
 #endif
@@ -102,7 +104,8 @@ public:
   // this gets done once - load the shaders, set up the vao
   void initGL(std::vector<float>& _projmat,
               float*              _poscolor,
-              float*              _negcolor) {
+              float*              _negcolor,
+              float*              _defcolor) {
 
     std::cout << "inside Panels.initGL" << std::endl;
   }

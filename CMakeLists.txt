@@ -141,6 +141,7 @@ INCLUDE_DIRECTORIES( "src/tinyxml2" )
 SET(SOURCES "src/Simulation.cpp"
             "src/FlowFeature.cpp"
             "src/CollectionHelper.cpp"
+            "src/MeasureFeature.cpp"
             "src/tinyxml2/tinyxml2.cpp")
 
 # create a binary for the GUI version

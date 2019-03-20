@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Omega3D.h"
 #include "VectorHelper.h"
 #include "MathHelper.h"
 #include "ElementBase.h"
@@ -14,6 +15,7 @@
 #ifdef USE_GL
 #include "GlState.h"
 #include "RenderParams.h"
+#include "OglHelper.h"
 #include "ShaderHelper.h"
 #include "glad.h"
 #endif
@@ -34,23 +36,32 @@
 template <class S>
 class Points: public ElementBase<S> {
 public:
-  // flexible constructor - use input 7*n vector
+  // flexible constructor - use input 7*n vector (x, y, z, sx, sy, sz, r)
+  //                         or input 3*n vector (x, y, z)
   Points(const std::vector<S>& _in,
          const elem_t _e,
          const move_t _m)
-    : ElementBase<S>(_in.size()/7, _e, _m),
+    : ElementBase<S>(0, _e, _m),
       max_strength(-1.0) {
 
-    std::cout << "  new collection with " << (_in.size()/7) << " particles..." << std::endl;
+    const size_t nper = (this->E == inert) ? 3 : 7;
+    if (_e == inert) {
+      std::cout << "  new collection with " << (_in.size()/nper) << " tracers..." << std::endl;
+    } else {
+      std::cout << "  new collection with " << (_in.size()/nper) << " vortons..." << std::endl;
+    }
+
+    // need to reset the base class n
+    this->n = _in.size()/nper;
 
     // make sure we have a complete input vector
-    assert(_in.size() % 7 == 0);
+    assert(_in.size() % nper == 0);
 
     // this initialization specific to Points
     for (size_t d=0; d<Dimensions; ++d) {
       this->x[d].resize(this->n);
       for (size_t i=0; i<this->n; ++i) {
-        this->x[d][i] = _in[7*i+d];
+        this->x[d][i] = _in[nper*i+d];
       }
     }
 
@@ -60,7 +71,7 @@ public:
     }
 
     if (_e == inert) {
-      // field points need no radius, but we must set one anyway so that vel evals work
+      // field points need no radius, but we must set one anyway so that vel evals work - not any more
       r.resize(this->n);
       for (size_t i=0; i<this->n; ++i) {
         r[i] = 0.0;
@@ -108,7 +119,9 @@ public:
   void add_new(std::vector<float>& _in) {
     // remember old size and incoming size
     const size_t nold = this->n;
-    const size_t nnew = _in.size()/7;
+
+    const size_t nper = (this->E == inert) ? 3 : 7;
+    const size_t nnew = _in.size()/nper;
     std::cout << "  adding " << nnew << " particles to collection..." << std::endl;
 
     // must explicitly call the method in the base class first
@@ -116,8 +129,14 @@ public:
 
     // then do local stuff
     r.resize(nold+nnew);
-    for (size_t i=0; i<nnew; ++i) {
-      r[nold+i] = _in[7*i+6];
+    if (this->E == inert) {
+      for (size_t i=0; i<nnew; ++i) {
+        r[nold+i] = 0.0;
+      }
+    } else {
+      for (size_t i=0; i<nnew; ++i) {
+        r[nold+i] = _in[7*i+6];
+      }
     }
 
     elong.resize(nold+nnew);
@@ -196,6 +215,7 @@ public:
   void move(const double _dt) {
     // must explicitly call the method in the base class
     ElementBase<S>::move(_dt);
+
     // and specialize
     if (this->M == lagrangian and ug and this->E != inert) {
       std::cout << "  Stretching" << to_string() << " using 1st order" << std::endl;
@@ -383,62 +403,111 @@ public:
     // generate the opengl state object with space for 7 vbos and 2 shader programs
     mgl = std::make_shared<GlState>(7,2);
 
-    // Load and create the blob-drawing shader program
-    mgl->spo[1] = create_particle_program();
-
     // Allocate space, but don't upload the data from CPU to GPU yet
     for (size_t i=0; i<Dimensions; ++i) {
       glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i]);
       glBufferData(GL_ARRAY_BUFFER, 0, this->x[i].data(), GL_STATIC_DRAW);
     }
-    glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[6]);
-    glBufferData(GL_ARRAY_BUFFER, 0, r.data(), GL_STATIC_DRAW);
-    for (size_t i=0; i<Dimensions; ++i) {
-      if (this->s) {
-        glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+3]);
-        glBufferData(GL_ARRAY_BUFFER, 0, (*this->s)[i].data(), GL_STATIC_DRAW);
+
+    // here is where we split on element type: active/reactive vs. inert
+    if (this->E == inert) {
+
+      // Load and create the blob-drawing shader program
+      mgl->spo[0] = create_draw_point_program();
+
+      // Now do the four arrays
+      prepare_opengl_buffer(mgl->spo[0], 0, "px");
+      prepare_opengl_buffer(mgl->spo[0], 1, "py");
+      prepare_opengl_buffer(mgl->spo[0], 2, "posz");
+
+      // and for the compute shaders!
+
+      // Get the location of the attributes that enters in the vertex shader
+      mgl->projmat_attribute_pt = glGetUniformLocation(mgl->spo[0], "Projection");
+
+      // upload the projection matrix
+      glUniformMatrix4fv(mgl->projmat_attribute_pt, 1, GL_FALSE, _projmat.data());
+
+      // locate where the colors and color scales go
+      mgl->def_color_attribute = glGetUniformLocation(mgl->spo[0], "def_color");
+
+      // send the current values
+      glUniform4fv(mgl->def_color_attribute, 1, _defcolor);
+
+      // locate where the point radius goes
+      mgl->unif_rad_attribute = glGetUniformLocation(mgl->spo[0], "rad");
+
+      // send the current values
+      glUniform1f(mgl->unif_rad_attribute, (const GLfloat)0.01);
+
+      // and indicate the fragment color output
+      glBindFragDataLocation(mgl->spo[0], 0, "frag_color");
+
+      // Initialize the quad attributes
+      std::vector<float> quadverts = {-1,-1, 1,-1, 1,1, -1,1};
+      glGenBuffers(1, &(mgl->qvbo));
+      glBindBuffer(GL_ARRAY_BUFFER, mgl->qvbo);
+      glBufferData(GL_ARRAY_BUFFER, quadverts.size()*sizeof(float), quadverts.data(), GL_STATIC_DRAW);
+
+      mgl->quad_attribute_pt = glGetAttribLocation(mgl->spo[0], "quad_attr");
+      glVertexAttribPointer(mgl->quad_attribute_pt, 2, GL_FLOAT, GL_FALSE, 0, 0);
+      glEnableVertexAttribArray(mgl->quad_attribute_pt);
+
+    } else { // this->E is active or reactive
+
+      glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[6]);
+      glBufferData(GL_ARRAY_BUFFER, 0, r.data(), GL_STATIC_DRAW);
+      for (size_t i=0; i<Dimensions; ++i) {
+        if (this->s) {
+          glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+3]);
+          glBufferData(GL_ARRAY_BUFFER, 0, (*this->s)[i].data(), GL_STATIC_DRAW);
+        }
       }
-    }
 
-    // Get the location of the attributes that enters in the vertex shader
-    mgl->projmat_attribute_bl = glGetUniformLocation(mgl->spo[1], "Projection");
+      // Load and create the blob-drawing shader program
+      mgl->spo[1] = create_draw_blob_program();
 
-    // Now do the seven arrays
-    prepare_opengl_buffer(mgl->spo[1], 0, "px");
-    prepare_opengl_buffer(mgl->spo[1], 1, "py");
-    prepare_opengl_buffer(mgl->spo[1], 2, "posz");
-    prepare_opengl_buffer(mgl->spo[1], 3, "sx");
-    prepare_opengl_buffer(mgl->spo[1], 4, "sy");
-    prepare_opengl_buffer(mgl->spo[1], 5, "sz");
-    prepare_opengl_buffer(mgl->spo[1], 6, "r");
+      // Now do the seven arrays
+      prepare_opengl_buffer(mgl->spo[1], 0, "px");
+      prepare_opengl_buffer(mgl->spo[1], 1, "py");
+      prepare_opengl_buffer(mgl->spo[1], 2, "posz");
+      prepare_opengl_buffer(mgl->spo[1], 3, "sx");
+      prepare_opengl_buffer(mgl->spo[1], 4, "sy");
+      prepare_opengl_buffer(mgl->spo[1], 5, "sz");
+      prepare_opengl_buffer(mgl->spo[1], 6, "r");
 
-    // and for the compute shaders!
+      // and for the compute shaders!
 
-    // upload the projection matrix
-    glUniformMatrix4fv(mgl->projmat_attribute_bl, 1, GL_FALSE, _projmat.data());
+      // Get the location of the attributes that enters in the vertex shader
+      mgl->projmat_attribute_bl = glGetUniformLocation(mgl->spo[1], "Projection");
 
-    // locate where the colors and color scales go
-    mgl->pos_color_attribute = glGetUniformLocation(mgl->spo[1], "pos_color");
-    mgl->neg_color_attribute = glGetUniformLocation(mgl->spo[1], "neg_color");
-    mgl->str_scale_attribute = glGetUniformLocation(mgl->spo[1], "str_scale");
+      // upload the projection matrix
+      glUniformMatrix4fv(mgl->projmat_attribute_bl, 1, GL_FALSE, _projmat.data());
 
-    // send the current values
-    glUniform4fv(mgl->pos_color_attribute, 1, (const GLfloat *)_poscolor);
-    glUniform4fv(mgl->neg_color_attribute, 1, (const GLfloat *)_negcolor);
-    glUniform1f (mgl->str_scale_attribute, (const GLfloat)1.0);
+      // locate where the colors and color scales go
+      mgl->pos_color_attribute = glGetUniformLocation(mgl->spo[1], "pos_color");
+      mgl->neg_color_attribute = glGetUniformLocation(mgl->spo[1], "neg_color");
+      mgl->str_scale_attribute = glGetUniformLocation(mgl->spo[1], "str_scale");
 
-    // and indicate the fragment color output
-    glBindFragDataLocation(mgl->spo[1], 0, "frag_color");
+      // send the current values
+      glUniform4fv(mgl->pos_color_attribute, 1, (const GLfloat *)_poscolor);
+      glUniform4fv(mgl->neg_color_attribute, 1, (const GLfloat *)_negcolor);
+      glUniform1f (mgl->str_scale_attribute, (const GLfloat)1.0);
 
-    // Initialize the quad attributes
-    std::vector<float> quadverts = {-1,-1, 1,-1, 1,1, -1,1};
-    glGenBuffers(1, &(mgl->qvbo));
-    glBindBuffer(GL_ARRAY_BUFFER, mgl->qvbo);
-    glBufferData(GL_ARRAY_BUFFER, quadverts.size()*sizeof(float), quadverts.data(), GL_STATIC_DRAW);
+      // and indicate the fragment color output
+      glBindFragDataLocation(mgl->spo[1], 0, "frag_color");
 
-    mgl->quad_attribute_bl = glGetAttribLocation(mgl->spo[1], "quad_attr");
-    glVertexAttribPointer(mgl->quad_attribute_bl, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(mgl->quad_attribute_bl);
+      // Initialize the quad attributes
+      std::vector<float> quadverts = {-1,-1, 1,-1, 1,1, -1,1};
+      glGenBuffers(1, &(mgl->qvbo));
+      glBindBuffer(GL_ARRAY_BUFFER, mgl->qvbo);
+      glBufferData(GL_ARRAY_BUFFER, quadverts.size()*sizeof(float), quadverts.data(), GL_STATIC_DRAW);
+
+      mgl->quad_attribute_bl = glGetAttribLocation(mgl->spo[1], "quad_attr");
+      glVertexAttribPointer(mgl->quad_attribute_bl, 2, GL_FLOAT, GL_FALSE, 0, 0);
+      glEnableVertexAttribArray(mgl->quad_attribute_bl);
+
+    } // end this->E is active or reactive
 
     glBindVertexArray(0);
   }
@@ -460,15 +529,26 @@ public:
         // the positions
         glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i]);
         glBufferData(GL_ARRAY_BUFFER, vlen, this->x[i].data(), GL_DYNAMIC_DRAW);
+      }
+
+      // here is where we split on element type: active/reactive vs. inert
+      if (this->E == inert) {
+
+        // just don't upload strengths or radii
+
+      } else { // this->E is active or reactive
+
         // the strengths
         if (this->s) {
-          glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+3]);
-          glBufferData(GL_ARRAY_BUFFER, vlen, (*this->s)[i].data(), GL_DYNAMIC_DRAW);
+          for (size_t i=0; i<Dimensions; ++i) {
+            glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+3]);
+            glBufferData(GL_ARRAY_BUFFER, vlen, (*this->s)[i].data(), GL_DYNAMIC_DRAW);
+          }
         }
+        // the radii
+        glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[6]);
+        glBufferData(GL_ARRAY_BUFFER, vlen, r.data(), GL_DYNAMIC_DRAW);
       }
-      // the radii
-      glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[6]);
-      glBufferData(GL_ARRAY_BUFFER, vlen, r.data(), GL_DYNAMIC_DRAW);
 
       glBindVertexArray(0);
 
@@ -503,17 +583,17 @@ public:
       if (this->E == inert) {
 
         // draw as small dots
-        //glUseProgram(mgl->spo[0]);
+        glUseProgram(mgl->spo[0]);
 
-        //glEnableVertexAttribArray(mgl->quad_attribute_pt);
+        glEnableVertexAttribArray(mgl->quad_attribute_pt);
 
         // upload the current uniforms
-        //glUniformMatrix4fv(mgl->projmat_attribute_pt, 1, GL_FALSE, _projmat.data());
-        //glUniform4fv(mgl->def_color_attribute, 1, (const GLfloat *)_rparams.default_color);
-        //glUniform1f (mgl->unif_rad_attribute, (const GLfloat)(2.5f*_rparams.tracer_size));
+        glUniformMatrix4fv(mgl->projmat_attribute_pt, 1, GL_FALSE, _projmat.data());
+        glUniform4fv(mgl->def_color_attribute, 1, (const GLfloat *)_rparams.default_color);
+        glUniform1f (mgl->unif_rad_attribute, (const GLfloat)(1.0f*_rparams.tracer_size));
 
         // the one draw call here
-        //glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, mgl->num_uploaded);
+        glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, mgl->num_uploaded);
 
       } else { // this->E is active or reactive
 

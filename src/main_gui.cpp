@@ -7,6 +7,8 @@
  */
 
 #include "FlowFeature.h"
+//#include "BoundaryFeature.h"
+#include "MeasureFeature.h"
 #include "Simulation.h"
 #include "RenderParams.h"
 
@@ -145,7 +147,7 @@ int main(int argc, char const *argv[]) {
   Simulation sim;
   std::vector< std::unique_ptr<FlowFeature> > ffeatures;
   //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
-  //std::vector< std::unique_ptr<MeasureFeature> > mfeatures;
+  std::vector< std::unique_ptr<MeasureFeature> > mfeatures;
   size_t nsteps = 0;
   static bool sim_is_running = false;
   static bool begin_single_step = false;
@@ -201,7 +203,7 @@ int main(int argc, char const *argv[]) {
   //static bool show_origin = true;
   static bool is_viscous = false;
 
-  // colors and projection matrix for the 3d view
+  // colors and projection matrix for the render view
   RenderParams rparams;
   std::vector<float> gl_projection;
   compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
@@ -244,9 +246,9 @@ int main(int argc, char const *argv[]) {
         //}
 
         // initialize measurement features
-        //for (auto const& mf: mfeatures) {
-        //  sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
-        //}
+        for (auto const& mf: mfeatures) {
+          sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
+        }
 
         sim.set_initialized();
       }
@@ -261,9 +263,9 @@ int main(int argc, char const *argv[]) {
         for (auto const& ff : ffeatures) {
           sim.add_particles( ff->step_particles(sim.get_ips()) );
         }
-        //for (auto const& mf: mfeatures) {
-        //  sim.add_fldpts( mf->step_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
-        //}
+        for (auto const& mf: mfeatures) {
+          sim.add_fldpts( mf->step_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
+        }
 
         // begin a new dynamic step: convection and diffusion
         sim.async_step();
@@ -336,7 +338,7 @@ int main(int argc, char const *argv[]) {
           sim.reset();
           //bfeatures.clear();
           ffeatures.clear();
-          //mfeatures.clear();
+          mfeatures.clear();
           *dt = 0.002;
           fs[0] = 0.0; fs[1] = 0.0;
           sim.set_re_for_ips(0.015);
@@ -354,7 +356,7 @@ int main(int argc, char const *argv[]) {
           sim.reset();
           //bfeatures.clear();
           ffeatures.clear();
-          //mfeatures.clear();
+          mfeatures.clear();
           *dt = 0.002;
           fs[0] = 0.0; fs[1] = 0.0;
           sim.set_re_for_ips(0.02);
@@ -373,7 +375,7 @@ int main(int argc, char const *argv[]) {
           sim.reset();
           //bfeatures.clear();
           ffeatures.clear();
-          //mfeatures.clear();
+          mfeatures.clear();
           *dt = 0.002;
           fs[0] = 0.0; fs[1] = 0.0;
           sim.set_re_for_ips(0.02);
@@ -392,7 +394,7 @@ int main(int argc, char const *argv[]) {
           sim.reset();
           //bfeatures.clear();
           ffeatures.clear();
-          //mfeatures.clear();
+          mfeatures.clear();
           *dt = 0.01;
           fs[0] = 0.0; fs[1] = 0.0;
           *re = 100.0;
@@ -438,6 +440,9 @@ int main(int argc, char const *argv[]) {
           is_viscous = sim.get_diffuse();
           // run one step so we know what we have
           begin_single_step = true;
+
+          // check and possibly resize the window to match the saved resolution
+          resize_to_resolution(window, rparams.width, rparams.height);
         }
       }
     }
@@ -457,7 +462,7 @@ int main(int argc, char const *argv[]) {
         //sim.set_amr(use_amr);
         sim.set_diffuse(true);
         // and let user choose Reynolds number
-        ImGui::SliderFloat("Reynolds number", sim.addr_re(), 10.0f, 2000.0f, "%.0f", 2.0f);
+        ImGui::SliderFloat("Reynolds number", sim.addr_re(), 10.0f, 2000.0f, "%.1f", 2.0f);
         ImGui::Text("Particle spacing %g", sim.get_ips());
       } else {
         static float my_ips = 0.03141;
@@ -514,9 +519,24 @@ int main(int argc, char const *argv[]) {
       }
 */
 
+      // list existing measurement features here
+      int del_this_measure = -1;
+      for (int i=0; i<(int)mfeatures.size(); ++i) {
+        // add a "remove" button here somehow
+        ImGui::PushID(++buttonIDs);
+        if (ImGui::SmallButton("remove")) del_this_measure = i;
+        ImGui::PopID();
 
-      // button and modal window for adding new ones
-      if (ImGui::Button("Add new flow structure")) ImGui::OpenPopup("New flow structure");
+        ImGui::SameLine();
+        ImGui::Text("%s", mfeatures[i]->to_string().c_str());
+      }
+      if (del_this_measure > -1) {
+        std::cout << "Asked to delete measurement feature " << del_this_measure << std::endl;
+        mfeatures.erase(mfeatures.begin()+del_this_measure);
+      }
+
+      // button and modal window for adding new flow structures
+      if (ImGui::Button("Add flow structure")) ImGui::OpenPopup("New flow structure");
       ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
       if (ImGui::BeginPopupModal("New flow structure"))
       {
@@ -553,6 +573,8 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
+            // it would be nice to be able to put this all in
+            //SingleParticle::draw_creation_gui();
             break;
 
           case 1:
@@ -611,7 +633,93 @@ int main(int argc, char const *argv[]) {
       //if (ImGui::Button("Add new boundary structure")) ImGui::OpenPopup("New boundary structure");
       //ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
 
-    } // end flow structures
+
+      // button and modal window for adding new measurement objects
+      ImGui::SameLine();
+      if (ImGui::Button("Add measurement structure")) ImGui::OpenPopup("New measurement structure");
+      ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
+      if (ImGui::BeginPopupModal("New measurement structure"))
+      {
+        static int item = 0;
+        const char* items[] = { "single point/tracer", "streakline", "circle of tracers", "line of tracers", "measurement line" };
+        ImGui::Combo("type", &item, items, 5);
+
+        static float xc[3] = {0.0f, 0.0f, 0.0f};
+        static float xf[3] = {0.0f, 1.0f, 0.0f};
+        static bool is_lagrangian = true;
+        static float rad = 2.0 * sim.get_ips();
+
+        // show different inputs based on what is selected
+        switch(item) {
+          case 0:
+            // a single measurement point
+            ImGui::InputFloat3("position", xc);
+            ImGui::Checkbox("Point follows flow", &is_lagrangian);
+            ImGui::TextWrapped("This feature will add 1 point");
+            if (ImGui::Button("Add single point")) {
+              mfeatures.emplace_back(std::make_unique<SinglePoint>(xc[0], xc[1], xc[2], is_lagrangian));
+              std::cout << "Added " << (*mfeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+          case 1:
+            // a tracer emitter
+            ImGui::InputFloat3("position", xc);
+            ImGui::TextWrapped("This feature will add 1 tracer emitter");
+            if (ImGui::Button("Add streakline")) {
+              mfeatures.emplace_back(std::make_unique<TracerEmitter>(xc[0], xc[1], xc[2]));
+              std::cout << "Added " << (*mfeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+          case 2:
+            // a tracer circle
+            ImGui::InputFloat3("center", xc);
+            ImGui::SliderFloat("radius", &rad, 0.5f*sim.get_ips(), 0.5f, "%.4f");
+            ImGui::TextWrapped("This feature will add about %d field points",
+                               (int)(0.6*std::pow(2*rad/(rparams.tracer_scale*sim.get_ips()), 3)));
+            if (ImGui::Button("Add circle of tracers")) {
+              mfeatures.emplace_back(std::make_unique<TracerBlob>(xc[0], xc[1], xc[2], rad));
+              std::cout << "Added " << (*mfeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+          case 3:
+            // a tracer line
+            ImGui::InputFloat3("start", xc);
+            ImGui::InputFloat3("finish", xf);
+            ImGui::TextWrapped("This feature will add about %d field points",
+                               1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(rparams.tracer_scale*sim.get_ips())));
+            if (ImGui::Button("Add line of tracers")) {
+              mfeatures.emplace_back(std::make_unique<TracerLine>(xc[0], xc[1], xc[2], xf[0], xf[1], xf[2]));
+              std::cout << "Added " << (*mfeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+          case 4:
+            // a static, measurement line
+            ImGui::InputFloat3("start", xc);
+            ImGui::InputFloat3("finish", xf);
+            ImGui::TextWrapped("This feature will add about %d field points",
+                               1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(rparams.tracer_scale*sim.get_ips())));
+            if (ImGui::Button("Add line of measurement points")) {
+              mfeatures.emplace_back(std::make_unique<MeasurementLine>(xc[0], xc[1], xc[2], xf[0], xf[1], xf[2]));
+              std::cout << "Added " << (*mfeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            break;
+        }
+
+        if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+      }
+
+    } // end structure entry
 
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Rendering parameters")) {
@@ -678,8 +786,8 @@ int main(int argc, char const *argv[]) {
       ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-      //ImGui::Text("Number of panels: %ld  Number of particles: %ld", sim.get_npanels(), sim.get_nparts());
-      ImGui::Text("Number of particles: %ld", sim.get_nparts());
+      ImGui::Text("Number of panels: %ld  particles: %ld  field points: %ld",
+                  (size_t)0, sim.get_nparts(), sim.get_nfldpts());
 
       // save the simulation to a JSON or VTK file
       ImGui::Spacing();

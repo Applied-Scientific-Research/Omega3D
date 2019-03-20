@@ -100,50 +100,35 @@ void Convection<A>::solve_bem(const std::array<double,Dimensions>& _fs,
 //
 template <class A>
 void Convection<A>::find_vels(const std::array<double,Dimensions>& _fs,
-                              std::vector<Collection>& _vort,
-                              std::vector<Collection>& _bdry,
-                              std::vector<Collection>& _fldpt) {
+                              std::vector<Collection>&             _vort,
+                              std::vector<Collection>&             _bdry,
+                              std::vector<Collection>&             _targets) {
 
-  //if (_vort.size()+_fldpt.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
-  if (_vort.size()+_fldpt.size() > 0) std::cout << std::endl;
+  //if (_targets.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
+  if (_targets.size() > 0) std::cout << std::endl;
 
   // need this for dispatching velocity influence calls, template param is accumulator type
   // should the solution_t be an argument to the constructor?
   InfluenceVisitor<A> visitor;
 
-  // TODO - can I temporarily join vort and fldpt for the loop below?
-
-  // find the influence on every vorticity element
-  for (auto &targ : _vort) {
-    std::cout << "  Solving for velocities on" << to_string(targ) << std::endl << std::flush;
-    // zero velocities
-    std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
-    // accumulate from vorticity
-    for (auto &src : _vort) {
-      // how do I specify the solver?
-      std::visit(visitor, src, targ);
-    }
-    // accumulate from boundaries
-    for (auto &src : _bdry) {
-      std::visit(visitor, src, targ);
-    }
-    // add freestream and divide by 2pi
-    std::visit([=](auto& elem) { elem.finalize_vels(_fs); }, targ);
-  }
-
   // find the influence on every field point/tracer element
-  for (auto &targ : _fldpt) {
+  for (auto &targ : _targets) {
     std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
+
     // zero velocities
     std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
+
     // accumulate from vorticity
     for (auto &src : _vort) {
       std::visit(visitor, src, targ);
     }
+
     // accumulate from boundaries
     for (auto &src : _bdry) {
+      // call the Influence routine for these collections
       std::visit(visitor, src, targ);
     }
+
     // add freestream and divide by 2pi
     std::visit([=](auto& elem) { elem.finalize_vels(_fs); }, targ);
   }
@@ -160,7 +145,7 @@ void Convection<A>::advect_1st(const double _dt,
                                std::vector<Collection>& _bdry,
                                std::vector<Collection>& _fldpt) {
 
-  std::cout << "  inside advect_1st with dt=" << _dt << std::endl;
+  std::cout << "Inside advect_1st with dt=" << _dt << std::endl;
 
   // part A - unknowns
 
@@ -168,6 +153,7 @@ void Convection<A>::advect_1st(const double _dt,
 
   // part B - knowns
 
+  find_vels(_fs, _vort, _bdry, _vort);
   find_vels(_fs, _vort, _bdry, _fldpt);
 
   // part C - convection here
@@ -189,6 +175,7 @@ void Convection<A>::advect_1st(const double _dt,
   //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
 }
 
+
 //
 // second-order RK2 forward integration
 //
@@ -199,7 +186,7 @@ void Convection<A>::advect_2nd(const double _dt,
                                std::vector<Collection>& _bdry,
                                std::vector<Collection>& _fldpt) {
 
-  std::cout << "  inside advect_2nd with dt=" << _dt << std::endl;
+  std::cout << "Inside advect_2nd with dt=" << _dt << std::endl;
 
   // take the first Euler step ---------
 
@@ -207,6 +194,7 @@ void Convection<A>::advect_2nd(const double _dt,
   solve_bem(_fs, _vort, _bdry);
 
   // find the derivatives
+  find_vels(_fs, _vort, _bdry, _vort);
   find_vels(_fs, _vort, _bdry, _fldpt);
 
   // advect into an intermediate system
@@ -217,7 +205,11 @@ void Convection<A>::advect_2nd(const double _dt,
   // now _vort has its original positions and the velocities evaluated there
   // and interm_vort has the positions at t+dt
 
-  // do the same for bdry and fldpt, if necessary
+  // do the same for fldpt
+  std::vector<Collection> interim_fldpt = _fldpt;
+  for (auto &coll : interim_fldpt) {
+    std::visit([=](auto& elem) { elem.move(_dt); }, coll);
+  }
 
   // begin the 2nd step ---------
 
@@ -227,7 +219,8 @@ void Convection<A>::advect_2nd(const double _dt,
 
   // find the derivatives
   //find_vels(_fs, interim_vort, interim_bdry, interim_fldpt);
-  find_vels(_fs, interim_vort, _bdry, _fldpt);
+  find_vels(_fs, interim_vort, _bdry, interim_vort);
+  find_vels(_fs, interim_vort, _bdry, interim_fldpt);
 
   // _vort still has its original positions and the velocities evaluated there
   // but interm_vort now has the velocities at t+dt
@@ -244,11 +237,24 @@ void Convection<A>::advect_2nd(const double _dt,
       Points<float>& p2 = std::get<Points<float>>(c2);
       p1.move(_dt, 0.5, p1, 0.5, p2);
     }
-    // do the same for Panels
     ++v1p;
     ++v2p;
   }
 
+  v1p = _fldpt.begin();
+  v2p = interim_fldpt.begin();
+  for (size_t i = 0; i < _fldpt.size(); ++i) {
+    Collection& c1 = *v1p;
+    Collection& c2 = *v2p;
+    // switch based on what type is actually held in the std::variant
+    if (std::holds_alternative<Points<float>>(c1) and std::holds_alternative<Points<float>>(c2)) {
+      Points<float>& p1 = std::get<Points<float>>(c1);
+      Points<float>& p2 = std::get<Points<float>>(c2);
+      p1.move(_dt, 0.5, p1, 0.5, p2);
+    }
+    ++v1p;
+    ++v2p;
+  }
 
   //std::cout << "After 1st order convection, particles are:" << std::endl;
   //for (size_t i=0; i<4*n; i+=4) {

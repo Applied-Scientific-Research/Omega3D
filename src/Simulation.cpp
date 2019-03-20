@@ -69,13 +69,13 @@ size_t Simulation::get_nparts() {
   return n;
 }
 
-//size_t Simulation::get_nfldpts() {
-//  size_t n = 0;
-//  for (auto &coll : fldpt) {
-//    std::visit([&n](auto& elem) { n += elem.get_n(); }, coll);
-//  }
-//  return n;
-//}
+size_t Simulation::get_nfldpts() {
+  size_t n = 0;
+  for (auto &coll : fldpt) {
+    std::visit([&n](auto& elem) { n += elem.get_n(); }, coll);
+  }
+  return n;
+}
 
 // like a setter
 void Simulation::set_re_for_ips(const float _ips) {
@@ -95,17 +95,29 @@ void Simulation::set_diffuse(const bool _do_diffuse) {
 #ifdef USE_GL
 void Simulation::initGL(std::vector<float>& _projmat,
                         float*              _poscolor,
-                        float*              _negcolor) {
-  // never gets called
-  //bdry.initGL(_projmat, _poscolor, _negcolor);
-  //vort.initGL(_projmat, _poscolor, _negcolor);
+                        float*              _negcolor,
+                        float*              _defcolor) {
+  for (auto &coll : vort) {
+    std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
+  }
+  //for (auto &coll : bdry) {
+  //  std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
+  //}
+  for (auto &coll : fldpt) {
+    std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
+  }
 }
 
 void Simulation::updateGL() {
   for (auto &coll : vort) {
     std::visit([=](auto& elem) { elem.updateGL(); }, coll);
   }
-  //bdry.updateGL();
+  //for (auto &coll : bdry) {
+  //  std::visit([=](auto& elem) { elem.updateGL(); }, coll);
+  //}
+  for (auto &coll : fldpt) {
+    std::visit([=](auto& elem) { elem.updateGL(); }, coll);
+  }
 }
 
 void Simulation::drawGL(std::vector<float>& _projmat,
@@ -119,9 +131,9 @@ void Simulation::drawGL(std::vector<float>& _projmat,
     //for (auto &coll : bdry) {
     //  std::visit([&](auto& elem) { elem.drawGL(_projmat, _rparams); }, coll);
     //}
-    //for (auto &coll : fldpt) {
-    //  std::visit([&](auto& elem) { elem.drawGL(_projmat, _rparams); }, coll);
-    //}
+    for (auto &coll : fldpt) {
+      std::visit([&](auto& elem) { elem.drawGL(_projmat, _rparams); }, coll);
+    }
   }
 }
 #endif
@@ -166,7 +178,7 @@ void Simulation::write_vtk() {
       write_vtu_points<float>(pts, idx++, frameno);
     }
   }
-/*
+
   idx = 0;
   for (auto &coll : fldpt) {
     // eventually all collections will support vtk output
@@ -177,7 +189,7 @@ void Simulation::write_vtk() {
       write_vtu_points<float>(pts, idx++, frameno);
     }
   }
-*/
+
   frameno++;
 }
 
@@ -354,6 +366,37 @@ void Simulation::add_particles(std::vector<float> _invec) {
     //for (auto &coll : vort) {
       //std::visit([&](auto& elem) { elem.add_new(_invec); }, coll);
     //}
+  }
+}
+
+// add some tracer particles to new arch
+void Simulation::add_fldpts(std::vector<float> _xyz, const bool _moves) {
+
+  if (_xyz.size() == 0) return;
+
+  // make sure we're getting full points
+  assert(_xyz.size() % 3 == 0);
+
+  const move_t move_type = _moves ? lagrangian : fixed;
+
+  // add to new archtecture
+
+  // if no collections exist
+  if (fldpt.size() == 0) {
+    // make a new collection
+    fldpt.push_back(Points<float>(_xyz, inert, move_type));
+
+  } else {
+    // THIS MUST USE A VISITOR
+    // HACK - add all particles to first collection
+    //std::visit([&](auto& elem) { elem.add_new(_xyz); }, fldpt.back());
+    auto& coll = fldpt.back();
+    // eventually we will want to check every collection for matching element and move types
+    // only proceed if the collection is Points
+    if (std::holds_alternative<Points<float>>(coll)) {
+      Points<float>& pts = std::get<Points<float>>(coll);
+      pts.add_new(_xyz);
+    }
   }
 }
 

@@ -4,7 +4,7 @@
  * These methods are from https://solarianprogrammer.com/2013/05/13/opengl-101-drawing-primitives/
  * and https://github.com/sol-prog/OpenGL-101
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
@@ -18,6 +18,13 @@
 //#include <fstream>
 
 // clang-format off
+
+const std::string point_vert_shader_source =
+#include "shaders/point.vert"
+;
+const std::string point_frag_shader_source =
+#include "shaders/point.frag"
+;
 
 const std::string part_vert_shader_source =
 #include "shaders/particle.vert"
@@ -62,7 +69,7 @@ GLuint load_and_compile_shader(const std::string shader_src, GLenum shaderType) 
 }
 
 // Create a program from two shaders to render particles as blobs
-GLuint create_particle_program() {
+GLuint create_draw_blob_program() {
   // Load and compile the vertex and fragment shaders
   GLuint vertexShader = load_and_compile_shader(part_vert_shader_source, GL_VERTEX_SHADER);
   GLuint fragmentShader = load_and_compile_shader(part_frag_shader_source, GL_FRAGMENT_SHADER);
@@ -84,3 +91,48 @@ GLuint create_particle_program() {
 }
 
 
+// Create a program from one shader to render particles as points
+GLuint create_draw_point_program() {
+  // Load and compile the vertex and fragment shaders
+  GLuint vertexShader = load_and_compile_shader(point_vert_shader_source, GL_VERTEX_SHADER);
+  GLuint fragmentShader = load_and_compile_shader(point_frag_shader_source, GL_FRAGMENT_SHADER);
+
+  // Attach the above shader to a program
+  GLuint shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, vertexShader);
+  glAttachShader(shaderProgram, fragmentShader);
+
+  // Flag the shaders for deletion
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+
+  // Link and use the program
+  glLinkProgram(shaderProgram);
+  glUseProgram(shaderProgram);
+
+  return shaderProgram;
+}
+
+/*
+// Create a program from two shaders to render panels
+GLuint create_draw_surface_tri_prog() {
+  // Load and compile the vertex and fragment shaders
+  GLuint vertexShader = load_and_compile_shader(surfline_vert_shader_source, GL_VERTEX_SHADER);
+  GLuint fragmentShader = load_and_compile_shader(surfline_frag_shader_source, GL_FRAGMENT_SHADER);
+
+  // Attach the above shader to a program
+  GLuint shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, vertexShader);
+  glAttachShader(shaderProgram, fragmentShader);
+
+  // Flag the shaders for deletion
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+
+  // Link and use the program
+  glLinkProgram(shaderProgram);
+  glUseProgram(shaderProgram);
+
+  return shaderProgram;
+}
+*/

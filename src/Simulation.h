@@ -10,6 +10,7 @@
 #include "Omega3D.h"
 //#include "Body.h"
 #include "Collection.h"
+//#include "BEM.h"
 #include "Convection.h"
 #include "Diffusion.h"
 
@@ -67,13 +68,14 @@ public:
   // get runtime status
   //size_t get_npanels();
   size_t get_nparts();
-  //size_t get_nfldpts();
+  size_t get_nfldpts();
 
   // inviscid case needs this
   void set_re_for_ips(float);
 
   // receive and add a set of particles
   void add_particles(std::vector<float>);
+  void add_fldpts(std::vector<float>, const bool);
   //void add_boundary(bdryType, std::vector<float>);
 
   // act on stuff
@@ -82,7 +84,6 @@ public:
   void reset();
   void async_step();
   void step();
-  //void init_bcs();
   bool is_initialized();
   void set_initialized();
   std::string check_simulation(const size_t);
@@ -91,7 +92,7 @@ public:
 
 #ifdef USE_GL
   // graphics pass-through calls
-  void initGL(std::vector<float>&, float*, float*);
+  void initGL(std::vector<float>&, float*, float*, float*);
   void updateGL();
   void drawGL(std::vector<float>&, RenderParams&);
 #endif
