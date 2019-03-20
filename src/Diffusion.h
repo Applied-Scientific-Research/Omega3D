@@ -1,7 +1,7 @@
 /*
  * Diffusion.h - a class for diffusion of strength from bodies to particles and among particles
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
@@ -42,6 +42,7 @@ public:
       particle_overlap(1.5)
     {}
 
+  const bool get_diffuse() { return !is_inviscid; }
   void set_diffuse(const bool _do_diffuse) { is_inviscid = not _do_diffuse; }
   //void set_amr(const bool _do_amr) { adaptive_radii = _do_amr; }
   S get_nom_sep_scaled() const { return nom_sep_scaled; }
@@ -88,7 +89,7 @@ void Diffusion<S,A,I>::step(const float                 _dt,
 
   if (is_inviscid) return;
 
-  std::cout << "  inside Diffusion::step with dt=" << _dt << std::endl;
+  std::cout << "Inside Diffusion::step with dt=" << _dt << std::endl;
 
 /*
   // always re-run the BEM calculation before shedding
@@ -119,7 +120,10 @@ void Diffusion<S,A,I>::step(const float                 _dt,
   //vrm.set_adaptive_radii(adaptive_radii);
 
   // loop over active vorticity
-  for (auto &coll: _vort) {
+  for (auto &coll : _vort) {
+
+    // if no strength, skip
+    if (std::visit([=](auto& elem) { return elem.is_inert(); }, coll)) continue;
 
     // but only check particles ("Points")
     if (std::holds_alternative<Points<float>>(coll)) {

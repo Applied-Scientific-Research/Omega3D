@@ -8,9 +8,9 @@
 #include "Simulation.h"
 #include "Points.h"
 #include "VtkXmlHelper.h"
-#include "Influence.h"
-#include "CollectionHelper.h"
-#include "Core.h"
+//#include "Influence.h"
+//#include "CollectionHelper.h"
+//#include "Core.h"
 #include "Split.h"
 
 #include <cassert>
@@ -85,6 +85,10 @@ void Simulation::set_re_for_ips(const float _ips) {
 
 void Simulation::set_diffuse(const bool _do_diffuse) {
   diff.set_diffuse(_do_diffuse);
+}
+
+const bool Simulation::get_diffuse() {
+  return diff.get_diffuse();
 }
 
 //void Simulation::set_amr(const bool _do_amr) {
