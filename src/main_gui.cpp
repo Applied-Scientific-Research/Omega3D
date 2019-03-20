@@ -20,6 +20,8 @@
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw_gl3.h"
+//#include "imgui/ImguiWindowsFileIO.hpp"
+#include "imgui/FrameBufferToImage.hpp"
 
 //#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL
 // functions (because it is small). You may use glew/glad/glLoadGen/etc.
@@ -663,6 +665,14 @@ int main(int argc, char const *argv[]) {
       }
 
       ImGui::Spacing();
+      //ImGui::Separator();
+      /*
+      ImGui::Text("Open additional windows");
+      if (ImGui::Button("Plot statistics")) show_stats_window ^= 1;
+      ImGui::SameLine();
+      if (ImGui::Button("Show terminal output")) show_terminal_window ^= 1;
+      ImGui::SameLine();
+      */
       //if (ImGui::Button("ImGui Samples")) show_test_window ^= 1;
 
       ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)",
@@ -677,6 +687,20 @@ int main(int argc, char const *argv[]) {
       //ImGui::SameLine();
       if (ImGui::Button("Save parts to vtk", ImVec2(170,0))) export_vtk_this_frame = true;
 
+      // PNG output of the render frame
+      if (ImGui::Button("Save screenshot to png", ImVec2(180,0))) draw_this_frame = true;
+      ImGui::SameLine();
+      if (record_all_frames) {
+        if (ImGui::Button("STOP", ImVec2(80,0))) {
+          record_all_frames = false;
+          sim_is_running = false;
+        }
+      } else {
+        if (ImGui::Button("RECORD to png", ImVec2(120,0))) {
+          record_all_frames = true;
+          sim_is_running = true;
+        }
+      }
     }
 
     // done drawing the Omega3D UI window
@@ -718,6 +742,20 @@ int main(int argc, char const *argv[]) {
     // draw the simulation: panels and particles
     compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
     sim.drawGL(gl_projection, rparams);
+
+    // if simulation has not been initted, draw the features instead!
+    //for (auto const& bf : bfeatures) { bf.drawGL(gl_projection, rparams); }
+
+    // here is where we write the buffer to a file
+    if ((is_ready and record_all_frames) or draw_this_frame) {
+      static int frameno = 0;
+      std::stringstream pngfn;
+      pngfn << "img_" << std::setfill('0') << std::setw(5) << frameno << ".png";
+      (void) saveFramePNG(pngfn.str());
+      std::cout << "Wrote screenshot to " << pngfn.str() << std::endl;
+      frameno++;
+      draw_this_frame = false;
+    }
 
     // draw the GUI
     ImGui::Render();
