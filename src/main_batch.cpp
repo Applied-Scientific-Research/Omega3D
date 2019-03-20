@@ -7,8 +7,17 @@
  */
 
 #include "FlowFeature.h"
+#include "MeasureFeature.h"
 #include "Simulation.h"
+#include "JsonHelper.h"
 #include "RenderParams.h"
+
+#ifdef _WIN32
+  // for glad
+  #define APIENTRY __stdcall
+  // for C++11 stuff
+  #include <ciso646>
+#endif
 
 #include <iostream>
 #include <vector>
@@ -23,7 +32,7 @@ int main(int argc, char const *argv[]) {
   Simulation sim;
   std::vector< std::unique_ptr<FlowFeature> > ffeatures;
   //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
-
+  std::vector< std::unique_ptr<MeasureFeature> > mfeatures;
   size_t nsteps = 0;
   RenderParams rparams;
 
@@ -37,11 +46,22 @@ int main(int argc, char const *argv[]) {
   // for starters, generate some vortons, particles, and field points
   //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, 0.1, 0.0, 0.0, -1.0, 1.0, 1.0));
   //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, -0.1, 0.0, 0.0, 1.0, 1.0, 1.0));
-  ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1000.0, 30000));
+  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1000.0, 30000));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(10000, active, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
   //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(2000, inert, fixed));
  
+  // load a simulation from a JSON file - check command line for file name
+  if (argc == 2) {
+    std::string infile = argv[1];
+    read_json(sim, ffeatures, /*bfeatures,*/ mfeatures, rparams, infile);
+    std::cout << std::endl << "Loaded simulation from " << infile << std::endl;
+  } else {
+    std::cout << std::endl << "Usage:" << std::endl;
+    std::cout << "  " << argv[0] << " filename.json" << std::endl << std::endl;
+    return -1;
+  }
+
 
   std::cout << std::endl << "Initializing simulation" << std::endl;
 
@@ -56,9 +76,9 @@ int main(int argc, char const *argv[]) {
   //}
 
   // initialize measurement features
-  //for (auto const& mf: mfeatures) {
-  //  sim.add_fldpts( mf->init_particles(0.1*sim.get_ips()), mf->moves() );
-  //}
+  for (auto const& mf: mfeatures) {
+    sim.add_fldpts( mf->init_particles(0.1*sim.get_ips()), mf->moves() );
+  }
 
   sim.set_initialized();
 
@@ -75,9 +95,12 @@ int main(int argc, char const *argv[]) {
       // the last simulation step was fine, OK to continue
 
       // generate new particles from emitters
-      //for (auto const& ff : ffeatures) {
-      //  sim.add_particles( ff->step_particles(sim.get_ips()) );
-      //}
+      for (auto const& ff : ffeatures) {
+        sim.add_particles( ff->step_particles(sim.get_ips()) );
+      }
+      for (auto const& mf: mfeatures) {
+        sim.add_fldpts( mf->step_particles(0.1*sim.get_ips()), mf->moves() );
+      }
 
       // begin a new dynamic step: convection and diffusion
       sim.step();
@@ -93,13 +116,23 @@ int main(int argc, char const *argv[]) {
     nsteps++;
 
     // for testing: always break after a few steps
-    if (nsteps == 2) break;
+    //if (nsteps == 2) break;
 
     // check vs. stopping conditions
     if (sim.using_max_steps() and sim.get_max_steps() == nsteps) break;
     if (sim.using_end_time() and sim.get_end_time() <= sim.get_time()) break;
 
   } // end step
+
+
+  // Save final step if desired
+  if (false) {
+    // just make up a file name and write it
+    std::string outfile = "output.json";
+    // write and echo
+    write_json(sim, ffeatures, /*bfeatures,*/ mfeatures, rparams, outfile);
+    std::cout << std::endl << "Wrote simulation to " << outfile << std::endl;
+  }
 
   sim.reset();
   std::cout << "Quitting" << std::endl;

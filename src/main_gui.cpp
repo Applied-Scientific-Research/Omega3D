@@ -10,6 +10,8 @@
 //#include "BoundaryFeature.h"
 #include "MeasureFeature.h"
 #include "Simulation.h"
+#include "JsonHelper.h"
+//#include "Body.h"
 #include "RenderParams.h"
 
 #ifdef _WIN32
@@ -22,7 +24,7 @@
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw_gl3.h"
-//#include "imgui/ImguiWindowsFileIO.hpp"
+#include "imgui/ImguiWindowsFileIO.hpp"
 #include "imgui/FrameBufferToImage.hpp"
 
 //#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL
@@ -136,6 +138,48 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
   last_w = display_w;
   last_h = display_h;
 }
+
+
+//
+// resize a window and framebuffer programmatically
+//
+void resize_to_resolution(GLFWwindow* window, const int new_w, const int new_h) {
+
+  // get framebuffer size
+  int fb_w, fb_h;
+  glfwGetFramebufferSize(window, &fb_w, &fb_h);
+  //std::cout << "Framebuffer size is " << fb_w << " x " << fb_h << std::endl;
+
+  // get window size
+  int ws_w, ws_h;
+  glfwGetWindowSize(window, &ws_w, &ws_h);
+  //std::cout << "Window size is " << ws_w << " x " << ws_h << std::endl;
+
+  // on normal monitors, these numbers should be the same; on retina displays, they may not
+
+  // check and resize
+  if (fb_w != new_w or fb_h != new_h) {
+    // on a retina display...do anything different?
+
+    glfwSetWindowSize(window, new_w, new_h);
+    std::cout << "Resizing window/framebuffer to " << new_w << " x " << new_h << std::endl;
+  }
+}
+
+/*
+static void ShowHelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(450.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+*/
 
 
 // execution starts here
@@ -411,7 +455,6 @@ int main(int argc, char const *argv[]) {
       } // end switch
     }
 
-/*
     // or load a simulation from a JSON file
     ImGui::SameLine();
     if (ImGui::Button("Or load a json file", ImVec2(160,0))) show_file_input_window = true;
@@ -430,11 +473,11 @@ int main(int argc, char const *argv[]) {
 
           // stop and clear before loading
           sim.reset();
-          bfeatures.clear();
+          //bfeatures.clear();
           ffeatures.clear();
 
           // load and report
-          read_json(sim, ffeatures, bfeatures, mfeatures, rparams, infile);
+          read_json(sim, ffeatures, /*bfeatures,*/ mfeatures, rparams, infile);
 
           // we have to manually set this variable
           is_viscous = sim.get_diffuse();
@@ -446,7 +489,6 @@ int main(int argc, char const *argv[]) {
         }
       }
     }
-*/
     ImGui::Spacing();
 
 
@@ -791,9 +833,30 @@ int main(int argc, char const *argv[]) {
 
       // save the simulation to a JSON or VTK file
       ImGui::Spacing();
-      //if (ImGui::Button("Save setup to json", ImVec2(180,0))) show_file_output_window = true;
-      //ImGui::SameLine();
+      if (ImGui::Button("Save setup to json", ImVec2(180,0))) show_file_output_window = true;
+      ImGui::SameLine();
       if (ImGui::Button("Save parts to vtk", ImVec2(170,0))) export_vtk_this_frame = true;
+
+      if (show_file_output_window) {
+        bool try_it = false;
+        std::string outfile = "output.json";
+
+        if (fileIOWindow( try_it, outfile, recent_files, "Save", {"*.json", "*.*"}, false, ImVec2(500,250))) {
+          show_file_output_window = false;
+
+          if (try_it) {
+            // remember
+            recent_files.push_back( outfile );
+
+            // retrieve window sizes
+            glfwGetWindowSize(window, &rparams.width, &rparams.height);
+
+            // write and echo
+            write_json(sim, ffeatures, /*bfeatures,*/ mfeatures, rparams, outfile);
+            std::cout << std::endl << "Wrote simulation to " << outfile << std::endl;
+          }
+        }
+      }
 
       // PNG output of the render frame
       if (ImGui::Button("Save screenshot to png", ImVec2(180,0))) draw_this_frame = true;
