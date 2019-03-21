@@ -43,14 +43,6 @@ int main(int argc, char const *argv[]) {
   // a string to hold any error messages
   std::string sim_err_msg;
 
-  // for starters, generate some vortons, particles, and field points
-  //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, 0.1, 0.0, 0.0, -1.0, 1.0, 1.0));
-  //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0, 0.0, -0.1, 0.0, 0.0, 1.0, 1.0, 1.0));
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1000.0, 30000));
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(10000, active, lagrangian));
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(5000, inert, lagrangian));
-  //ffeatures.emplace_back(std::make_unique<BlockOfRandom>(2000, inert, fixed));
- 
   // load a simulation from a JSON file - check command line for file name
   if (argc == 2) {
     std::string infile = argv[1];
