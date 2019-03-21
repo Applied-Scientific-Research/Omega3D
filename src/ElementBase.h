@@ -44,23 +44,18 @@ public:
 
     // check inputs
     if (_in.size() == 0) return;
-    assert(_in.size() % 7 == 0);
-    const size_t nnew = _in.size()/7;
+    const size_t nper = (this->E == inert) ? 3 : 7;
+    assert(_in.size() % nper == 0);
+    const size_t nnew = _in.size()/nper;
 
     // this initialization is specific to Points - so should we do it there?
     for (size_t d=0; d<Dimensions; ++d) {
-      // copy existing vector
-      //Vector<S> new_x = x[d];
       // extend with more space for new values
-      //new_x.resize(n+nnew);
       x[d].resize(n+nnew);
       // copy new values to end of vector
       for (size_t i=0; i<nnew; ++i) {
-        //new_x[n+i] = _in[7*i+d];
-        x[d][n+i] = _in[7*i+d];
+        x[d][n+i] = _in[nper*i+d];
       }
-      // finally, replace the master with this new vector
-      //x[d] = std::move(new_x);
     }
 
     // strength
