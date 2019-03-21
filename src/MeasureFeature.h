@@ -18,7 +18,10 @@
 class MeasureFeature {
 public:
   explicit
-  MeasureFeature(float _x, float _y, float _z, bool _moves)
+  MeasureFeature(float _x,
+                 float _y,
+                 float _z,
+                 bool _moves)
     : m_x(_x),
       m_y(_y),
       m_z(_z),
@@ -28,6 +31,7 @@ public:
   bool moves() const { return m_is_lagrangian; }
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
+  virtual void from_json(const nlohmann::json) = 0;
   virtual nlohmann::json to_json() const = 0;
   virtual std::vector<float> init_particles(float) const = 0;
   virtual std::vector<float> step_particles(float) const = 0;
@@ -61,12 +65,16 @@ std::ostream& operator<<(std::ostream& os, MeasureFeature const& ff);
 //
 class SinglePoint : public MeasureFeature {
 public:
-  SinglePoint(float _x, float _y, float _z, bool _moves)
+  SinglePoint(float _x = 0.0,
+              float _y = 0.0,
+              float _z = 0.0,
+              bool _moves = true)
     : MeasureFeature(_x, _y, _z, _moves)
     {}
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -81,12 +89,15 @@ protected:
 //
 class TracerEmitter : public SinglePoint {
 public:
-  TracerEmitter(float _x, float _y, float _z)
+  TracerEmitter(float _x = 0.0,
+                float _y = 0.0,
+                float _z = 0.0)
     : SinglePoint(_x, _y, _z, false)
     {}
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -102,13 +113,17 @@ protected:
 //
 class TracerBlob : public SinglePoint {
 public:
-  TracerBlob(float _x, float _y, float _z, float _rad)
+  TracerBlob(float _x = 0.0,
+             float _y = 0.0,
+             float _z = 0.0,
+             float _rad = 0.1)
     : SinglePoint(_x, _y, _z, true),
       m_rad(_rad)
     {}
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -123,7 +138,12 @@ protected:
 //
 class TracerLine : public SinglePoint {
 public:
-  TracerLine(float _x, float _y, float _z, float _xf, float _yf, float _zf)
+  TracerLine(float _x = 0.0,
+             float _y = 0.0,
+             float _z = 0.0,
+             float _xf = 1.0,
+             float _yf = 0.0,
+             float _zf = 0.0)
     : SinglePoint(_x, _y, _z, true),
       m_xf(_xf),
       m_yf(_yf),
@@ -132,6 +152,7 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -146,7 +167,12 @@ protected:
 //
 class MeasurementLine : public SinglePoint {
 public:
-  MeasurementLine(float _x, float _y, float _z, float _xf, float _yf, float _zf)
+  MeasurementLine(float _x = 0.0,
+                  float _y = 0.0,
+                  float _z = 0.0,
+                  float _xf = 1.0,
+                  float _yf = 0.0,
+                  float _zf = 0.0)
     : SinglePoint(_x, _y, _z, false),
       m_xf(_xf),
       m_yf(_yf),
@@ -155,6 +181,7 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -162,4 +189,10 @@ public:
 protected:
   float m_xf, m_yf, m_zf;
 };
+
+
+//
+// Parser for converting json object to new feature
+//
+void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>&, const nlohmann::json);
 

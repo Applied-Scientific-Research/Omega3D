@@ -20,6 +20,29 @@ std::ostream& operator<<(std::ostream& os, MeasureFeature const& ff) {
 
 
 //
+// parse the json and dispatch the constructors
+//
+void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
+                        const nlohmann::json _jin) {
+
+  // must have one and only one type
+  if (_jin.count("type") != 1) return;
+
+  const std::string ftype = _jin["type"];
+  std::cout << "  found " << ftype << std::endl;
+
+  if      (ftype == "tracer") {           _flist.emplace_back(std::make_unique<SinglePoint>()); }
+  else if (ftype == "tracer emitter") {   _flist.emplace_back(std::make_unique<TracerEmitter>()); }
+  else if (ftype == "tracer blob") {      _flist.emplace_back(std::make_unique<TracerBlob>()); }
+  else if (ftype == "tracer line") {      _flist.emplace_back(std::make_unique<TracerLine>()); }
+  else if (ftype == "measurement line") { _flist.emplace_back(std::make_unique<MeasurementLine>()); }
+
+  // and pass the json object to the specific parser
+  _flist.back()->from_json(_jin);
+}
+
+
+//
 // Create a single measurement point
 //
 std::vector<float>
@@ -44,6 +67,14 @@ SinglePoint::to_string() const {
   std::stringstream ss;
   ss << "single field point at " << m_x << " " << m_y << " " << m_z;
   return ss.str();
+}
+
+void
+SinglePoint::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
 }
 
 nlohmann::json
@@ -81,6 +112,14 @@ TracerEmitter::to_string() const {
   std::stringstream ss;
   ss << "tracer emitter at " << m_x << " " << m_y << " " << m_z << " spawning tracers every step";
   return ss.str();
+}
+
+void
+TracerEmitter::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
 }
 
 nlohmann::json
@@ -143,6 +182,15 @@ TracerBlob::to_string() const {
   return ss.str();
 }
 
+void
+TracerBlob::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  m_rad = j["rad"];
+}
+
 nlohmann::json
 TracerBlob::to_json() const {
   nlohmann::json j;
@@ -199,6 +247,18 @@ TracerLine::to_string() const {
   return ss.str();
 }
 
+void
+TracerLine::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> e = j["end"];
+  m_xf = e[0];
+  m_yf = e[1];
+  m_zf = e[2];
+}
+
 nlohmann::json
 TracerLine::to_json() const {
   nlohmann::json j;
@@ -253,6 +313,18 @@ MeasurementLine::to_string() const {
   std::stringstream ss;
   ss << "measurement line from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << " " << m_zf;
   return ss.str();
+}
+
+void
+MeasurementLine::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> e = j["end"];
+  m_xf = e[0];
+  m_yf = e[1];
+  m_zf = e[2];
 }
 
 nlohmann::json
