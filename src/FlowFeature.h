@@ -18,7 +18,9 @@
 class FlowFeature {
 public:
   explicit
-  FlowFeature(float _x, float _y, float _z)
+  FlowFeature(float _x,
+              float _y,
+              float _z)
     : m_x(_x),
       m_y(_y),
       m_z(_z)
@@ -26,6 +28,7 @@ public:
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
+  virtual void from_json(const nlohmann::json) = 0;
   virtual nlohmann::json to_json() const = 0;
   virtual std::vector<float> init_particles(float) const = 0;
   virtual std::vector<float> step_particles(float) const = 0;
@@ -51,13 +54,21 @@ std::ostream& operator<<(std::ostream& os, FlowFeature const& ff);
 //
 class SingleParticle : public FlowFeature {
 public:
-  SingleParticle(float _x, float _y, float _z, float _sx, float _sy, float _sz)
+  SingleParticle(float _x = 0.0,
+                 float _y = 0.0,
+                 float _z = 0.0,
+                 float _sx = 0.0,
+                 float _sy = 0.0,
+                 float _sz = 1.0)
     : FlowFeature(_x, _y, _z),
-      m_sx(_sx), m_sy(_sy), m_sz(_sz)
+      m_sx(_sx),
+      m_sy(_sy),
+      m_sz(_sz)
     {}
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -72,7 +83,14 @@ protected:
 //
 class VortexBlob : public SingleParticle {
 public:
-  VortexBlob(float _x, float _y, float _z, float _sx, float _sy, float _sz, float _rad, float _soft)
+  VortexBlob(float _x = 0.0,
+             float _y = 0.0,
+             float _z = 0.0,
+             float _sx = 0.0,
+             float _sy = 0.0,
+             float _sz = 1.0,
+             float _rad = 0.1,
+             float _soft = 0.1)
     : SingleParticle(_x, _y, _z, _sx, _sy, _sz),
       m_rad(_rad),
       m_softness(_soft)
@@ -80,6 +98,7 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -95,14 +114,14 @@ protected:
 //
 class BlockOfRandom : public FlowFeature {
 public:
-  BlockOfRandom(float _x,
-                float _y,
-                float _z,
-                float _xsize,
-                float _ysize,
-                float _zsize,
-                float _maxstr,
-                int   _num)
+  BlockOfRandom(float _x = 0.0,
+                float _y = 0.0,
+                float _z = 0.0,
+                float _xsize = 1.0,
+                float _ysize = 1.0,
+                float _zsize = 1.0,
+                float _maxstr = 0.01,
+                int   _num = 100)
     : FlowFeature(_x, _y, _z),
       m_xsize(_xsize),
       m_ysize(_ysize),
@@ -113,6 +132,7 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -131,12 +151,18 @@ protected:
 //
 class ParticleEmitter : public SingleParticle {
 public:
-  ParticleEmitter(float _x, float _y, float _z, float _sx, float _sy, float _sz)
+  ParticleEmitter(float _x = 0.0,
+                  float _y = 0.0,
+                  float _z = 0.0,
+                  float _sx = 0.0,
+                  float _sy = 0.0,
+                  float _sz = 0.01)
     : SingleParticle(_x, _y, _z, _sx, _sy, _sz)
     {}
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -150,14 +176,14 @@ protected:
 //
 class SingularRing : public FlowFeature {
 public:
-  SingularRing(float _x,
-               float _y,
-               float _z,
-               float _nx,
-               float _ny,
-               float _nz,
-               float _majrad,
-               float _circ)
+  SingularRing(float _x = 0.0,
+               float _y = 0.0,
+               float _z = 0.0,
+               float _nx = 1.0,
+               float _ny = 0.0,
+               float _nz = 0.0,
+               float _majrad = 0.5,
+               float _circ = 1.0)
     : FlowFeature(_x, _y, _z),
       m_nx(_nx),
       m_ny(_ny),
@@ -168,6 +194,7 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -186,21 +213,22 @@ protected:
 //
 class ThickRing : public SingularRing {
 public:
-  ThickRing(float _x,
-            float _y,
-            float _z,
-            float _nx,
-            float _ny,
-            float _nz,
-            float _majrad,
-            float _minrad,
-            float _circ)
+  ThickRing(float _x = 0.0,
+            float _y = 0.0,
+            float _z = 0.0,
+            float _nx = 1.0,
+            float _ny = 0.0,
+            float _nz = 0.0,
+            float _majrad = 0.5,
+            float _minrad = 0.05,
+            float _circ = 1.0)
     : SingularRing(_x, _y, _z, _nx, _ny, _nz, _majrad, _circ),
       m_minrad(_minrad)
     {}
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
@@ -209,9 +237,14 @@ protected:
   float m_minrad;
 };
 
+
 // how about an oval ring? requires no radii, but two basis vectors: long axis and short axis
-
 // vortex ring emitter (singular)
-
 // particles from file
+
+
+//
+// Parser for converting json object to new feature
+//
+void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>&, const nlohmann::json);
 

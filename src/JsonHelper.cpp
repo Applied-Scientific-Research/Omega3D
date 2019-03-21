@@ -173,50 +173,8 @@ void read_json (Simulation& sim,
 
     // iterate through vector of flow features
     for (auto const& ff: ff_json) {
-      //if (ff.count("type") == 1) {
-
-      const std::string ftype = ff["type"];
-      if (ftype == "single particle") {
-        std::cout << "  found single particle" << std::endl;
-        const std::vector<float> c = ff["center"];
-        const std::vector<float> str = ff["strength"];
-        ffeatures.emplace_back(std::make_unique<SingleParticle>(c[0], c[1], c[2], str[0], str[1], str[2]));
-      } else if (ftype == "vortex blob") {
-        std::cout << "  found vortex blob" << std::endl;
-        // maybe put this in a try-catch block to prevent erroring out when it can't find one
-        const std::vector<float> c = ff["center"];
-        const std::vector<float> str = ff["strength"];
-        const float rad = ff["radius"];
-        const float soft = ff["softness"];
-        ffeatures.emplace_back(std::make_unique<VortexBlob>(c[0], c[1], c[2], str[0], str[1], str[2], rad, soft));
-      } else if (ftype == "block of random") {
-        std::cout << "  found block of random" << std::endl;
-        const std::vector<float> c = ff["center"];
-        const std::vector<float> sz = ff["size"];
-        const float str = ff["max strength"];
-        const int num = ff["num"];
-        ffeatures.emplace_back(std::make_unique<BlockOfRandom>(c[0], c[1], c[2], sz[0], sz[1], sz[2], str, num));
-      } else if (ftype == "particle emitter") {
-        std::cout << "  found particle emitter" << std::endl;
-        const std::vector<float> c = ff["center"];
-        const std::vector<float> str = ff["strength"];
-        ffeatures.emplace_back(std::make_unique<ParticleEmitter>(c[0], c[1], c[2], str[0], str[1], str[2]));
-      } else if (ftype == "singular ring") {
-        std::cout << "  found singular ring" << std::endl;
-        const std::vector<float> c = ff["center"];
-        const std::vector<float> sz = ff["normal"];
-        const float majrad = ff["major radius"];
-        const float str = ff["circulation"];
-        ffeatures.emplace_back(std::make_unique<SingularRing>(c[0], c[1], c[2], sz[0], sz[1], sz[2], majrad, str));
-      } else if (ftype == "thick ring") {
-        std::cout << "  found thick ring" << std::endl;
-        const std::vector<float> c = ff["center"];
-        const std::vector<float> sz = ff["normal"];
-        const float majrad = ff["major radius"];
-        const float minrad = ff["major radius"];
-        const float str = ff["circulation"];
-        ffeatures.emplace_back(std::make_unique<ThickRing>(c[0], c[1], c[2], sz[0], sz[1], sz[2], majrad, minrad, str));
-      }
+      // pass ff into a function in FlowFeature to generate the object
+      parse_flow_json(ffeatures, ff);
     }
   }
 

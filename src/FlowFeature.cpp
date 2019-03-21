@@ -1,7 +1,7 @@
 /*
  * FlowFeature.cpp - GUI-side descriptions of flow features
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
@@ -17,6 +17,30 @@
 std::ostream& operator<<(std::ostream& os, FlowFeature const& ff) {
   ff.debug(os);
   return os;
+}
+
+
+//
+// parse the json and dispatch the constructors
+//
+void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
+                     const nlohmann::json _jin) {
+
+  // must have one and only one type
+  if (_jin.count("type") != 1) return;
+
+  const std::string ftype = _jin["type"];
+  std::cout << "  found " << ftype << std::endl;
+
+  if      (ftype == "single particle") {  _flist.emplace_back(std::make_unique<SingleParticle>()); }
+  else if (ftype == "vortex blob") {      _flist.emplace_back(std::make_unique<VortexBlob>()); }
+  else if (ftype == "block of random") {  _flist.emplace_back(std::make_unique<BlockOfRandom>()); }
+  else if (ftype == "particle emitter") { _flist.emplace_back(std::make_unique<ParticleEmitter>()); }
+  else if (ftype == "singular ring") {    _flist.emplace_back(std::make_unique<SingularRing>()); }
+  else if (ftype == "thick ring") {       _flist.emplace_back(std::make_unique<ThickRing>()); }
+
+  // and pass the json object to the specific parser
+  _flist.back()->from_json(_jin);
 }
 
 
@@ -50,6 +74,18 @@ SingleParticle::to_string() const {
   ss << "single particle at " << m_x << " " << m_y << " " << m_z;
   ss << " with strength " << m_sx << " " << m_sy << " " << m_sz;
   return ss.str();
+}
+
+void
+SingleParticle::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> s = j["strength"];
+  m_sx = s[0];
+  m_sy = s[1];
+  m_sz = s[2];
 }
 
 nlohmann::json
@@ -140,6 +176,20 @@ VortexBlob::to_string() const {
   return ss.str();
 }
 
+void
+VortexBlob::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> s = j["strength"];
+  m_sx = s[0];
+  m_sy = s[1];
+  m_sz = s[2];
+  m_rad = j["rad"];
+  m_softness = j["softness"];
+}
+
 nlohmann::json
 VortexBlob::to_json() const {
   nlohmann::json j;
@@ -202,6 +252,20 @@ BlockOfRandom::to_string() const {
   return ss.str();
 }
 
+void
+BlockOfRandom::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> s = j["size"];
+  m_xsize = s[0];
+  m_ysize = s[1];
+  m_zsize = s[2];
+  m_maxstr = j["max strength"];
+  m_num = j["num"];
+}
+
 nlohmann::json
 BlockOfRandom::to_json() const {
   nlohmann::json j;
@@ -238,6 +302,18 @@ ParticleEmitter::to_string() const {
   ss << "particle emitter at " << m_x << " " << m_y << " " << m_z << " spawning particles";
   ss << " with strength " << m_sx << " " << m_sy << " " << m_sz;
   return ss.str();
+}
+
+void
+ParticleEmitter::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> s = j["strength"];
+  m_sx = s[0];
+  m_sy = s[1];
+  m_sz = s[2];
 }
 
 nlohmann::json
@@ -306,6 +382,20 @@ SingularRing::to_string() const {
   ss << "singular vortex ring at " << m_x << " " << m_y << " " << m_z << ", radius " << m_majrad << ", circulation " << m_circ;
   ss << ", aimed along " << m_nx << " " << m_ny << " " << m_nz;
   return ss.str();
+}
+
+void
+SingularRing::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> n = j["normal"];
+  m_nx = n[0];
+  m_ny = n[1];
+  m_nz = n[2];
+  m_majrad = j["major radius"];
+  m_circ = j["circulation"];
 }
 
 nlohmann::json
@@ -412,6 +502,21 @@ ThickRing::to_string() const {
   ss << "thick vortex ring at " << m_x << " " << m_y << " " << m_z << ", radii " << m_majrad << " " << m_minrad << ", circulation " << m_circ;
   ss << ", aimed along " << m_nx << " " << m_ny << " " << m_nz;
   return ss.str();
+}
+
+void
+ThickRing::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> n = j["normal"];
+  m_nx = n[0];
+  m_ny = n[1];
+  m_nz = n[2];
+  m_majrad = j["major radius"];
+  m_minrad = j["minor radius"];
+  m_circ = j["circulation"];
 }
 
 nlohmann::json
