@@ -44,12 +44,9 @@ public:
     : ElementBase<S>(0, _e, _m),
       max_strength(-1.0) {
 
-    const size_t nper = (this->E == inert) ? 3 : 7;
-    if (_e == inert) {
-      std::cout << "  new collection with " << (_in.size()/nper) << " tracers..." << std::endl;
-    } else {
-      std::cout << "  new collection with " << (_in.size()/nper) << " vortons..." << std::endl;
-    }
+    const size_t nper = (_e == inert) ? 3 : 7;
+    std::cout << "  new collection with " << (_in.size()/nper);
+    std::cout << ((_e == inert) ? " tracers" : " vortons") << std::endl;
 
     // need to reset the base class n
     this->n = _in.size()/nper;
@@ -65,23 +62,20 @@ public:
       }
     }
 
-    this->elong.resize(this->n);
-    for (size_t i=0; i<this->n; ++i) {
-      this->elong[i] = 1.0;
-    }
-
     if (_e == inert) {
-      // field points need no radius, but we must set one anyway so that vel evals work - not any more
-      r.resize(this->n);
-      for (size_t i=0; i<this->n; ++i) {
-        r[i] = 0.0;
-      }
+      // field points need neither radius, elong, nor strength
 
     } else {
       // active vortons need a radius
       r.resize(this->n);
       for (size_t i=0; i<this->n; ++i) {
         r[i] = _in[7*i+6];
+      }
+
+      // and elongation
+      this->elong.resize(this->n);
+      for (size_t i=0; i<this->n; ++i) {
+        this->elong[i] = 1.0;
       }
 
       // optional strength in base class
@@ -128,20 +122,20 @@ public:
     ElementBase<S>::add_new(_in);
 
     // then do local stuff
-    r.resize(nold+nnew);
     if (this->E == inert) {
-      for (size_t i=0; i<nnew; ++i) {
-        r[nold+i] = 0.0;
-      }
+      // no radius needed
+
     } else {
+      // active points need radius and elongation
+      r.resize(nold+nnew);
       for (size_t i=0; i<nnew; ++i) {
         r[nold+i] = _in[7*i+6];
       }
-    }
 
-    elong.resize(nold+nnew);
-    for (size_t i=nold; i<nold+nnew; ++i) {
-      elong[i] = 1.0;
+      elong.resize(nold+nnew);
+      for (size_t i=nold; i<nold+nnew; ++i) {
+        elong[i] = 1.0;
+      }
     }
 
     // optional vel grads don't need to be initialized
@@ -163,16 +157,20 @@ public:
     if (_nnew == currn) return;
 
     // radii here
-    const size_t thisn = r.size();
-    r.resize(_nnew);
-    for (size_t i=thisn; i<_nnew; ++i) {
-      r[i] = 1.0;
-    }
+    if (this->E == inert) {
+      // no radii or elongation
 
-    // elongations here
-    elong.resize(_nnew);
-    for (size_t i=thisn; i<_nnew; ++i) {
-      elong[i] = 1.0;
+    } else {
+      r.resize(_nnew);
+      for (size_t i=r.size(); i<_nnew; ++i) {
+        r[i] = 1.0;
+      }
+
+      // elongations here
+      elong.resize(_nnew);
+      for (size_t i=elong.size(); i<_nnew; ++i) {
+        elong[i] = 1.0;
+      }
     }
 
     // vel grads ((no need to set it)
@@ -415,7 +413,7 @@ public:
       // Load and create the blob-drawing shader program
       mgl->spo[0] = create_draw_point_program();
 
-      // Now do the four arrays
+      // Only send position arrays - no radius or strength
       prepare_opengl_buffer(mgl->spo[0], 0, "px");
       prepare_opengl_buffer(mgl->spo[0], 1, "py");
       prepare_opengl_buffer(mgl->spo[0], 2, "posz");
@@ -534,7 +532,7 @@ public:
       // here is where we split on element type: active/reactive vs. inert
       if (this->E == inert) {
 
-        // just don't upload strengths or radii
+        // no strengths or radii needed or present
 
       } else { // this->E is active or reactive
 
