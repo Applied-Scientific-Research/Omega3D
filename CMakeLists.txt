@@ -101,7 +101,9 @@ ELSEIF( UNIX )
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
     ENDIF()
   ELSE()
-    # need to find pthreads
+    # suppress the warning
+    SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
+    # need to find pthreads (for std::async?)
     FIND_PACKAGE( Threads REQUIRED )
     #SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
     #IF (CMAKE_THREAD_LIBS_INIT)
@@ -136,14 +138,16 @@ SET(GLADSRC "src/glad/glad.c" )
 INCLUDE_DIRECTORIES( "src/glad" )
 FILE(GLOB IMGUISOURCES "src/imgui/*.cpp" )
 INCLUDE_DIRECTORIES( "src/tinyxml2" )
-#INCLUDE_DIRECTORIES( "src/tinyexpr" )
+INCLUDE_DIRECTORIES( "src/tinyexpr" )
 
 SET(SOURCES "src/Simulation.cpp"
             "src/FlowFeature.cpp"
             "src/CollectionHelper.cpp"
             "src/MeasureFeature.cpp"
+            "src/Body.cpp"
             "src/JsonHelper.cpp"
-            "src/tinyxml2/tinyxml2.cpp")
+            "src/tinyxml2/tinyxml2.cpp"
+            "src/tinyexpr/tinyexpr.c" )
 
 # create a binary for the GUI version
 ADD_EXECUTABLE( ${PROJECT_NAME} ${GLADSRC} ${IMGUISOURCES} ${SOURCES} "src/ShaderHelper.cpp" "src/main_gui.cpp" )

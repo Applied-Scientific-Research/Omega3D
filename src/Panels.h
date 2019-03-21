@@ -31,8 +31,11 @@
 template <class S>
 class Panels: public ElementBase<S> {
 public:
-  Panels(const size_t _n, const elem_t _e, const move_t _m)
-    : ElementBase<S>(_n, _e, _m) {
+  Panels(const size_t _n,
+         const elem_t _e,
+         const move_t _m,
+         std::shared_ptr<Body> _bp)
+    : ElementBase<S>(_n, _e, _m, _bp) {
 
     // this initialization specific to Panels - a circle
     this->x[0].resize(_n);

@@ -8,9 +8,6 @@
 #include "Simulation.h"
 #include "Points.h"
 #include "VtkXmlHelper.h"
-//#include "Influence.h"
-//#include "CollectionHelper.h"
-//#include "Core.h"
 #include "Split.h"
 
 #include <cassert>
@@ -167,9 +164,9 @@ void Simulation::reset() {
   step_is_finished = false;
 }
 
-//void Simulation::clear_bodies() {
-//  bodies.clear();
-//}
+void Simulation::clear_bodies() {
+  bodies.clear();
+}
 
 // Write a set of vtu files for the particles and panels
 void Simulation::write_vtk() {
@@ -232,6 +229,25 @@ std::string Simulation::check_simulation(const size_t _nff) {
   // later
 
   return retstr;
+}
+
+//
+// check all bodies for movement
+//
+bool Simulation::do_any_bodies_move() {
+  bool some_move = false;
+  for (size_t i=0; i<bodies.size(); ++i) {
+    auto thisvel = bodies[i]->get_vel(time);
+    auto nextvel = bodies[i]->get_vel(time+dt);
+    auto thisrot = bodies[i]->get_rotvel(time);
+    auto nextrot = bodies[i]->get_rotvel(time+dt);
+    if (std::abs(thisvel[0]) + std::abs(thisvel[1]) + std::abs(thisrot) +
+        std::abs(nextvel[0]) + std::abs(nextvel[1]) + std::abs(nextrot) >
+        std::numeric_limits<float>::epsilon()) {
+      some_move = true;
+    }
+  }
+  return some_move;
 }
 
 //
@@ -347,13 +363,7 @@ void Simulation::add_particles(std::vector<float> _invec) {
   // if no collections exist
   if (vort.size() == 0) {
     // make a new collection
-    vort.push_back(Points<float>(_invec, active, lagrangian));      // vortons
-
-    // some examples of other collections
-    //vort.push_back(Points<float>(5000, active, lagrangian));      // vortons
-    //fldpt.push_back(Points<float>(2000, inert, lagrangian));      // tracer particles
-    //fldpt.push_back(Points<float>(100, inert, fixed));            // static field points
-    //bdry.push_back(Panels<float>(500, reactive, bodybound));    // panels
+    vort.push_back(Points<float>(_invec, active, lagrangian, nullptr));      // vortons
 
   } else {
     // THIS MUST USE A VISITOR
@@ -365,7 +375,12 @@ void Simulation::add_particles(std::vector<float> _invec) {
     //} visitor;
 
     // HACK - add all particles to first collection
-    std::visit([&](auto& elem) { elem.add_new(_invec); }, vort.back());
+    auto& coll = vort.back();
+    // only proceed if the last collection is Points
+    if (std::holds_alternative<Points<float>>(coll)) {
+      Points<float>& pts = std::get<Points<float>>(coll);
+      pts.add_new(_invec);
+    }
 
     // TODO - need to find a way to not always make a new collection!
     //        like, test a collection for matching elem_t and move_t and Points/Panels/etc
@@ -391,7 +406,7 @@ void Simulation::add_fldpts(std::vector<float> _xyz, const bool _moves) {
   // if no collections exist
   if (fldpt.size() == 0) {
     // make a new collection
-    fldpt.push_back(Points<float>(_xyz, inert, move_type));
+    fldpt.push_back(Points<float>(_xyz, inert, move_type, nullptr));
 
   } else {
     // THIS MUST USE A VISITOR
@@ -416,4 +431,48 @@ void Simulation::add_boundary(bdryType _type, std::vector<float> _params) {
   }
 }
 */
+
+// add a new Body with the given name
+void Simulation::add_body(std::shared_ptr<Body> _body) {
+  bodies.emplace_back(_body);
+  std::cout << "  added new body (" << _body->get_name() << "), now have " << bodies.size() << std::endl;
+}
+
+// return a Body pointer to the last Body in the array
+std::shared_ptr<Body> Simulation::get_last_body() {
+  std::shared_ptr<Body> bp;
+
+  if (bodies.size() == 0) {
+    std::cout << "  no last body found, creating (ground)" << std::endl;
+    bp = std::make_shared<Body>();
+    bp->set_name("ground");
+    add_body(bp);
+  } else {
+    bp = bodies.back();
+    std::cout << "  returning last body (" << bp->get_name() << ")" << std::endl;
+  }
+
+  return bp;
+}
+
+// return a Body pointer to the body matching the given name
+std::shared_ptr<Body> Simulation::get_pointer_to_body(const std::string _name) {
+  std::shared_ptr<Body> bp;
+
+  for (auto &bptr : bodies) {
+    if (bptr->get_name() == _name) {
+      std::cout << "  found body matching name (" << _name << ")" << std::endl;
+    }
+  }
+
+  // or ground if none match
+  if (not bp) {
+    std::cout << "  no body matching (" << _name << ") found, creating (ground)" << std::endl;
+    bp = std::make_shared<Body>();
+    bp->set_name("ground");
+    add_body(bp);
+  }
+
+  return bp;
+}
 

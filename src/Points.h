@@ -40,8 +40,9 @@ public:
   //                         or input 3*n vector (x, y, z)
   Points(const std::vector<S>& _in,
          const elem_t _e,
-         const move_t _m)
-    : ElementBase<S>(0, _e, _m),
+         const move_t _m,
+         std::shared_ptr<Body> _bp)
+    : ElementBase<S>(0, _e, _m, _bp),
       max_strength(-1.0) {
 
     const size_t nper = (_e == inert) ? 3 : 7;
@@ -60,6 +61,11 @@ public:
       for (size_t i=0; i<this->n; ++i) {
         this->x[d][i] = _in[nper*i+d];
       }
+    }
+
+    // save untransformed positions if we are given a Body pointer
+    if (_bp) {
+      this->ux = this->x;
     }
 
     if (_e == inert) {
@@ -138,6 +144,16 @@ public:
       }
     }
 
+    // save the new untransformed positions if we have a Body pointer
+    if (this->B) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        (*this->ux)[d].resize(nold+nnew);
+        for (size_t i=nold; i<nold+nnew; ++i) {
+          (*this->ux)[d][i] = this->x[d][i];
+        }
+      }
+    }
+
     // optional vel grads don't need to be initialized
     if (ug) {
       for (size_t d=0; d<Dimensions*Dimensions; ++d) {
@@ -161,14 +177,16 @@ public:
       // no radii or elongation
 
     } else {
+      size_t thisn = r.size();
       r.resize(_nnew);
-      for (size_t i=r.size(); i<_nnew; ++i) {
+      for (size_t i=thisn; i<_nnew; ++i) {
         r[i] = 1.0;
       }
 
       // elongations here
+      thisn = elong.size();
       elong.resize(_nnew);
-      for (size_t i=elong.size(); i<_nnew; ++i) {
+      for (size_t i=thisn; i<_nnew; ++i) {
         elong[i] = 1.0;
       }
     }
@@ -199,9 +217,10 @@ public:
     ElementBase<S>::finalize_vels(_fs);
     // and specialize here for the vel grads
     if (ug) {
+      const S factor = 0.25/M_PI;
       for (size_t d=0; d<Dimensions*Dimensions; ++d) {
         for (size_t i=0; i<this->n; ++i) {
-          (*ug)[d][i] = (*ug)[d][i] * 0.25/M_PI;
+          (*ug)[d][i] = (*ug)[d][i] * factor;
         }
       }
     }

@@ -11,7 +11,7 @@
 #include "MeasureFeature.h"
 #include "Simulation.h"
 #include "JsonHelper.h"
-//#include "Body.h"
+#include "Body.h"
 #include "RenderParams.h"
 
 #ifdef _WIN32
@@ -372,6 +372,7 @@ int main(int argc, char const *argv[]) {
       float* dt = sim.addr_dt();
       float* fs = sim.addr_fs();
       float* re = sim.addr_re();
+      std::shared_ptr<Body> bp;
 
       switch(sim_item) {
         case 0:
@@ -380,6 +381,7 @@ int main(int argc, char const *argv[]) {
         case 1:
           // one singular vortex ring
           sim.reset();
+          sim.clear_bodies();
           //bfeatures.clear();
           ffeatures.clear();
           mfeatures.clear();
@@ -398,6 +400,7 @@ int main(int argc, char const *argv[]) {
         case 2:
           // leapfrogging vortex rings
           sim.reset();
+          sim.clear_bodies();
           //bfeatures.clear();
           ffeatures.clear();
           mfeatures.clear();
@@ -417,6 +420,7 @@ int main(int argc, char const *argv[]) {
         case 3:
           // colliding vortex rings
           sim.reset();
+          sim.clear_bodies();
           //bfeatures.clear();
           ffeatures.clear();
           mfeatures.clear();
@@ -436,6 +440,7 @@ int main(int argc, char const *argv[]) {
         case 4:
           // Re=100 vortex ring
           sim.reset();
+          sim.clear_bodies();
           //bfeatures.clear();
           ffeatures.clear();
           mfeatures.clear();

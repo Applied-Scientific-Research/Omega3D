@@ -8,7 +8,7 @@
 #pragma once
 
 #include "Omega3D.h"
-//#include "Body.h"
+#include "Body.h"
 #include "Collection.h"
 //#include "BEM.h"
 #include "Convection.h"
@@ -78,18 +78,27 @@ public:
   // receive and add a set of particles
   void add_particles(std::vector<float>);
   void add_fldpts(std::vector<float>, const bool);
-  //void add_boundary(bdryType, std::vector<float>);
+  //void add_boundary(std::shared_ptr<Body>, ElementPacket<float>);
+
+  // access body list
+  void add_body(std::shared_ptr<Body>);
+  std::shared_ptr<Body> get_last_body();
+  std::shared_ptr<Body> get_pointer_to_body(const std::string);
+  std::vector<std::shared_ptr<Body>>::iterator bodies_begin() { return bodies.begin(); }
+  std::vector<std::shared_ptr<Body>>::iterator bodies_end() { return bodies.end(); }
 
   // act on stuff
   //void set_amr(const bool);
   void set_diffuse(const bool);
   const bool get_diffuse();
   void reset();
+  void clear_bodies();
   void async_step();
   void step();
   bool is_initialized();
   void set_initialized();
   std::string check_simulation(const size_t);
+  bool do_any_bodies_move();
   bool test_for_new_results();
   void write_vtk();
 
@@ -107,7 +116,7 @@ private:
   float fs[Dimensions];
 
   // List of independent rigid bodies (and one for ground)
-  //std::vector< std::shared_ptr<Body> > bodies;
+  std::vector< std::shared_ptr<Body> > bodies;
 
   // Object to contain all Lagrangian elements
   std::vector<Collection> vort;		// active elements

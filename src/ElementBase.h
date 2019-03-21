@@ -9,6 +9,7 @@
 
 #include "VectorHelper.h"
 #include "Omega3D.h"
+#include "Body.h"
 
 #include <iostream>
 #include <vector>
@@ -27,12 +28,17 @@ class ElementBase {
 public:
   ElementBase<S>(const size_t _n,
                  const elem_t _e,
-                 const move_t _m) :
-      E(_e), M(_m), n(_n) {
+                 const move_t _m,
+                 std::shared_ptr<Body> _bp) :
+      E(_e), M(_m), B(_bp), n(_n) {
   }
 
   size_t get_n() const { return n; }
   bool is_inert() const { return E==inert; }
+  elem_t                                  get_elemt() const { return E; }
+  move_t                                  get_movet() const { return M; }
+  const std::shared_ptr<Body>             get_body_ptr() const { return B; }
+  std::shared_ptr<Body>                   get_body_ptr()  { return B; }
   const std::array<Vector<S>,Dimensions>& get_pos() const { return x; }
   std::array<Vector<S>,Dimensions>&       get_pos()       { return x; }
   const std::array<Vector<S>,Dimensions>& get_str() const { return *s; }
@@ -193,7 +199,7 @@ protected:
   // how does it move? use move_t and Body*
   move_t M;
   // if attached to a body, which one?
-  //std::shared_ptr<Body> B;
+  std::shared_ptr<Body> B;
 
   // common arrays for all derived types
   size_t n;
@@ -205,5 +211,8 @@ protected:
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity
   //std::optional<std::array<Vector<S>,Dimensions>> dsdt; // strength change
+
+  // for objects moving with a body
+  std::optional<std::array<Vector<S>,Dimensions>> ux;   // untransformed position
 };
 
