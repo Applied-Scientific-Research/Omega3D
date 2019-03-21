@@ -1,7 +1,7 @@
 /*
  * Kernels.h - Non-class inner kernels for influence calculations
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
@@ -13,6 +13,7 @@
 
 // velocity influence functions
 
+// thick-cored particle on thick-cored point, no gradients
 template <class S, class A>
 static inline void kernel_0_0s (const S sx, const S sy, const S sz,
                                 const S sr,
@@ -25,6 +26,31 @@ static inline void kernel_0_0s (const S sx, const S sy, const S sz,
   const S dy = ty - sy;
   const S dz = tz - sz;
   S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
+#ifdef USE_VC
+  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#else
+  r2 = 1.0 / (r2*std::sqrt(r2));
+#endif
+  const S dxxw = dz*ssy - dy*ssz;
+  const S dyxw = dx*ssz - dz*ssx;
+  const S dzxw = dy*ssx - dx*ssy;
+  *tu += r2 * dxxw;
+  *tv += r2 * dyxw;
+  *tw += r2 * dzxw;
+}
+
+// thick-cored particle on singular point, no gradients
+template <class S, class A>
+static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
+                                 const S sr,
+                                 const S ssx, const S ssy, const S ssz,
+                                 const S tx, const S ty, const S tz,
+                                 A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
+  // 28 flops
+  const S dx = tx - sx;
+  const S dy = ty - sy;
+  const S dz = tz - sz;
+  S r2 = dx*dx + dy*dy + dz*dz + sr*sr;
 #ifdef USE_VC
   r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
 #else
@@ -55,6 +81,7 @@ static inline void kernel_0_0v (const S* __restrict__ sx, const S __restrict__ s
   tu[2] += r2 * dzxw;
 }
 
+// thick-cored particle on thick-cored point, with gradients
 template <class S, class A>
 static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -70,6 +97,55 @@ static inline void kernel_0_0sg (const S sx, const S sy, const S sz,
   const S dy = ty - sy;
   const S dz = tz - sz;
   const S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
+#ifdef USE_VC
+  const S r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#else
+  const S r3 = 1.0 / (r2*std::sqrt(r2));
+#endif
+  S dxxw = dz*ssy - dy*ssz;
+  S dyxw = dx*ssz - dz*ssx;
+  S dzxw = dy*ssx - dx*ssy;
+  *tu += r3 * dxxw;
+  *tv += r3 * dyxw;
+  *tw += r3 * dzxw;
+
+  // accumulate velocity gradients
+#ifdef USE_VC
+  //const S bbb = -3.f * r3 * Vc::reciprocal(r2);
+  const S bbb = S(-3.0) * r3 * Vc::reciprocal(r2);
+#else
+  const S bbb = -3.0 * r3 / r2;
+#endif
+  // continuing with grads - this section is 33 flops
+  dxxw *= bbb;
+  dyxw *= bbb;
+  dzxw *= bbb;
+  *tux += dx*dxxw;
+  *tvx += dx*dyxw + ssz*r3;
+  *twx += dx*dzxw - ssy*r3;
+  *tuy += dy*dxxw - ssz*r3;
+  *tvy += dy*dyxw;
+  *twy += dy*dzxw + ssx*r3;
+  *tuz += dz*dxxw + ssy*r3;
+  *tvz += dz*dyxw - ssx*r3;
+  *twz += dz*dzxw;
+}
+
+// thick-cored particle on singular point, with gradients
+template <class S, class A>
+static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
+                                  const S sr,
+                                  const S ssx, const S ssy, const S ssz,
+                                  const S tx, const S ty, const S tz,
+                                  A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw,
+                                  A* __restrict__ tux, A* __restrict__ tvx, A* __restrict__ twx,
+                                  A* __restrict__ tuy, A* __restrict__ tvy, A* __restrict__ twy,
+                                  A* __restrict__ tuz, A* __restrict__ tvz, A* __restrict__ twz) {
+  // 30 flops
+  const S dx = tx - sx;
+  const S dy = ty - sy;
+  const S dz = tz - sz;
+  const S r2 = dx*dx + dy*dy + dz*dz + sr*sr;
 #ifdef USE_VC
   const S r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
 #else
