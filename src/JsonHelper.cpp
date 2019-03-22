@@ -6,7 +6,7 @@
  */
 
 #include "JsonHelper.h"
-//#include "Body.h"
+#include "Body.h"
 
 #include "json/json.hpp"
 
@@ -183,7 +183,6 @@ void read_json (Simulation& sim,
     //std::cout << "  found bodies" << std::endl;
     std::vector<json> bdy_json = j["bodies"];
 
-/*
     // iterate through vector of bodies and generate boundary features
     for (auto const& bdy: bdy_json) {
       // make a new Body (later) and attach these geometries to it
@@ -249,7 +248,6 @@ void read_json (Simulation& sim,
       // and add the Body pointer bp to the master list
       sim.add_body(bp);
     }
-*/
   }
 
   // read the measurement features, if any
@@ -319,7 +317,6 @@ void write_json(Simulation& sim,
     j["flowstructures"] = jflows;
   }
 
-/*
   // assemble a vector of bodies, each with 0 or more boundary features
   std::vector<json> jbods;
   auto b_iter = sim.bodies_begin();
@@ -346,7 +343,6 @@ void write_json(Simulation& sim,
     jbods.push_back(jb);
   }
   j["bodies"] = jbods;
-*/
 
   if (mfeatures.size() > 0) {
     // assemble a vector of measurement features
