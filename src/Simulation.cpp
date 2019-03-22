@@ -305,8 +305,8 @@ void Simulation::step() {
 
 
   // advect with no diffusion (must update BEM strengths)
-  //conv.advect_1st(dt, thisfs, vort, bdry, fldpt);
-  conv.advect_2nd(dt, thisfs, vort, bdry, fldpt);
+  //conv.advect_1st(time, dt, thisfs, vort, bdry, fldpt);
+  conv.advect_2nd(time, dt, thisfs, vort, bdry, fldpt);
 
   // operator splitting requires another half-step diffuse (must compute new coefficients)
   //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry);
@@ -371,7 +371,7 @@ void Simulation::add_particles(std::vector<float> _invec) {
     // helper struct for dispatching through a variant
     //struct AddElemsVisitor {
     //  void operator()(Points<float> const& coll) { coll.add_new(what); }
-    //  void operator()(Panels<float> const& coll) { coll.add_new(src); }
+    //  void operator()(Surfaces<float> const& coll) { coll.add_new(src); }
     //} visitor;
 
     // HACK - add all particles to first collection
@@ -383,7 +383,7 @@ void Simulation::add_particles(std::vector<float> _invec) {
     }
 
     // TODO - need to find a way to not always make a new collection!
-    //        like, test a collection for matching elem_t and move_t and Points/Panels/etc
+    //        like, test a collection for matching elem_t and move_t and Points/Surfaces/etc
     //        and add to the most appropriate
     //for (auto &coll : vort) {
       //std::visit([&](auto& elem) { elem.add_new(_invec); }, coll);

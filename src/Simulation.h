@@ -123,7 +123,7 @@ private:
 
   // Object to contain all Reactive elements
   //   inside is the vector of bodies and inlets and liftinglines/kuttapoints
-  //   and the Panels list of all unknowns discretized representations
+  //   and the Surfaces list of all unknowns discretized representations
   std::vector<Collection> bdry;		// reactive-active elements like BEM surfaces
 
   // Object with all of the non-reactive, non-active (inert) points
@@ -142,8 +142,8 @@ private:
   //   and performs 1st, 2nd, etc. RK forward integration
   //   inside here are non-drawing Particles objects used as temporaries in the multi-step methods
   //   also copies of the panels, which will be recreated for each step, and solutions to unknowns
-  //   Template parameter is accumulator type (float is OK)
-  Convection<float> conv;
+  // Note that with Vc, the storage and accumulator classes have to be the same
+  Convection<STORE,ACCUM,Int> conv;
 
   // state
   std::string description;

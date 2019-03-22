@@ -1,7 +1,7 @@
 /*
  * Convection.h - a class for forward integration of elements and their strengths
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
@@ -11,6 +11,9 @@
 #include "Collection.h"
 #include "CollectionHelper.h"
 #include "Influence.h"
+//#include "RHS.h"
+//#include "BEM.h"
+#include "BEMHelper.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -21,25 +24,24 @@
 //
 // One step of convection of elements, allowing for boundary conditions
 //
-// templatized on 'A'ccumulator type
+// templatized on 'S'torage, 'A'ccumulator types, and 'I'ndex types
 //
-template <class A>
+template <class S, class A, class I>
 class Convection {
 public:
   Convection() {}
-  void solve_bem( const std::array<double,Dimensions>&,
-                  std::vector<Collection>&,
-                  std::vector<Collection>&);
   void find_vels( const std::array<double,Dimensions>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&);
   void advect_1st(const double,
+                  const double,
                   const std::array<double,Dimensions>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&);
   void advect_2nd(const double,
+                  const double,
                   const std::array<double,Dimensions>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
@@ -52,54 +54,10 @@ private:
 
 
 //
-// helper function to solve BEM equations on given state
-//
-template <class A>
-void Convection<A>::solve_bem(const std::array<double,Dimensions>& _fs,
-                              std::vector<Collection>& _vort,
-                              std::vector<Collection>& _bdry) {
-
-  // no unknowns? no problem.
-  if (_bdry.size() == 0) return;
-
-  // need this for dispatching velocity influence calls, template param is accumulator type
-  // should the solution_t be an argument to the constructor?
-  InfluenceVisitor<A> visitor;
-
-  std::cout << std::endl << "Solving for BEM RHS" << std::endl << std::endl;
-
-  // loop over boundary collections
-  for (auto &targ : _bdry) {
-    std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
-    // zero velocities
-    std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
-    // accumulate from vorticity
-    for (auto &src : _vort) {
-      std::visit(visitor, src, targ);
-    }
-  }
-
-  std::cout << std::endl << "Solving for BEM matrix" << std::endl << std::endl;
-
-  // loop over boundary collections
-  for (auto &targ : _bdry) {
-    std::cout << "  Solving for influence coefficients on" << to_string(targ) << std::endl;
-    // assemble from all boundaries
-    for (auto &src : _bdry) {
-      std::visit(visitor, src, targ);
-    }
-  }
-
-  std::cout << std::endl << "Solving BEM for strengths" << std::endl << std::endl;
-
-  // soon...
-}
-
-//
 // helper function to find velocities at a given state, assuming BEM is solved
 //
-template <class A>
-void Convection<A>::find_vels(const std::array<double,Dimensions>& _fs,
+template <class S, class A, class I>
+void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
                               std::vector<Collection>&             _vort,
                               std::vector<Collection>&             _bdry,
                               std::vector<Collection>&             _targets) {
@@ -138,18 +96,20 @@ void Convection<A>::find_vels(const std::array<double,Dimensions>& _fs,
 //
 // first-order Euler forward integration
 //
-template <class A>
-void Convection<A>::advect_1st(const double _dt,
-                               const std::array<double,Dimensions>& _fs,
-                               std::vector<Collection>& _vort,
-                               std::vector<Collection>& _bdry,
-                               std::vector<Collection>& _fldpt) {
+template <class S, class A, class I>
+void Convection<S,A,I>::advect_1st(const double _time,
+                                   const double _dt,
+                                   const std::array<double,Dimensions>& _fs,
+                                   std::vector<Collection>&             _vort,
+                                   std::vector<Collection>&             _bdry,
+                                   std::vector<Collection>&             _fldpt/*,
+                                   BEM<S,I>&                            _bem*/) {
 
   std::cout << "Inside advect_1st with dt=" << _dt << std::endl;
 
   // part A - unknowns
 
-  solve_bem(_fs, _vort, _bdry);
+  solve_bem<S,A,I>(_time, _fs, _vort, _bdry/*, _bem*/);
 
   // part B - knowns
 
@@ -179,19 +139,21 @@ void Convection<A>::advect_1st(const double _dt,
 //
 // second-order RK2 forward integration
 //
-template <class A>
-void Convection<A>::advect_2nd(const double _dt,
-                               const std::array<double,Dimensions>& _fs,
-                               std::vector<Collection>& _vort,
-                               std::vector<Collection>& _bdry,
-                               std::vector<Collection>& _fldpt) {
+template <class S, class A, class I>
+void Convection<S,A,I>::advect_2nd(const double _time,
+                                   const double _dt,
+                                   const std::array<double,Dimensions>& _fs,
+                                   std::vector<Collection>&             _vort,
+                                   std::vector<Collection>&             _bdry,
+                                   std::vector<Collection>&             _fldpt/*,
+                                   BEM<S,I>&                            _bem*/) {
 
   std::cout << "Inside advect_2nd with dt=" << _dt << std::endl;
 
   // take the first Euler step ---------
 
   // perform the first BEM
-  solve_bem(_fs, _vort, _bdry);
+  solve_bem<S,A,I>(_time, _fs, _vort, _bdry/*, _bem*/);
 
   // find the derivatives
   find_vels(_fs, _vort, _bdry, _vort);
@@ -214,8 +176,8 @@ void Convection<A>::advect_2nd(const double _dt,
   // begin the 2nd step ---------
 
   // perform the second BEM
-  //solve_bem(_fs, interim_vort, interim_bdry);
-  solve_bem(_fs, interim_vort, _bdry);
+  //solve_bem<S,A,I>(_time + _dt, _fs, interim_vort, interim_bdry, _bem);
+  solve_bem<S,A,I>(_time + _dt, _fs, interim_vort, _bdry/*, _bem*/);
 
   // find the derivatives
   //find_vels(_fs, interim_vort, interim_bdry, interim_fldpt);
