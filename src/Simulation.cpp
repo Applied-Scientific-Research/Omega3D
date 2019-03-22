@@ -60,7 +60,19 @@ void Simulation::set_max_steps(const size_t nms) { max_steps = nms; use_max_step
 void Simulation::set_output_dt(const double nodt) { output_dt = nodt; }
 
 // status
-//size_t Simulation::get_npanels() { return bdry.get_npanels(); }
+size_t Simulation::get_npanels() {
+  size_t n = 0;
+  for (auto &coll: bdry) {
+    //std::visit([&n](auto& elem) { n += elem.get_npanels(); }, coll);
+    // only proceed if the last collection is Surfaces
+    if (std::holds_alternative<Surfaces<float>>(coll)) {
+      Surfaces<float>& surf = std::get<Surfaces<float>>(coll);
+      n += surf.get_npanels();
+    }
+  }
+  return n;
+}
+
 size_t Simulation::get_nparts() {
   size_t n = 0;
   for (auto &coll: vort) {
@@ -200,18 +212,31 @@ void Simulation::write_vtk() {
 //
 // Check all aspects of the simulation for conditions that should stop the run
 //
-//std::string Simulation::check_simulation(const size_t _nff, const size_t _nbf) {
-std::string Simulation::check_simulation(const size_t _nff) {
+std::string Simulation::check_simulation(const size_t _nff, const size_t _nbf) {
   std::string retstr;
 
   // Check for no bodies and no particles
-  if (_nff == 0) {
-    //retstr.append("No flow features and no bodies - try adding one or both.\n");
-    retstr.append("No flow features. Add one, reset, and run.\n");
+  if (_nbf == 0 and get_nparts() == 0) {
+    retstr.append("No flow features and no bodies. Add one or both, reset, and run.\n");
   }
 
-  // Check for a body and no particles and no freestream
-  // retstr.append("No flow features and zero freestream speed - try adding one or both.\n");
+  // Check for a body and no particles
+  if (_nbf > 0 and get_nparts() == 0) {
+
+    const bool zero_freestream = (fs[0]*fs[0]+fs[1]*fs[1] < std::numeric_limits<float>::epsilon());
+    const bool no_body_movement = not do_any_bodies_move();
+
+    // AND no freestream
+    if (zero_freestream and no_body_movement) {
+      retstr.append("No flow features and zero freestream speed - try adding one or both.\n");
+      return retstr;
+    }
+
+    // AND no viscosity
+    if (not diff.get_diffuse()) {
+      retstr.append("You have a solid body, but no diffusion. It will not shed vorticity. Turn on viscosity or add a flow feature, reset, and run.\n");
+    }
+  }
 
   // Check for excessive elongation
   float max_elong = 0.0;

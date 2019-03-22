@@ -298,7 +298,7 @@ int main(int argc, char const *argv[]) {
       }
 
       // check flow for blow-up or errors
-      sim_err_msg = sim.check_simulation(ffeatures.size());
+      sim_err_msg = sim.check_simulation(ffeatures.size(), bfeatures.size());
 
       if (sim_err_msg.empty()) {
         // the last simulation step was fine, OK to continue
@@ -832,7 +832,7 @@ int main(int argc, char const *argv[]) {
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
       ImGui::Text("Number of panels: %ld  particles: %ld  field points: %ld",
-                  (size_t)0, sim.get_nparts(), sim.get_nfldpts());
+                  sim.get_npanels(), sim.get_nparts(), sim.get_nfldpts());
 
       // save the simulation to a JSON or VTK file
       ImGui::Spacing();

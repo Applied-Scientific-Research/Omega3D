@@ -68,7 +68,7 @@ public:
   void set_output_dt(const double);
 
   // get runtime status
-  //size_t get_npanels();
+  size_t get_npanels();
   size_t get_nparts();
   size_t get_nfldpts();
 
@@ -97,7 +97,7 @@ public:
   void step();
   bool is_initialized();
   void set_initialized();
-  std::string check_simulation(const size_t);
+  std::string check_simulation(const size_t, const size_t);
   bool do_any_bodies_move();
   bool test_for_new_results();
   void write_vtk();
