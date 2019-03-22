@@ -54,9 +54,9 @@ public:
     // make sure input arrays are correctly-sized
     assert(_x.size() % Dimensions == 0);
     assert(_idx.size() % Dimensions == 0);
-    //assert(_idx.size()/2 == _val.size());
     const size_t nnodes = _x.size() / Dimensions;
     const size_t nsurfs = _idx.size() / Dimensions;
+    assert(_val.size() % nsurfs == 0);
 
     std::cout << "  new collection with " << nsurfs << " surface panels..." << std::endl;
 
@@ -76,7 +76,7 @@ public:
     // copy over the node indices (with a possible type change)
     bool idx_are_all_good = true;
     idx.resize(_idx.size());
-    for (size_t i=0; i<2*nsurfs; ++i) {
+    for (size_t i=0; i<3*nsurfs; ++i) {
       // make sure it exists in the nodes array
       if (_idx[i] >= nnodes) idx_are_all_good = false;
       idx[i] = _idx[i];
@@ -85,22 +85,41 @@ public:
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
-      // value is a fixed strength for the segment
-      Vector<S> new_s(_val.size());
-      std::copy(_val.begin(), _val.end(), new_s.begin());
-      //new_s.resize(nsurfs);
+      // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths
+      for (size_t d=0; d<2; ++d) {
+        vs[d].resize(this->n);
+        for (size_t i=0; i<this->n; ++i) {
+          vs[d][i] = _val[2*i+d];
+        }
+      }
+
+      // we still need general strengths
+      std::array<Vector<S>,3> new_s;
+      for (size_t d=0; d<3; ++d) {
+        new_s[d].resize(nsurfs);
+      }
       this->s = std::move(new_s);
 
     } else if (this->E == reactive) {
       // value is a boundary condition
-      bc.resize(_val.size());
-      std::copy(_val.begin(), _val.end(), bc.begin());
-      //bc.resize(nsurfs);
-      //for (size_t i=0; i<nsurfs; ++i) {
-      //  bc[i] = _val[i];
-      //}
-      // we still need strengths
-      Vector<S> new_s(_val.size());
+      bc.resize(_val.size()/nsurfs);
+      for (size_t d=0; d<3; ++d) {
+        bc[d].resize(this->n);
+        for (size_t i=0; i<this->n; ++i) {
+          bc[d][i] = _val[3*i+d];
+        }
+      }
+
+      // make space for panel-centric strengths
+      for (size_t d=0; d<2; ++d) {
+        vs[d].resize(this->n);
+      }
+
+      // we still need general strengths
+      std::array<Vector<S>,3> new_s;
+      for (size_t d=0; d<3; ++d) {
+        new_s[d].resize(nsurfs);
+      }
       this->s = std::move(new_s);
 
     } else if (this->E == inert) {
@@ -138,18 +157,19 @@ public:
   const std::array<S,Dimensions> get_geom_center() const { return tc; }
 
   // callers should never have to change this array
-  const std::vector<Int>& get_idx() const { return idx; }
-  const Vector<S>&        get_bcs() const { return bc; }
+  const std::vector<Int>&        get_idx() const { return idx; }
+  const std::vector<Vector<S>>&  get_bcs() const { return bc; }
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
   const Int get_first_row() const { return istart; }
-  const Int get_num_rows()  const { return bc.size() + (this->B ? 1 : 0); }
+  const Int get_num_rows()  const { return bc[0].size() + (this->B ? 1 : 0); }
   const Int get_next_row()  const { return istart+get_num_rows(); }
 
-  // source strengths
-  const bool have_src_str() const { return (bool)ss; }
-  const Vector<S>& get_src_str() const { return *ss; }
+  // vortex and source strengths
+  const std::array<Vector<S>,2>&  get_vort_str() const { return vs; }
+  const bool                      have_src_str() const { return (bool)ss; }
+  const Vector<S>&                get_src_str() const { return *ss; }
 
   // add more nodes and panels to this collection
   void add_new(const std::vector<S>&   _x,
@@ -203,16 +223,25 @@ public:
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
       // value is a fixed strength for the element
-      //*(this->s).resize(neold+nsurfs);
-      //(*this->s)[i]
-      this->s->resize(neold+nsurfs); 
+      for (size_t d=0; d<2; ++d) {
+        vs[d].resize(neold+nsurfs);
+        for (size_t i=0; i<nsurfs; ++i) {
+          vs[d][neold+i] = _val[2*i+d];
+        }
+      }
 
     } else if (this->E == reactive) {
       // value is a boundary condition
-      bc.reserve(neold+nsurfs); 
-      bc.insert(bc.end(), _val.begin(), _val.end());
-      // and we still need strengths
-      this->s->resize(neold+nsurfs); 
+      for (size_t d=0; d<3; ++d) {
+        bc[d].resize(neold+nsurfs);
+        for (size_t i=0; i<nsurfs; ++i) {
+          bc[d][neold+i] = _val[3*i+d];
+        }
+      }
+      // upsize strength arrays, too
+      for (size_t d=0; d<3; ++d) {
+        (*this->s)[d].resize(neold+nsurfs);
+      }
 
     } else if (this->E == inert) {
       // value is ignored (probably zero)
@@ -721,14 +750,15 @@ public:
 
 protected:
   // ElementBase.h has x, s, u
-  std::vector<Int>	idx;	// indexes into the x array
-  Vector<S>		bc;	// boundary condition for the elements
+
+  // here are the variables special to triangular panels
+  std::vector<Int>		idx;	// indexes into the x array
+  std::vector<Vector<S>>	bc;	// boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
+
+  std::array<Vector<S>,2>	vs;	// vortex sheet strengths of the elements (x1,x2)
+  std::optional<Vector<S>> 	ss;	// source strengths which represent the vel inf of the rotating volume
 
   Int istart;	// index of first entry in RHS vector and A matrix
-
-  // the source strengths per unit length which represent the velocity
-  //   influence of the volume vorticity of the parent body
-  std::optional<Vector<S>> ss;
 
   S vol;			// volume of the body - for augmented BEM solution
   std::array<S,3> utc;		// untransformed geometric center

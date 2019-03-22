@@ -25,7 +25,7 @@ using json = nlohmann::json;
 //
 void read_json (Simulation& sim,
                 std::vector<std::unique_ptr<FlowFeature>>& ffeatures,
-                //std::vector<std::unique_ptr<BoundaryFeature>>& bfeatures,
+                std::vector<std::unique_ptr<BoundaryFeature>>& bfeatures,
                 std::vector<std::unique_ptr<MeasureFeature>>& mfeatures,
                 RenderParams& rp,
                 const std::string filename) {
@@ -241,37 +241,8 @@ void read_json (Simulation& sim,
 
         // iterate through vector of meshes, all on this body
         for (auto const& bf: bf_json) {
-          //std::cout << "  for this mesh" << std::endl;
-
-          const std::string ftype = bf["geometry"];
-          const std::vector<float> tr = bf["translation"];
-          // need to use "value" because this entry may not exist
-          const float rot = bf.value("rotation", 0.0);
-          // load scale into an object, because it can be a number or an array of numbers
-          const json sc = bf["scale"];
-          // split on geometry name
-          if (ftype == "circle") {
-            std::cout << "  found solid circle" << std::endl;
-            if (sc.is_number()) {
-              const float scale = bf["scale"];
-              bfeatures.emplace_back(std::make_unique<SolidCircle>(bp, tr[0], tr[1], scale));
-            }
-          } else if (ftype == "oval") {
-            std::cout << "  found solid oval" << std::endl;
-            if (sc.is_array()) {
-              const std::vector<float> scale = bf["scale"];
-              bfeatures.emplace_back(std::make_unique<SolidOval>(bp, tr[0], tr[1], scale[0], scale[1], rot));
-            }
-          } else if (ftype == "square") {
-            std::cout << "  found solid square" << std::endl;
-            if (sc.is_number()) {
-              const float scale = bf["scale"];
-              bfeatures.emplace_back(std::make_unique<SolidSquare>(bp, tr[0], tr[1], scale, rot));
-            }
-          } else {
-            // it's not a predefined geometry, but a file
-            std::cout << "  found geometry file - but not loading it" << std::endl;
-          }
+          // pass bf into a function in BoundaryFeature to generate the object
+          parse_boundary_json(bfeatures, bp, bf);
         }
       }
 
@@ -302,7 +273,7 @@ void read_json (Simulation& sim,
 //
 void write_json(Simulation& sim,
                 std::vector<std::unique_ptr<FlowFeature>>& ffeatures,
-                //std::vector<std::unique_ptr<BoundaryFeature>>& bfeatures,
+                std::vector<std::unique_ptr<BoundaryFeature>>& bfeatures,
                 std::vector<std::unique_ptr<MeasureFeature>>& mfeatures,
                 const RenderParams& rp,
                 const std::string filename) {

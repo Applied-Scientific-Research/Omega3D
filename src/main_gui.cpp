@@ -7,7 +7,7 @@
  */
 
 #include "FlowFeature.h"
-//#include "BoundaryFeature.h"
+#include "BoundaryFeature.h"
 #include "MeasureFeature.h"
 #include "Simulation.h"
 #include "JsonHelper.h"
@@ -190,7 +190,7 @@ int main(int argc, char const *argv[]) {
   // Set up vortex particle simulation
   Simulation sim;
   std::vector< std::unique_ptr<FlowFeature> > ffeatures;
-  //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
+  std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
   std::vector< std::unique_ptr<MeasureFeature> > mfeatures;
   size_t nsteps = 0;
   static bool sim_is_running = false;
@@ -285,9 +285,9 @@ int main(int argc, char const *argv[]) {
         }
 
         // initialize solid objects
-        //for (auto const& bf : bfeatures) {
-        //  sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
-        //}
+        for (auto const& bf : bfeatures) {
+          sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
+        }
 
         // initialize measurement features
         for (auto const& mf: mfeatures) {
@@ -382,7 +382,7 @@ int main(int argc, char const *argv[]) {
           // one singular vortex ring
           sim.reset();
           sim.clear_bodies();
-          //bfeatures.clear();
+          bfeatures.clear();
           ffeatures.clear();
           mfeatures.clear();
           *dt = 0.002;
@@ -401,7 +401,7 @@ int main(int argc, char const *argv[]) {
           // leapfrogging vortex rings
           sim.reset();
           sim.clear_bodies();
-          //bfeatures.clear();
+          bfeatures.clear();
           ffeatures.clear();
           mfeatures.clear();
           *dt = 0.002;
@@ -421,7 +421,7 @@ int main(int argc, char const *argv[]) {
           // colliding vortex rings
           sim.reset();
           sim.clear_bodies();
-          //bfeatures.clear();
+          bfeatures.clear();
           ffeatures.clear();
           mfeatures.clear();
           *dt = 0.002;
@@ -441,7 +441,7 @@ int main(int argc, char const *argv[]) {
           // Re=100 vortex ring
           sim.reset();
           sim.clear_bodies();
-          //bfeatures.clear();
+          bfeatures.clear();
           ffeatures.clear();
           mfeatures.clear();
           *dt = 0.01;
@@ -478,11 +478,11 @@ int main(int argc, char const *argv[]) {
 
           // stop and clear before loading
           sim.reset();
-          //bfeatures.clear();
+          bfeatures.clear();
           ffeatures.clear();
 
           // load and report
-          read_json(sim, ffeatures, /*bfeatures,*/ mfeatures, rparams, infile);
+          read_json(sim, ffeatures, bfeatures, mfeatures, rparams, infile);
 
           // we have to manually set this variable
           is_viscous = sim.get_diffuse();
@@ -549,7 +549,6 @@ int main(int argc, char const *argv[]) {
       }
 
       // list existing boundary features here
-/*
       int del_this_bdry = -1;
       for (int i=0; i<(int)bfeatures.size(); ++i) {
         // add a "remove" button here somehow
@@ -564,7 +563,6 @@ int main(int argc, char const *argv[]) {
         std::cout << "Asked to delete boundary feature " << del_this_bdry << std::endl;
         bfeatures.erase(bfeatures.begin()+del_this_bdry);
       }
-*/
 
       // list existing measurement features here
       int del_this_measure = -1;
@@ -857,7 +855,7 @@ int main(int argc, char const *argv[]) {
             glfwGetWindowSize(window, &rparams.width, &rparams.height);
 
             // write and echo
-            write_json(sim, ffeatures, /*bfeatures,*/ mfeatures, rparams, outfile);
+            write_json(sim, ffeatures, bfeatures, mfeatures, rparams, outfile);
             std::cout << std::endl << "Wrote simulation to " << outfile << std::endl;
           }
         }
@@ -879,7 +877,7 @@ int main(int argc, char const *argv[]) {
       }
     }
 
-    // done drawing the Omega3D UI window
+    // done drawing the UI window
     ImGui::End();
     }
 

@@ -104,9 +104,9 @@ void Simulation::initGL(std::vector<float>& _projmat,
   for (auto &coll : vort) {
     std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
   }
-  //for (auto &coll : bdry) {
-  //  std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
-  //}
+  for (auto &coll : bdry) {
+    std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
+  }
   for (auto &coll : fldpt) {
     std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
   }
@@ -116,9 +116,9 @@ void Simulation::updateGL() {
   for (auto &coll : vort) {
     std::visit([=](auto& elem) { elem.updateGL(); }, coll);
   }
-  //for (auto &coll : bdry) {
-  //  std::visit([=](auto& elem) { elem.updateGL(); }, coll);
-  //}
+  for (auto &coll : bdry) {
+    std::visit([=](auto& elem) { elem.updateGL(); }, coll);
+  }
   for (auto &coll : fldpt) {
     std::visit([=](auto& elem) { elem.updateGL(); }, coll);
   }
@@ -132,9 +132,9 @@ void Simulation::drawGL(std::vector<float>& _projmat,
     for (auto &coll : vort) {
       std::visit([&](auto& elem) { elem.drawGL(_projmat, _rparams); }, coll);
     }
-    //for (auto &coll : bdry) {
-    //  std::visit([&](auto& elem) { elem.drawGL(_projmat, _rparams); }, coll);
-    //}
+    for (auto &coll : bdry) {
+      std::visit([&](auto& elem) { elem.drawGL(_projmat, _rparams); }, coll);
+    }
     for (auto &coll : fldpt) {
       std::visit([&](auto& elem) { elem.drawGL(_projmat, _rparams); }, coll);
     }
@@ -345,7 +345,7 @@ void Simulation::step() {
   time += (double)dt;
 }
 
-// set up the particles
+// set up some vortex particles
 // TODO - accept elem_t and move_t from the caller!
 void Simulation::add_particles(std::vector<float> _invec) {
 
@@ -392,12 +392,12 @@ void Simulation::add_particles(std::vector<float> _invec) {
 }
 
 // add some tracer particles to new arch
-void Simulation::add_fldpts(std::vector<float> _xyz, const bool _moves) {
+void Simulation::add_fldpts(std::vector<float> _invec, const bool _moves) {
 
-  if (_xyz.size() == 0) return;
+  if (_invec.size() == 0) return;
 
   // make sure we're getting full points
-  assert(_xyz.size() % 3 == 0);
+  assert(_invec.size() % Dimensions == 0);
 
   const move_t move_type = _moves ? lagrangian : fixed;
 
@@ -406,31 +406,78 @@ void Simulation::add_fldpts(std::vector<float> _xyz, const bool _moves) {
   // if no collections exist
   if (fldpt.size() == 0) {
     // make a new collection
-    fldpt.push_back(Points<float>(_xyz, inert, move_type, nullptr));
+    fldpt.push_back(Points<float>(_invec, inert, move_type, nullptr));
 
   } else {
     // THIS MUST USE A VISITOR
     // HACK - add all particles to first collection
-    //std::visit([&](auto& elem) { elem.add_new(_xyz); }, fldpt.back());
+    //std::visit([&](auto& elem) { elem.add_new(_invec); }, fldpt.back());
     auto& coll = fldpt.back();
     // eventually we will want to check every collection for matching element and move types
     // only proceed if the collection is Points
     if (std::holds_alternative<Points<float>>(coll)) {
       Points<float>& pts = std::get<Points<float>>(coll);
-      pts.add_new(_xyz);
+      pts.add_new(_invec);
     }
   }
 }
 
 // add geometry
-/*
-void Simulation::add_boundary(bdryType _type, std::vector<float> _params) {
-  if (_type == circle) {
-    assert(_params.size() == 3);
-    bdry.add(Circle<float>(_params[0], _params[1], _params[2]));
+void Simulation::add_boundary(std::shared_ptr<Body> _bptr, ElementPacket<float> _geom) {
+
+  // incoming collections types
+  const elem_t this_elem_type = reactive;
+  const move_t this_move_type = (_bptr ? bodybound : fixed);
+
+  // search the collections list for a match (same movement type and Body)
+  size_t imatch = 0;
+  bool no_match = true;
+  for (size_t i=0; i<bdry.size(); ++i) {
+    // assume match
+    bool this_match = true;
+
+    // check element type
+    elem_t tet = std::visit([=](auto& elem) { return elem.get_elemt(); }, bdry[i]);
+    if (this_elem_type != tet) this_match = false;
+
+    // check movement type
+    move_t tmt = std::visit([=](auto& elem) { return elem.get_movet(); }, bdry[i]);
+    if (this_move_type != tmt) this_match = false;
+
+    // check body pointer
+    if (this_move_type == bodybound and tmt == bodybound) {
+      std::shared_ptr<Body> tbp = std::visit([=](auto& elem) { return elem.get_body_ptr(); }, bdry[i]);
+      if (_bptr != tbp) this_match = false;
+    }
+
+    // check Collections type (add later)
+    //if (std::holds_alternative<Surfaces<float>>(coll) not std::holds_alternative<Surfaces<float>>(coll)) this_match = false;
+
+    if (this_match) {
+      imatch = i;
+      no_match = false;
+    }
+  }
+
+  // if no match, or no collections exist
+  if (no_match) {
+    // make a new collection - assume BEM panels
+    bdry.push_back(Surfaces<float>(_geom.x,
+                                   _geom.idx,
+                                   _geom.val,
+                                   reactive, this_move_type, _bptr));
+  } else {
+    // found a match
+    auto& coll = bdry[imatch];
+    // only proceed if the last collection is Surfaces
+    if (std::holds_alternative<Surfaces<float>>(coll)) {
+      Surfaces<float>& surf = std::get<Surfaces<float>>(coll);
+      surf.add_new(_geom.x,
+                   _geom.idx,
+                   _geom.val);
+    }
   }
 }
-*/
 
 // add a new Body with the given name
 void Simulation::add_body(std::shared_ptr<Body> _body) {

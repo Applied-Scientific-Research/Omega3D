@@ -7,6 +7,7 @@
  */
 
 #include "FlowFeature.h"
+#include "BoundaryFeature.h"
 #include "MeasureFeature.h"
 #include "Simulation.h"
 #include "JsonHelper.h"
@@ -31,7 +32,7 @@ int main(int argc, char const *argv[]) {
   // Set up vortex particle simulation
   Simulation sim;
   std::vector< std::unique_ptr<FlowFeature> > ffeatures;
-  //std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
+  std::vector< std::unique_ptr<BoundaryFeature> > bfeatures;
   std::vector< std::unique_ptr<MeasureFeature> > mfeatures;
   size_t nsteps = 0;
   RenderParams rparams;
@@ -46,7 +47,7 @@ int main(int argc, char const *argv[]) {
   // load a simulation from a JSON file - check command line for file name
   if (argc == 2) {
     std::string infile = argv[1];
-    read_json(sim, ffeatures, /*bfeatures,*/ mfeatures, rparams, infile);
+    read_json(sim, ffeatures, bfeatures, mfeatures, rparams, infile);
     std::cout << std::endl << "Loaded simulation from " << infile << std::endl;
   } else {
     std::cout << std::endl << "Usage:" << std::endl;
@@ -63,9 +64,9 @@ int main(int argc, char const *argv[]) {
   }
 
   // initialize solid objects
-  //for (auto const& bf : bfeatures) {
-  //  sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
-  //}
+  for (auto const& bf : bfeatures) {
+    sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
+  }
 
   // initialize measurement features
   for (auto const& mf: mfeatures) {
@@ -122,7 +123,7 @@ int main(int argc, char const *argv[]) {
     // just make up a file name and write it
     std::string outfile = "output.json";
     // write and echo
-    write_json(sim, ffeatures, /*bfeatures,*/ mfeatures, rparams, outfile);
+    write_json(sim, ffeatures, bfeatures, mfeatures, rparams, outfile);
     std::cout << std::endl << "Wrote simulation to " << outfile << std::endl;
   }
 
