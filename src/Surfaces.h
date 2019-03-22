@@ -58,7 +58,7 @@ public:
     const size_t nsurfs = _idx.size() / Dimensions;
     assert(_val.size() % nsurfs == 0);
 
-    std::cout << "  new collection with " << nsurfs << " surface panels..." << std::endl;
+    std::cout << "  new collection with " << nsurfs << " surface panels" << std::endl;
 
     // pull out the node locations
     for (size_t d=0; d<Dimensions; ++d) {
