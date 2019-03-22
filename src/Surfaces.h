@@ -153,13 +153,13 @@ public:
     }
   }
 
-  size_t get_npanels() const { return idx.size()/Dimensions; }
-  const S get_vol() const { return vol; }
+  size_t                         get_npanels()     const { return idx.size()/Dimensions; }
+  const S                        get_vol()         const { return vol; }
   const std::array<S,Dimensions> get_geom_center() const { return tc; }
 
   // callers should never have to change this array
-  const std::vector<Int>&        get_idx() const { return idx; }
-  const std::vector<Vector<S>>&  get_bcs() const { return bc; }
+  const std::vector<Int>&        get_idx()         const { return idx; }
+  const std::vector<Vector<S>>&  get_bcs()         const { return bc; }
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
@@ -391,38 +391,33 @@ public:
     std::cout << "  inside Surfaces::set_geom_center with " << get_npanels() << " panels" << std::endl;
 
     // iterate over panels, accumulating vol and CM
-    S asum = 0.0;
-    S xsum = 0.0;
-    S ysum = 0.0;
-    S zsum = 0.0;
+    double vsum = 0.0;
+    double xsum = 0.0;
+    double ysum = 0.0;
+    double zsum = 0.0;
     for (size_t i=0; i<get_npanels(); i++) {
-      const size_t j   = idx[2*i];
-      const size_t jp1 = idx[2*i+1];
+      const size_t jp0 = idx[3*i];
+      const size_t jp1 = idx[3*i+1];
+      const size_t jp2 = idx[3*i+2];
       // assume a triangle from 0,0 to two ends of each panel
-      const S xc = (0.0 + (*this->ux)[0][j] + (*this->ux)[0][jp1]) / 3.0;
-      const S yc = (0.0 + (*this->ux)[1][j] + (*this->ux)[1][jp1]) / 3.0;
-      const S panelx = (*this->ux)[0][jp1] - (*this->ux)[0][j];
-      const S panely = (*this->ux)[1][jp1] - (*this->ux)[1][j];
-      // and the side lengths
-      const S a = std::sqrt(std::pow((*this->ux)[0][j],2)+std::pow((*this->ux)[1][j],2));
-      const S b = std::sqrt(std::pow(panelx,2)+std::pow(panely,2));
-      const S c = std::sqrt(std::pow((*this->ux)[0][jp1],2)+std::pow((*this->ux)[1][jp1],2));
-      //std::cout << "  panel " << i << " has side lens " << a << " " << b << " " << c << std::endl;
-      // Heron's formula for the vol
-      const S hs = 0.5*(a+b+c);
-      S thisarea = std::sqrt(hs*(hs-a)*(hs-b)*(hs-c));
-      // negate area if the winding is backwards
-      if ((*this->ux)[1][j]*panelx - (*this->ux)[0][j]*panely < 0.0) thisarea = -thisarea;
+      double thisvol = (*this->ux)[0][jp0] * (double)(*this->ux)[1][jp1] * (*this->ux)[2][jp2]
+                     - (*this->ux)[0][jp0] * (double)(*this->ux)[1][jp2] * (*this->ux)[2][jp1]
+                     - (*this->ux)[0][jp1] * (double)(*this->ux)[1][jp0] * (*this->ux)[2][jp2]
+                     + (*this->ux)[0][jp1] * (double)(*this->ux)[1][jp2] * (*this->ux)[2][jp0]
+                     + (*this->ux)[0][jp2] * (double)(*this->ux)[1][jp0] * (*this->ux)[2][jp1]
+                     - (*this->ux)[0][jp2] * (double)(*this->ux)[1][jp1] * (*this->ux)[2][jp0];
+      thisvol /= 6.0;
       // add this to the running sums
-      //std::cout << "    and area " << thisarea << " and center " << xc << " " << yc << std::endl;
-      asum += thisarea;
-      xsum += xc*thisarea;
-      ysum += yc*thisarea;
+      //std::cout << "    and area " << thisvol << " and center " << xc << " " << yc << std::endl;
+      vsum += thisvol;
+      xsum += 0.25 * thisvol * ((*this->ux)[0][jp0] + (*this->ux)[0][jp1] + (*this->ux)[0][jp2]);
+      ysum += 0.25 * thisvol * ((*this->ux)[1][jp0] + (*this->ux)[1][jp1] + (*this->ux)[1][jp2]);
+      zsum += 0.25 * thisvol * ((*this->ux)[2][jp0] + (*this->ux)[2][jp1] + (*this->ux)[2][jp2]);
     }
-    vol = asum;
-    utc[0] = xsum/vol;
-    utc[1] = ysum/vol;
-    utc[2] = zsum/vol;
+    vol = (S)vsum;
+    utc[0] = (S)xsum;
+    utc[1] = (S)ysum;
+    utc[2] = (S)zsum;
 
     std::cout << "    geom center is " << utc[0] << " " << utc[1] << " " << utc[2] << " and vol is " << vol << std::endl;
   }
