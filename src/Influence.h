@@ -11,7 +11,7 @@
 #include "VectorHelper.h"
 #include "Kernels.h"
 #include "Points.h"
-#include "Panels.h"
+#include "Surfaces.h"
 
 #ifdef USE_VC
 #include <Vc/Vc>
@@ -357,14 +357,14 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 // Vc and x86 versions of Panels/Surfaces affecting Points/Particles
 //
 template <class S, class A>
-void panels_affect_points (Panels<S> const& src, Points<S>& targ) {
+void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   std::cout << "    1_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   //auto start = std::chrono::system_clock::now();
 
   // get references to use locally
   const std::array<Vector<S>,Dimensions>& sx = src.get_pos();
   //const Vector<S>&                      sr = src.get_rad();
-  const std::vector<uint16_t>&            si = src.get_idx();
+  const std::vector<Int>&                 si = src.get_idx();
   const std::array<Vector<S>,Dimensions>& ss = src.get_str();
   const std::array<Vector<S>,Dimensions>& tx = targ.get_pos();
   //const Vector<S>&                      tr = targ.get_rad();
@@ -402,7 +402,7 @@ void panels_affect_points (Panels<S> const& src, Points<S>& targ) {
 // Vc and x86 versions of Points/Particles affecting Panels/Surfaces
 //
 template <class S, class A>
-void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
+void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
   std::cout << "    0_1 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
 
@@ -410,7 +410,7 @@ void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
   const std::array<Vector<S>,Dimensions>& sx = src.get_pos();
   const std::array<Vector<S>,Dimensions>& ss = src.get_str();
   const std::array<Vector<S>,Dimensions>& tx = targ.get_pos();
-  const std::vector<uint16_t>&            ti = targ.get_idx();
+  const std::vector<Int>&                 ti = targ.get_idx();
   std::array<Vector<S>,Dimensions>&       tu = targ.get_vel();
 
   float flops = (float)targ.get_n();
@@ -452,7 +452,7 @@ void points_affect_panels (Points<S> const& src, Panels<S>& targ) {
 
 
 template <class S, class A>
-void panels_affect_panels (Panels<S> const& src, Panels<S>& targ) {
+void panels_affect_panels (Surfaces<S> const& src, Surfaces<S>& targ) {
   std::cout << "    1_1 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   // not sure how to do this - find field points of one and apply a function above?
 }
@@ -464,9 +464,9 @@ void panels_affect_panels (Panels<S> const& src, Panels<S>& targ) {
 template <class A>
 struct InfluenceVisitor {
   // source collection, target collection
-  void operator()(Points<float> const& src, Points<float>& targ) { points_affect_points<float,A>(src, targ); } 
-  void operator()(Panels<float> const& src, Points<float>& targ) { panels_affect_points<float,A>(src, targ); } 
-  void operator()(Points<float> const& src, Panels<float>& targ) { points_affect_panels<float,A>(src, targ); } 
-  void operator()(Panels<float> const& src, Panels<float>& targ) { panels_affect_panels<float,A>(src, targ); } 
+  void operator()(Points<float> const& src,   Points<float>& targ)   { points_affect_points<float,A>(src, targ); } 
+  void operator()(Surfaces<float> const& src, Points<float>& targ)   { panels_affect_points<float,A>(src, targ); } 
+  void operator()(Points<float> const& src,   Surfaces<float>& targ) { points_affect_panels<float,A>(src, targ); } 
+  void operator()(Surfaces<float> const& src, Surfaces<float>& targ) { panels_affect_panels<float,A>(src, targ); } 
 };
 
