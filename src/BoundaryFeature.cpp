@@ -52,26 +52,44 @@ ElementPacket<float>
 ExteriorFromFile::init_elements(const float _ips) const {
 
   // how many panels?
-  const size_t num_panels = 1000;
+  const size_t num_nodes = 4;
+  const size_t num_panels = 4;
 
-  std::cout << "Reading file with " << num_panels << " panels" << std::endl;
+  std::cout << "Reading file with " << num_nodes << " and " << num_panels << " panels" << std::endl;
 
   // created once
-  std::vector<float>   x(num_panels*3);
+  std::vector<float>   x(num_nodes*3);
   std::vector<Int>   idx(num_panels*3);
   std::vector<float> val(num_panels);
 
-  // outside is to the left walking from one point to the next
-  // so go CW around the circle starting at theta=0 (+x axis)
-  for (size_t i=0; i<num_panels; i++) {
-    x[3*i]     = m_x + std::cos(2.0 * M_PI * (float)i / (float)num_panels);
-    x[3*i+1]   = m_y - std::sin(2.0 * M_PI * (float)i / (float)num_panels);
-    x[3*i+2]   = m_z - std::sin(2.0 * M_PI * (float)i / (float)num_panels);
-    idx[3*i]   = i;
-    idx[3*i+1] = i+1;
-    idx[3*i+2] = i+2;
-    val[i]     = 0.0;
-  }
+  x[0] = 0.0;
+  x[1] = 0.0;
+  x[2] = 0.0;
+  x[3] = 1.0;
+  x[4] = 0.0;
+  x[5] = 0.0;
+  x[6] = 1.0;
+  x[7] = 1.0;
+  x[8] = 0.0;
+  x[9] = 0.6;
+  x[10] = 0.6;
+  x[11] = 1.0;
+  idx[0] = 0;
+  idx[1] = 2;
+  idx[2] = 1;
+  idx[3] = 0;
+  idx[4] = 1;
+  idx[5] = 3;
+  idx[6] = 1;
+  idx[7] = 2;
+  idx[8] = 3;
+  idx[9] = 0;
+  idx[10] = 3;
+  idx[11] = 2;
+  val[0] = 0.0;
+  val[1] = 0.0;
+  val[2] = 0.0;
+  val[3] = 0.0;
 
   return ElementPacket<float>({x, idx, val});
 }
