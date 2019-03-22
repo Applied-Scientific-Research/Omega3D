@@ -145,6 +145,7 @@ SET_SOURCE_FILES_PROPERTIES("src/imgui/imgui_draw.cpp" PROPERTIES COMPILE_FLAGS 
 SET(SOURCES "src/Simulation.cpp"
             "src/FlowFeature.cpp"
             "src/CollectionHelper.cpp"
+            "src/BoundaryFeature.cpp"
             "src/MeasureFeature.cpp"
             "src/Body.cpp"
             "src/JsonHelper.cpp"
