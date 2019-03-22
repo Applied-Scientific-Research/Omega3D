@@ -87,8 +87,8 @@ public:
     if (this->E == active) {
       // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths
       for (size_t d=0; d<2; ++d) {
-        vs[d].resize(this->n);
-        for (size_t i=0; i<this->n; ++i) {
+        vs[d].resize(nsurfs);
+        for (size_t i=0; i<nsurfs; ++i) {
           vs[d][i] = _val[2*i+d];
         }
       }
@@ -102,17 +102,18 @@ public:
 
     } else if (this->E == reactive) {
       // value is a boundary condition
-      bc.resize(_val.size()/nsurfs);
-      for (size_t d=0; d<3; ++d) {
-        bc[d].resize(this->n);
-        for (size_t i=0; i<this->n; ++i) {
-          bc[d][i] = _val[3*i+d];
+      const size_t nper = _val.size()/nsurfs;
+      bc.resize(nper);
+      for (size_t d=0; d<nper; ++d) {
+        bc[d].resize(nsurfs);
+        for (size_t i=0; i<nsurfs; ++i) {
+          bc[d][i] = _val[nper*i+d];
         }
       }
 
       // make space for panel-centric strengths
       for (size_t d=0; d<2; ++d) {
-        vs[d].resize(this->n);
+        vs[d].resize(nsurfs);
       }
 
       // we still need general strengths
