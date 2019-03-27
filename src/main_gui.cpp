@@ -139,7 +139,6 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
   last_h = display_h;
 }
 
-
 //
 // resize a window and framebuffer programmatically
 //
@@ -166,7 +165,6 @@ void resize_to_resolution(GLFWwindow* window, const int new_w, const int new_h) 
   }
 }
 
-
 static void ShowHelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
@@ -179,7 +177,6 @@ static void ShowHelpMarker(const char* desc)
         ImGui::EndTooltip();
     }
 }
-
 
 
 // execution starts here
