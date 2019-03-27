@@ -102,7 +102,11 @@ ExteriorFromFile::debug(std::ostream& os) const {
 std::string
 ExteriorFromFile::to_string() const {
   std::stringstream ss;
-  ss << m_infile << " at " << m_x << " " << m_y << " " << m_z << " scaled by " << m_sx << " " << m_sy << " " << m_sz;
+
+  // shorten the filename
+  const size_t lastchar = m_infile.find_last_of("/\\");
+
+  ss << m_infile.substr(lastchar+1) << " at " << m_x << " " << m_y << " " << m_z << " scaled by " << m_sx << " " << m_sy << " " << m_sz;
   return ss.str();
 }
 

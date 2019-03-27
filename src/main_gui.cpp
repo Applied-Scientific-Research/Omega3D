@@ -469,7 +469,7 @@ int main(int argc, char const *argv[]) {
 
     if (show_json_input_window) {
       bool try_it = false;
-      std::string infile = "input.json";
+      static std::string infile = "input.json";
 
       if (fileIOWindow( try_it, infile, recent_json_files, "Open", {"*.json", "*.*"}, true, ImVec2(500,250))) {
         show_json_input_window = false;
@@ -796,6 +796,7 @@ int main(int argc, char const *argv[]) {
           case 2:
             // load a geometry file
             static std::string infile = "input.obj";
+            static std::string shortname = infile;
             if (ImGui::Button("Geometry file", ImVec2(200,0))) show_geom_input_window = true;
 
             if (show_geom_input_window) {
@@ -814,12 +815,12 @@ int main(int argc, char const *argv[]) {
 
                   // now remove the leading directories from the string
                   const size_t lastchar = infile.find_last_of("/\\");
-                  infile = infile.substr(lastchar+1);
+                  shortname = infile.substr(lastchar+1);
                 }
               }
             }
             ImGui::SameLine();
-            ImGui::Text(infile.c_str());
+            ImGui::Text(shortname.c_str());
             ImGui::SliderFloat("diameter", &scale, 0.01f, 10.0f, "%.4f", 2.0);
             ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
             if (ImGui::Button("Add geometry from file")) {
@@ -1019,7 +1020,7 @@ int main(int argc, char const *argv[]) {
 
       if (show_file_output_window) {
         bool try_it = false;
-        std::string outfile = "output.json";
+        static std::string outfile = "output.json";
 
         if (fileIOWindow( try_it, outfile, recent_json_files, "Save", {"*.json", "*.*"}, false, ImVec2(500,250))) {
           show_file_output_window = false;
