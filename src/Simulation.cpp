@@ -221,18 +221,21 @@ void Simulation::write_vtk() {
 }
 
 //
-// Check all aspects of the simulation for conditions that should stop the run
+// Check all aspects of the initialization for conditions that prevent a run from starting
 //
-std::string Simulation::check_simulation(const size_t _nff, const size_t _nbf) {
+std::string Simulation::check_initialization() {
   std::string retstr;
 
+  // are any flow features particle generators? - HOW DO WE DO THIS?
+  const bool are_generators = false;
+
   // Check for no bodies and no particles
-  if (_nbf == 0 and get_nparts() == 0) {
+  if (get_npanels() == 0 and get_nparts() == 0 and not are_generators) {
     retstr.append("No flow features and no bodies. Add one or both, reset, and run.\n");
   }
 
   // Check for a body and no particles
-  if (_nbf > 0 and get_nparts() == 0) {
+  if (get_npanels() > 0 and get_nparts() == 0) {
 
     const bool zero_freestream = (fs[0]*fs[0]+fs[1]*fs[1] < std::numeric_limits<float>::epsilon());
     const bool no_body_movement = not do_any_bodies_move();
@@ -263,6 +266,17 @@ std::string Simulation::check_simulation(const size_t _nff, const size_t _nbf) {
 
   // Check for vorticity-based Courant number - too high and we're probably messing up
   // later
+
+  return retstr;
+}
+
+//
+// Check dynamic aspects of the simulation for conditions that should stop the run
+//
+std::string Simulation::check_simulation() {
+  std::string retstr;
+
+  // Are there any dynamic problems in 2D that could blow a run?
 
   return retstr;
 }
@@ -313,6 +327,32 @@ bool Simulation::test_for_new_results() {
 
   // async call is not finished, do not try calling it again
   return false;
+}
+
+//
+// call this from a real-time GUI - will only start the first step if no other steps are being worked on
+//
+void Simulation::async_first_step() {
+  step_has_started = true;
+  stepfuture = std::async(std::launch::async, [this](){first_step();});
+}
+
+//
+// initialize the system so we can start drawing things
+//
+void Simulation::first_step() {
+  std::cout << std::endl << "Taking step " << nstep << " at t=" << time << std::endl;
+
+  // we wind up using this a lot
+  std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
+
+  // this is the first step, just solve BEM and return - it's time=0
+
+  // update BEM and find vels on any particles but DO NOT ADVECT
+  conv.advect_1st(time, 0.0, thisfs, vort, bdry, fldpt);
+
+  // and write status file
+  dump_stats_to_status();
 }
 
 //
@@ -384,9 +424,38 @@ void Simulation::step() {
   nstep++;
 
   // and write status file
-  sf.append_value((float)time);
-  sf.append_value((int)get_nparts());
-  sf.write_line();
+  dump_stats_to_status();
+}
+
+//
+// close out the step with some work and output to the status file
+//
+void Simulation::dump_stats_to_status() {
+  if (sf.is_active()) {
+    // the basics
+    sf.append_value((float)time);
+    sf.append_value((int)get_nparts());
+
+    // more advanced info
+
+    // add up the total circulation
+    //float tot_circ = 0.0;
+    //for (auto &src : vort) {
+    //  tot_circ += std::visit([=](auto& elem) { return elem.get_total_circ(time); }, src);
+    //}
+    // then add up the circulation in bodies - DO WE NEED TO RE-SOLVE BEM FIRST?
+    //for (auto &src : bdry) {
+    //  tot_circ += std::visit([=](auto& elem) { return elem.get_total_circ(time); }, src);
+    //}
+    //sf.append_value(tot_circ);
+
+    // now forces
+    //std::array<float,Dimensions> impulse = calculate_simple_forces();
+    //for (size_t i=0; i<Dimensions; ++i) sf.append_value(impulse[i]);
+
+    // write here
+    sf.write_line();
+  }
 }
 
 // set up some vortex particles
@@ -585,15 +654,28 @@ bool Simulation::test_vs_stop() {
 // this is different because we have to trigger when last step is still running
 bool Simulation::test_vs_stop_async() {
   bool should_stop = false;
+  static bool already_reported = false;
+
   if (using_max_steps() and get_max_steps() == nstep+1) {
-    std::cout << "Stopping at step " << get_max_steps() << std::endl;
+    if (not already_reported) {
+      std::cout << std::endl << "Stopping at step " << get_max_steps() << std::endl;
+      already_reported = true;
+    }
     should_stop = true;
   }
+
   if (using_end_time() and get_end_time() >= time+0.5*dt
                        and get_end_time() <= time+1.5*dt) {
-    std::cout << "Stopping at time " << get_end_time() << std::endl;
+    if (not already_reported) {
+      std::cout << std::endl << "Stopping at time " << get_end_time() << std::endl;
+      already_reported = true;
+    }
     should_stop = true;
   }
+
+  // reset the toggle
+  if (not should_stop) already_reported = false;
+
   return should_stop;
 }
 

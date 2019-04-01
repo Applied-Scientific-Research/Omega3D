@@ -74,6 +74,17 @@ int main(int argc, char const *argv[]) {
 
   sim.set_initialized();
 
+  // check init for blow-up or errors
+  sim_err_msg = sim.check_initialization();
+
+  if (not sim_err_msg.empty()) {
+    // the initialization had some difficulty
+    std::cout << std::endl << "ERROR: " << sim_err_msg;
+    // stop the run
+    return 1;
+  }
+
+
   //
   // Main loop
   //
@@ -81,7 +92,7 @@ int main(int argc, char const *argv[]) {
   while (true) {
 
     // check flow for blow-up or errors
-    sim_err_msg = sim.check_simulation(ffeatures.size(), bfeatures.size());
+    sim_err_msg = sim.check_simulation();
 
     if (sim_err_msg.empty()) {
       // the last simulation step was fine, OK to continue
