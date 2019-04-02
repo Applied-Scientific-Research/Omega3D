@@ -518,7 +518,7 @@ public:
   }
 */
 
-  // return a particle version of the panels (useful during Diffusion)
+  // return a particle version of the panels (useful during Diffusion) - NEEDS WORK
   std::vector<S> represent_as_particles(const S _offset, const S _vdelta) {
 
     // how many panels?
@@ -529,11 +529,12 @@ public:
 
     // outside is to the left walking from one point to the next
     // so go CW around the circle starting at theta=0 (+x axis)
-    S oopanlen, along[2];
+    S oopanlen, along[3];
 
     for (size_t i=0; i<num_pts; i++) {
-      Int id0 = idx[2*i];
-      Int id1 = idx[2*i+1];
+      Int id0 = idx[3*i];
+      Int id1 = idx[3*i+1];
+      //Int id2 = idx[3*i+2];
       // start at center of panel
       px[4*i+0] = 0.5 * (this->x[0][id1] + this->x[0][id0]);
       px[4*i+1] = 0.5 * (this->x[1][id1] + this->x[1][id0]);
@@ -546,7 +547,7 @@ public:
       px[4*i+0] += _offset * -along[1] * oopanlen;
       px[4*i+1] += _offset *  along[0] * oopanlen;
       // complete the element with a strength and radius
-      px[4*i+2] = (*this->s)[i] / oopanlen;
+      px[4*i+2] = (*this->s)[0][i] / oopanlen;
       px[4*i+3] = _vdelta;
       //std::cout << "  new part is " << px[4*i+0] << " " << px[4*i+1] << " " << px[4*i+2] << " " << px[4*i+3] << std::endl;
     }
@@ -567,15 +568,43 @@ public:
   }
 
   // add and return the total circulation of all elements
-  S get_total_circ(const double _time) {
+  std::array<S,3> get_total_circ(const double _time) {
+    std::array<S,3> circ;
+    circ.fill(0.0);
+
     // do not call the parent
     if (this->B) {
       // we're attached to a body - great! what's the rotation rate?
-      return 2.0 * vol * (S)this->B->get_rotvel(_time);
+      // HACK - this assumes z-axis rotation only
+      circ[2] = 2.0 * vol * (S)this->B->get_rotvel(_time);
     } else {
       // we are fixed, thus not rotating
-      return 0.0;
     }
+
+    return circ;
+  }
+
+  // add and return the total impulse of all elements
+  std::array<S,Dimensions> get_total_impulse() {
+
+    // here is the return vector
+    std::array<S,Dimensions> imp;
+    imp.fill(0.0);
+
+    if (this->s) {
+      // make this easy - represent as particles
+      std::vector<S> pts = represent_as_particles(0.0, 1.0);
+
+      // now compute impulse of those
+      for (size_t i=0; i<get_npanels(); ++i) {
+        const size_t idx = 7*i;
+        imp[0] += pts[idx+3+1] * pts[idx+2] - pts[idx+3+2] * pts[idx+1];
+        imp[1] += pts[idx+3+2] * pts[idx+0] - pts[idx+3+0] * pts[idx+2];
+        imp[2] += pts[idx+3+0] * pts[idx+1] - pts[idx+3+1] * pts[idx+0];
+      }
+    }
+
+    return imp;
   }
 
 
@@ -766,8 +795,8 @@ protected:
   Int istart;	// index of first entry in RHS vector and A matrix
 
   S vol;			// volume of the body - for augmented BEM solution
-  std::array<S,3> utc;		// untransformed geometric center
-  std::array<S,3>  tc;		// transformed geometric center
+  std::array<S,Dimensions> utc;		// untransformed geometric center
+  std::array<S,Dimensions>  tc;		// transformed geometric center
 
 private:
 #ifdef USE_GL

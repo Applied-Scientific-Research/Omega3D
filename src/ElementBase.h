@@ -169,7 +169,43 @@ public:
       }
 
       // update strengths (in derived class)
+
+    } else if (B and M == bodybound) {
+      //transform(_time+_dt);
     }
+  }
+
+  // find the new peak strength magnitude
+  S get_max_str() {
+    if (s) {
+      // we have strengths, go through and check them
+      S thismax = 0.0;
+      for (size_t i=0; i<(*s)[0].size(); ++i) {
+        S thisstr = (*s)[0][i]*(*s)[0][i] + (*s)[1][i]*(*s)[1][i] + (*s)[2][i]*(*s)[2][i];
+        if (thisstr > thismax) thismax = thisstr;
+      }
+      return std::sqrt(thismax);
+    } else {
+      return 1.0;
+    }
+  }
+
+  // add and return the total circulation of all elements
+  std::array<S,3> get_total_circ(const double _time) {
+    std::array<S,3> circ;
+    circ.fill(0.0);
+
+    if (s) {
+      // we have strengths, add them up
+      // this is the c++17 way
+      //return std::reduce(std::execution::par, s->begin(), s->end());
+      // this is the c++11 way
+      for (size_t d=0; d<3; ++d) {
+        circ[d] = std::accumulate((*s)[d].begin(), (*s)[d].end(), 0.0);
+      }
+    }
+
+    return circ;
   }
 
   std::string to_string() const {

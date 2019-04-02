@@ -439,15 +439,17 @@ void Simulation::dump_stats_to_status() {
     // more advanced info
 
     // add up the total circulation
-    //float tot_circ = 0.0;
-    //for (auto &src : vort) {
-    //  tot_circ += std::visit([=](auto& elem) { return elem.get_total_circ(time); }, src);
-    //}
+    std::array<float,3> tot_circ = {0.0};
+    for (auto &src : vort) {
+      auto this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(time); }, src);
+      for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
+    }
     // then add up the circulation in bodies - DO WE NEED TO RE-SOLVE BEM FIRST?
-    //for (auto &src : bdry) {
-    //  tot_circ += std::visit([=](auto& elem) { return elem.get_total_circ(time); }, src);
-    //}
-    //sf.append_value(tot_circ);
+    for (auto &src : bdry) {
+      auto this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(time); }, src);
+      for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
+    }
+    for (size_t i=0; i<3; ++i) sf.append_value(tot_circ[i]);
 
     // now forces
     //std::array<float,Dimensions> impulse = calculate_simple_forces();
@@ -456,6 +458,42 @@ void Simulation::dump_stats_to_status() {
     // write here
     sf.write_line();
   }
+}
+
+// Use impulse method to calculate total forces
+std::array<float,Dimensions>
+Simulation::calculate_simple_forces() {
+
+  static double last_time = 0.0;
+  static std::array<float,Dimensions> last_impulse = {0.0};
+  std::array<float,Dimensions> this_impulse = {0.0};
+
+  // reset the "last" values if time is zero
+  if (time < 0.1*dt) {
+    last_time = -dt;
+    last_impulse.fill(0.0);
+  }
+
+  // calculate impulse from particles
+  for (auto &src : vort) {
+    std::array<float,Dimensions> this_imp = std::visit([=](auto& elem) { return elem.get_total_impulse(); }, src);
+    for (size_t i=0; i<Dimensions; ++i) this_impulse[i] += this_imp[i];
+  }
+  // then add up the impulse from bodies - DO WE NEED TO RE-SOLVE BEM FIRST?
+  for (auto &src : bdry) {
+    std::array<float,Dimensions> this_imp = std::visit([=](auto& elem) { return elem.get_total_impulse(); }, src);
+    for (size_t i=0; i<Dimensions; ++i) this_impulse[i] += this_imp[i];
+  }
+
+  // find the time derivative of the impulses
+  std::array<float,Dimensions> forces;
+  for (size_t i=0; i<Dimensions; ++i) forces[i] = (this_impulse[i] - last_impulse[i]) / (time - last_time);
+
+  // save the last condition
+  last_time = time;
+  for (size_t i=0; i<Dimensions; ++i) last_impulse[i] = this_impulse[i];
+
+  return forces;
 }
 
 // set up some vortex particles

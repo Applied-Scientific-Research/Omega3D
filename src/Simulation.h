@@ -106,6 +106,7 @@ public:
   void async_step();
   void step();
   void dump_stats_to_status();
+  std::array<float,Dimensions> calculate_simple_forces();
   bool is_initialized();
   void set_initialized();
   std::string check_initialization();

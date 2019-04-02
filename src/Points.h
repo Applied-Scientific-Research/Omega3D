@@ -391,6 +391,37 @@ public:
     return *imax;
   }
 
+  // find the new peak strength magnitude
+  void update_max_str() {
+    S thismax = ElementBase<S>::get_max_str();
+
+    // and slowly update the current saved value
+    if (max_strength < 0.0) {
+      max_strength = thismax;
+    } else {
+      max_strength = 0.1*thismax + 0.9*max_strength;
+    }
+  }
+
+  // add and return the total impulse of all elements
+  std::array<S,Dimensions> get_total_impulse() {
+
+    // here is the return vector
+    std::array<S,Dimensions> imp;
+    imp.fill(0.0);
+
+    if (this->s) {
+      // accumulate impulse from each particle
+      for (size_t i=0; i<this->n; ++i) {
+        imp[0] += (*this->s)[1][i] * this->x[2][i] - (*this->s)[2][i] * this->x[1][i];
+        imp[1] += (*this->s)[2][i] * this->x[0][i] - (*this->s)[0][i] * this->x[2][i];
+        imp[2] += (*this->s)[0][i] * this->x[1][i] - (*this->s)[1][i] * this->x[0][i];
+      }
+    }
+
+    return imp;
+  }
+
 #ifdef USE_GL
   //
   // OpenGL functions
