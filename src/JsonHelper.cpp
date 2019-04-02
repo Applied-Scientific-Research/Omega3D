@@ -152,6 +152,9 @@ void read_json (Simulation& sim,
       //std::cout << "  setting neg color to " << new_color[0] << " " << new_color[1] << " " << new_color[2] << " " << new_color[3] << std::endl;
       for (size_t i=0; i<4; ++i) rp.neg_circ_color[i] = new_color[i];
     }
+    if (params.find("density") != params.end()) {
+      rp.circ_density = params["density"];
+    }
     if (params.find("tracerScale") != params.end()) {
       rp.tracer_scale = params["tracerScale"];
     }
@@ -247,6 +250,9 @@ void read_json (Simulation& sim,
         for (auto const& bf: bf_json) {
           // pass bf into a function in BoundaryFeature to generate the object
           parse_boundary_json(bfeatures, bp, bf);
+
+          // this turns off augmentation!
+          //parse_boundary_json(bfeatures, nullptr, bf);
         }
       }
 
@@ -313,6 +319,7 @@ void write_json(Simulation& sim,
                       {"featureColor", {rp.default_color[0], rp.default_color[1], rp.default_color[2], rp.default_color[3]} },
                       {"positiveColor", {rp.pos_circ_color[0], rp.pos_circ_color[1], rp.pos_circ_color[2], rp.pos_circ_color[3]} },
                       {"negativeColor", {rp.neg_circ_color[0], rp.neg_circ_color[1], rp.neg_circ_color[2], rp.neg_circ_color[3]} },
+                      {"density", rp.circ_density},
                       {"tracerScale", rp.tracer_scale},
                       {"viewPoint", {rp.vcx, rp.vcy, rp.vcz} },
                       {"viewScale", rp.vsize},
