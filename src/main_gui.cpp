@@ -36,7 +36,6 @@
 #include <iostream>
 #include <vector>
 
-
 static void error_callback(int error, const char* description) {
   fprintf(stderr, "Error %d: %s\n", error, description);
 }
@@ -991,7 +990,7 @@ int main(int argc, char const *argv[]) {
       ImGui::ColorEdit3("feature color",        rparams.default_color);
       ImGui::ColorEdit3("background color",     rparams.clear_color);
       //ImGui::Checkbox("show origin", &show_origin);
-      ImGui::SliderFloat("vorticity density", &(rparams.circ_density), 0.01f, 5.0f, "%.2f", 2.0f);
+      ImGui::SliderFloat("vorticity density", &(rparams.circ_density), 0.01f, 2.0f, "%.2f", 2.0f);
 
       if (ImGui::Button("Recenter")) {
         // put everything back to center
