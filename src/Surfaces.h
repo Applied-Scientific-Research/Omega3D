@@ -133,11 +133,11 @@ public:
     if (false) {
       std::cout << "Nodes" << std::endl;
       for (size_t i=0; i<nnodes; ++i) {
-        std::cout << "  " << i << " " << this->x[0][i] << " " << this->x[1][i] << std::endl;
+        std::cout << "  " << i << " " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i] << std::endl;
       }
-      std::cout << "Segments" << std::endl;
+      std::cout << "Triangles" << std::endl;
       for (size_t i=0; i<nsurfs; ++i) {
-        std::cout << "  " << i << " " << idx[2*i] << " " << idx[2*i+1] << std::endl;
+        std::cout << "  " << i << " " << idx[3*i] << " " << idx[3*i+1] << " " << idx[3*i+2] << std::endl;
       }
     }
 
@@ -628,9 +628,9 @@ public:
 
     //std::cout << "inside Surfaces.initGL" << std::endl;
     std::cout << "inside Surfaces.initGL with E=" << this->E << " and M=" << this->M << std::endl;
-/*
-    // generate the opengl state object with space for 4 vbos and 1 shader program
-    mgl = std::make_shared<GlState>(4,1);
+
+    // generate the opengl state object with space for 7 vbos and 1 shader program
+    mgl = std::make_shared<GlState>(7,1);
 
     // Allocate space, but don't upload the data from CPU to GPU yet
     for (size_t i=0; i<Dimensions; ++i) {
@@ -638,21 +638,26 @@ public:
       glBufferData(GL_ARRAY_BUFFER, 0, this->x[i].data(), GL_STATIC_DRAW);
     }
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mgl->vbo[2]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mgl->vbo[Dimensions]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, idx.data(), GL_STATIC_DRAW);
 
     if (this->s) {
-      glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[3]);
-      glBufferData(GL_ARRAY_BUFFER, 0, (*this->s).data(), GL_STATIC_DRAW);
+      for (size_t i=0; i<Dimensions; ++i) {
+        glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+4]);
+        glBufferData(GL_ARRAY_BUFFER, 0, (*this->s)[i].data(), GL_STATIC_DRAW);
+      }
     }
 
     // Load and create the blob-drawing shader program
-    mgl->spo[0] = create_draw_surface_line_prog();
+    mgl->spo[0] = create_draw_surface_tri_prog();
 
-    // Now do the four arrays
+    // Now do the arrays
     prepare_opengl_buffer(mgl->spo[0], 0, "px");
     prepare_opengl_buffer(mgl->spo[0], 1, "py");
-    prepare_opengl_buffer(mgl->spo[0], 2, "rawstr");
+    prepare_opengl_buffer(mgl->spo[0], 2, "posz");
+    prepare_opengl_buffer(mgl->spo[0], 3, "sx");
+    prepare_opengl_buffer(mgl->spo[0], 4, "sy");
+    prepare_opengl_buffer(mgl->spo[0], 5, "sz");
 
     // and for the compute shaders! (later)
 
@@ -677,7 +682,7 @@ public:
 
     // and indicate the fragment color output
     glBindFragDataLocation(mgl->spo[0], 0, "frag_color");
-*/
+
     glBindVertexArray(0);
   }
 
@@ -688,7 +693,7 @@ public:
     // has this been init'd yet?
     if (not mgl) return;
     if (glIsVertexArray(mgl->vao) == GL_FALSE) return;
-/*
+
     const size_t vlen = this->x[0].size()*sizeof(S);
     if (vlen > 0) {
       glBindVertexArray(mgl->vao);
@@ -700,34 +705,38 @@ public:
         glBufferData(GL_ARRAY_BUFFER, vlen, this->x[i].data(), GL_DYNAMIC_DRAW);
       }
 
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mgl->vbo[2]);
-      glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Int)*idx.size(), idx.data(), GL_DYNAMIC_DRAW);
+      const size_t ilen = idx.size()*sizeof(Int);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mgl->vbo[Dimensions]);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilen, idx.data(), GL_DYNAMIC_DRAW);
 
       // here is where we split on element type: active/reactive vs. inert
       if (this->E == inert) {
         // just don't upload strengths
+
       } else { // this->E is active or reactive
         // the strengths
         if (this->s) {
-          glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[3]);
-          glBufferData(GL_ARRAY_BUFFER, vlen, (*this->s).data(), GL_DYNAMIC_DRAW);
+          const size_t slen = (*this->s)[0].size()*sizeof(S);
+          for (size_t i=0; i<Dimensions; ++i) {
+            glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+4]);
+            glBufferData(GL_ARRAY_BUFFER, slen, (*this->s)[i].data(), GL_DYNAMIC_DRAW);
+          }
         }
       }
 
       glBindVertexArray(0);
 
       // must tell draw call how many elements are there
-      mgl->num_uploaded = idx.size();
+      mgl->num_uploaded = idx.size() / 3;
     }
-*/
   }
 
-  // OpenGL3 stuff to display points, called once per frame
+  // OpenGL3 stuff to draw triangles, called once per frame
   void drawGL(std::vector<float>& _projmat,
               RenderParams&       _rparams) {
 
     //std::cout << "inside Surfaces.drawGL" << std::endl;
-/*
+
     // has this been init'd yet?
     if (not mgl) {
       initGL(_projmat, _rparams.pos_circ_color,
@@ -763,14 +772,13 @@ public:
       glUniform1f (mgl->str_scale_attribute, (const GLfloat)max_strength);
 
       // the one draw call here
-      glDrawElements(GL_LINES, mgl->num_uploaded, get_gl_type<Int>, 0);
+      glDrawElements(GL_TRIANGLES, mgl->num_uploaded, get_gl_type<Int>, 0);
 
       // return state
       glEnable(GL_DEPTH_TEST);
       glDisable(GL_BLEND);
       glBindVertexArray(0);
     }
-*/
   }
 #endif
 

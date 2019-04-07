@@ -19,6 +19,6 @@
 // Create a render program from two shaders (vertex and fragment)
 GLuint create_draw_blob_program();
 GLuint create_draw_point_program();
-//GLuint create_draw_surface_tri_prog();
+GLuint create_draw_surface_tri_prog();
 
 // Create a compute program from one shader

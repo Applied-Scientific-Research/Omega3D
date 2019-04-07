@@ -51,6 +51,9 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
 ElementPacket<float>
 ExteriorFromFile::init_elements(const float _ips) const {
 
+  //std::cout << std::endl << "Reading " << m_infile << std::endl;
+  //read_obj(sim, infile);
+
   // how many panels?
   const size_t num_nodes = 4;
   const size_t num_panels = 4;

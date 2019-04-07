@@ -851,10 +851,6 @@ int main(int argc, char const *argv[]) {
                   // remember
                   recent_geom_files.push_back( infile );
 
-                  // read the geometry file
-                  std::cout << std::endl << "Reading " << infile << std::endl;
-                  //read_obj(sim, infile);
-
                   // now remove the leading directories from the string
                   const size_t lastchar = infile.find_last_of("/\\");
                   shortname = infile.substr(lastchar+1);

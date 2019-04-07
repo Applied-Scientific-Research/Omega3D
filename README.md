@@ -56,6 +56,7 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
+* Port over variable-core-size drawing techniques from O2D
 * Allow general spheres - use the ips to scale refinement of an icosahedron
 * Allow reading obj/stl/off/ply file using `igl/read_triangle_mesh.h`
 * Add some pics, maybe aGIF, to this readme
@@ -65,6 +66,7 @@ Tasks to consider or implement:
 * Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
+* ~~Draw the triangular elements, even if very basically~~
 * ~~Keep updated with Omega2D development and features: vtk, png, json, etc.~~
 * ~~Move radius from ElementBase into Points~~
 * ~~Add merging operation to avoid over-resolution~~

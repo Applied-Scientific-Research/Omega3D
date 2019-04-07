@@ -33,12 +33,12 @@ const std::string part_frag_shader_source =
 #include "shaders/particle.frag"
 ;
 
-//const std::string panel_vert_shader_source =
-//#include "shaders/panel.vert"
-//;
-//const std::string panel_frag_shader_source =
-//#include "shaders/panel.frag"
-//;
+const std::string panel_vert_shader_source =
+#include "shaders/flattriangle.vert"
+;
+const std::string panel_frag_shader_source =
+#include "shaders/flattriangle.frag"
+;
 
 
 // Compile a shader
@@ -113,12 +113,12 @@ GLuint create_draw_point_program() {
   return shaderProgram;
 }
 
-/*
+
 // Create a program from two shaders to render panels
 GLuint create_draw_surface_tri_prog() {
   // Load and compile the vertex and fragment shaders
-  GLuint vertexShader = load_and_compile_shader(surfline_vert_shader_source, GL_VERTEX_SHADER);
-  GLuint fragmentShader = load_and_compile_shader(surfline_frag_shader_source, GL_FRAGMENT_SHADER);
+  GLuint vertexShader = load_and_compile_shader(panel_vert_shader_source, GL_VERTEX_SHADER);
+  GLuint fragmentShader = load_and_compile_shader(panel_frag_shader_source, GL_FRAGMENT_SHADER);
 
   // Attach the above shader to a program
   GLuint shaderProgram = glCreateProgram();
@@ -135,4 +135,4 @@ GLuint create_draw_surface_tri_prog() {
 
   return shaderProgram;
 }
-*/
+
