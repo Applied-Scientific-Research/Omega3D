@@ -126,6 +126,7 @@ INCLUDE_DIRECTORIES( "src/tinyxml2" )
 INCLUDE_DIRECTORIES( "src/tinyexpr" )
 INCLUDE_DIRECTORIES( "src/cppcodec" )
 INCLUDE_DIRECTORIES( "src/stb" )
+INCLUDE_DIRECTORIES( "src/igl" )
 
 SET_SOURCE_FILES_PROPERTIES("src/imgui/imgui_draw.cpp" PROPERTIES COMPILE_FLAGS -Wno-maybe-uninitialized)
 
@@ -138,6 +139,7 @@ SET(SOURCES ${HEADERS}
             "src/MeasureFeature.cpp"
             "src/Body.cpp"
             "src/JsonHelper.cpp"
+            "src/ReadGeom.cpp"
             "src/StatusFile.cpp"
             "src/tinyxml2/tinyxml2.cpp"
             "src/tinyexpr/tinyexpr.c" )

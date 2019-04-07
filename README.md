@@ -58,7 +58,6 @@ Tasks to consider or implement:
 
 * Port over variable-core-size drawing techniques from O2D
 * Allow general spheres - use the ips to scale refinement of an icosahedron
-* Allow reading obj/stl/off/ply file using `igl/read_triangle_mesh.h`
 * Add some pics, maybe aGIF, to this readme
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
 * Use the actual core function to draw the blobs - but what is the real core function?
@@ -66,6 +65,7 @@ Tasks to consider or implement:
 * Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
+* ~~Allow reading obj/stl/off/ply file using `igl/read_triangle_mesh.h`~~
 * ~~Draw the triangular elements, even if very basically~~
 * ~~Keep updated with Omega2D development and features: vtk, png, json, etc.~~
 * ~~Move radius from ElementBase into Points~~

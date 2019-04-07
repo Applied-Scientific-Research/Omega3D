@@ -55,7 +55,7 @@ public:
     const size_t nsurfs = _idx.size() / Dimensions;
     assert(_val.size() % nsurfs == 0);
 
-    std::cout << "  new collection with " << nsurfs << " surface panels" << std::endl;
+    std::cout << "  new collection with " << nsurfs << " panels and " << nnodes << " nodes" << std::endl;
 
     // pull out the node locations
     for (size_t d=0; d<Dimensions; ++d) {
@@ -726,8 +726,8 @@ public:
 
       glBindVertexArray(0);
 
-      // must tell draw call how many elements are there
-      mgl->num_uploaded = idx.size() / 3;
+      // must tell draw call how many elements are there - or, really, how many indices
+      mgl->num_uploaded = idx.size();
     }
   }
 

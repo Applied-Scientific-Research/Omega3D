@@ -6,6 +6,7 @@
  */
 
 #include "BoundaryFeature.h"
+#include "ReadGeom.h"
 
 #include <cmath>
 #include <iostream>
@@ -51,9 +52,11 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
 ElementPacket<float>
 ExteriorFromFile::init_elements(const float _ips) const {
 
-  //std::cout << std::endl << "Reading " << m_infile << std::endl;
+  std::cout << std::endl << "Reading " << m_infile << std::endl;
   //read_obj(sim, infile);
+  return read_geometry_file(m_infile);
 
+/*
   // how many panels?
   const size_t num_nodes = 4;
   const size_t num_panels = 4;
@@ -95,6 +98,7 @@ ExteriorFromFile::init_elements(const float _ips) const {
   val[3] = 0.0;
 
   return ElementPacket<float>({x, idx, val});
+*/
 }
 
 void
