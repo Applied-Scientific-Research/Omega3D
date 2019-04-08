@@ -22,6 +22,7 @@ Simulation::Simulation()
     vort(),
     bdry(),
     fldpt(),
+    bem(),
     diff(),
     conv(),
     sf(),
@@ -181,7 +182,7 @@ void Simulation::reset() {
   vort.clear();
   bdry.clear();
   fldpt.clear();
-  //bem.reset();
+  bem.reset();
   sf.reset_sim();
   sim_is_initialized = false;
   step_has_started = false;
@@ -349,7 +350,7 @@ void Simulation::first_step() {
   // this is the first step, just solve BEM and return - it's time=0
 
   // update BEM and find vels on any particles but DO NOT ADVECT
-  conv.advect_1st(time, 0.0, thisfs, vort, bdry, fldpt);
+  conv.advect_1st(time, 0.0, thisfs, vort, bdry, fldpt, bem);
 
   // and write status file
   dump_stats_to_status();
@@ -373,19 +374,19 @@ void Simulation::step() {
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
   // for simplicity's sake, just run one full diffusion step here
-  //diff.step(dt, re, get_vdelta(), thisfs, vort, bdry);
-  diff.step(dt, re, thisfs, vort, bdry);
+  //diff.step(dt, re, get_vdelta(), thisfs, vort, bdry, bem);
+  diff.step(dt, re, thisfs, vort, bdry, bem);
 
   // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
-  //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry);
+  //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry, bem);
 
 
   // advect with no diffusion (must update BEM strengths)
-  //conv.advect_1st(time, dt, thisfs, vort, bdry, fldpt);
-  conv.advect_2nd(time, dt, thisfs, vort, bdry, fldpt);
+  //conv.advect_1st(time, dt, thisfs, vort, bdry, fldpt, bem);
+  conv.advect_2nd(time, dt, thisfs, vort, bdry, fldpt, bem);
 
   // operator splitting requires another half-step diffuse (must compute new coefficients)
-  //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry);
+  //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry, bem);
 
   // step complete, now split any elongated particles
   for (auto &coll: vort) {

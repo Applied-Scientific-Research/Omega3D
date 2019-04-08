@@ -13,7 +13,7 @@
 #include "Influence.h"
 //#include "Coeffcients.h"
 //#include "RHS.h"
-//#include "BEM.h"
+#include "BEM.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -29,8 +29,8 @@ template <class S, class A, class I>
 void solve_bem(const double                         _time,
                const std::array<double,Dimensions>& _fs,
                std::vector<Collection>&             _vort,
-               std::vector<Collection>&             _bdry) { //,
-               //BEM<S,I>&                            _bem) {
+               std::vector<Collection>&             _bdry,
+               BEM<S,I>&                            _bem) {
 
   // no unknowns? no problem.
   if (_bdry.size() == 0) return;
@@ -166,7 +166,7 @@ void solve_bem(const double                         _time,
           // test for relative motion between these two blocks (translation only for now)
           std::shared_ptr<Body> tb = std::visit([=](auto& elem) { return elem.get_body_ptr(); }, targ);
           std::shared_ptr<Body> sb = std::visit([=](auto& elem) { return elem.get_body_ptr(); }, src);
-          rebuild_this_block = tb->relative_motion_vs(sb, last_time, _time);
+          if (tb and sb) rebuild_this_block = tb->relative_motion_vs(sb, last_time, _time);
         }
 
         if (rebuild_this_block) {

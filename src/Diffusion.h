@@ -14,13 +14,11 @@
 //#include "Points.h"
 //#include "Surfaces.h"
 //#include "Reflect.h"
-#include "Collection.h"
-#include "CollectionHelper.h"
-#include "VectorHelper.h"
 #include "VRM.h"
+#include "BEM.h"
 
 #include <cstdlib>
-//#include <iostream>
+#include <iostream>
 #include <vector>
 #include <cassert>
 
@@ -53,7 +51,8 @@ public:
             const float,
             const std::array<double,3>&,
             std::vector<Collection>&,
-            std::vector<Collection>&);
+            std::vector<Collection>&,
+            BEM<S,I>& _bem);
 
 private:
   // the VRM algorithm, template params are storage, compute, max moments
@@ -85,7 +84,8 @@ void Diffusion<S,A,I>::step(const float                 _dt,
                             const float                 _re,
                             const std::array<double,3>& _fs,
                             std::vector<Collection>&    _vort,
-                            std::vector<Collection>&    _bdry) {
+                            std::vector<Collection>&    _bdry,
+                            BEM<S,I>&                   _bem) {
 
   if (is_inviscid) return;
 

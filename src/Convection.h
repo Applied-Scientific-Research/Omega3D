@@ -39,13 +39,15 @@ public:
                   const std::array<double,Dimensions>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
-                  std::vector<Collection>&);
+                  std::vector<Collection>&,
+                  BEM<S,I>&);
   void advect_2nd(const double,
                   const double,
                   const std::array<double,Dimensions>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
-                  std::vector<Collection>&);
+                  std::vector<Collection>&,
+                  BEM<S,I>&);
 
 private:
   // local copies of particle data
@@ -102,14 +104,14 @@ void Convection<S,A,I>::advect_1st(const double _time,
                                    const std::array<double,Dimensions>& _fs,
                                    std::vector<Collection>&             _vort,
                                    std::vector<Collection>&             _bdry,
-                                   std::vector<Collection>&             _fldpt/*,
-                                   BEM<S,I>&                            _bem*/) {
+                                   std::vector<Collection>&             _fldpt,
+                                   BEM<S,I>&                            _bem) {
 
   std::cout << "Inside advect_1st with dt=" << _dt << std::endl;
 
   // part A - unknowns
 
-  solve_bem<S,A,I>(_time, _fs, _vort, _bdry/*, _bem*/);
+  solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
   // part B - knowns
 
@@ -145,15 +147,15 @@ void Convection<S,A,I>::advect_2nd(const double _time,
                                    const std::array<double,Dimensions>& _fs,
                                    std::vector<Collection>&             _vort,
                                    std::vector<Collection>&             _bdry,
-                                   std::vector<Collection>&             _fldpt/*,
-                                   BEM<S,I>&                            _bem*/) {
+                                   std::vector<Collection>&             _fldpt,
+                                   BEM<S,I>&                            _bem) {
 
   std::cout << "Inside advect_2nd with dt=" << _dt << std::endl;
 
   // take the first Euler step ---------
 
   // perform the first BEM
-  solve_bem<S,A,I>(_time, _fs, _vort, _bdry/*, _bem*/);
+  solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
   // find the derivatives
   find_vels(_fs, _vort, _bdry, _vort);
@@ -177,7 +179,7 @@ void Convection<S,A,I>::advect_2nd(const double _time,
 
   // perform the second BEM
   //solve_bem<S,A,I>(_time + _dt, _fs, interim_vort, interim_bdry, _bem);
-  solve_bem<S,A,I>(_time + _dt, _fs, interim_vort, _bdry/*, _bem*/);
+  solve_bem<S,A,I>(_time + _dt, _fs, interim_vort, _bdry, _bem);
 
   // find the derivatives
   //find_vels(_fs, interim_vort, interim_bdry, interim_fldpt);

@@ -10,7 +10,7 @@
 #include "Omega3D.h"
 #include "Body.h"
 #include "Collection.h"
-//#include "BEM.h"
+#include "BEM.h"
 #include "Convection.h"
 #include "Diffusion.h"
 #include "StatusFile.h"
@@ -146,7 +146,7 @@ private:
 
   // The need to solve for the unknown strengths of reactive elements inside both the
   //   diffusion and convection steps necessitates a BEM object here
-  //BEM<STORE,Int> bem;
+  BEM<STORE,Int> bem;
 
   // Diffusion will resolve exchange of strength among particles and between panels and particles
   // Note that NNLS needs doubles for its compute type or else it will fail
