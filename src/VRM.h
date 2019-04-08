@@ -489,7 +489,8 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
   static const CT second_moment = 2.0;
   static const CT fourth_moment = 12.0;
 
-  // for non-adaptive method, 1e-6 fails immediately, 1e-5 fails quickly, 3e-5 seems to work for uniform res
+  // for non-adaptive method and floats, 1e-6 fails immediately, 1e-5 fails quickly, 3e-5 seems to work
+  // for doubles, can use 1e-6, will increase accuracy for slight performance hit (see vrm3d)
   static const CT nnls_eps = 3.e-5;
   // default to 1e-6, but drop to 1e-4 for adaptive with high overlap
   static const CT nnls_thresh = 1.e-6;
