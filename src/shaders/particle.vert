@@ -29,13 +29,13 @@ void main() {
   // pass through texture coordinates
   txcoord = quad_attr.xy;
 
-  // magnitude of strength scales fragments
-  strength = sqrt(sx*sx + sy*sy + sz*sz);
+  // magnitude of strength density scales fragment color
+  strength = sqrt(sx*sx + sy*sy + sz*sz) / (r*r*r);
   // or magnitude of strength normal to screen?
   //strength = str.z;
   //strength = sz;
 
   // make 4 verts as a single primitive and set texture coords - see other shaders
-  gl_Position = Projection * vec4(px + 2.5f*r*quad_attr.x, py + 2.5f*r*quad_attr.y, 0.f, 1.f);
+  gl_Position = Projection * vec4(px + 3.5f*r*quad_attr.x, py + 3.5f*r*quad_attr.y, 0.f, 1.f);
 }
 )"
