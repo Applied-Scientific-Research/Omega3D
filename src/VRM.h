@@ -110,20 +110,22 @@ VRM<ST,CT,MAXMOM>::VRM(const CT _hnu)
 template <class ST, class CT, uint8_t MAXMOM>
 void VRM<ST,CT,MAXMOM>::initialize_sites() {
 
+  const std::vector<ST>& ico = ico2;
+
   if (MAXMOM <= 2) {
     //std::cout << "Creating one layer of insertion sites" << std::endl;
 
     // for first and second-moment VRM, one layer only
     if (true) {
-      // pull data from a two-level refinement of an icosahedron
-      num_sites = ico1.size();
+      // pull data from a multi-level refinement of an icosahedron
+      num_sites = ico.size() / Dimensions;
       xsite.resize(num_sites);
       ysite.resize(num_sites);
       zsite.resize(num_sites);
       for (size_t i=0; i<num_sites; ++i) {
-        xsite[i] = 2.0 * ico2[3*i+0];
-        ysite[i] = 2.0 * ico2[3*i+1];
-        zsite[i] = 2.0 * ico2[3*i+2];
+        xsite[i] = 2.0 * ico[3*i+0];
+        ysite[i] = 2.0 * ico[3*i+1];
+        zsite[i] = 2.0 * ico[3*i+2];
       }
     }
 
@@ -131,31 +133,33 @@ void VRM<ST,CT,MAXMOM>::initialize_sites() {
     //std::cout << "Creating two layers of insertion sites" << std::endl;
 
     if (true) {
-      // pull data from a two-level refinement of an r=0.5 icosahedron
-      num_sites = ico1.size();
+      // pull data from a multi-level refinement of an r=0.5 icosahedron
+      num_sites = ico.size() / Dimensions;
       xsite.resize(num_sites);
       ysite.resize(num_sites);
       zsite.resize(num_sites);
       for (size_t i=0; i<num_sites; ++i) {
-        xsite[i] = 2.0 * ico2[3*i+0];
-        ysite[i] = 2.0 * ico2[3*i+1];
-        zsite[i] = 2.0 * ico2[3*i+2];
+        xsite[i] = 2.0 * ico[3*i+0];
+        ysite[i] = 2.0 * ico[3*i+1];
+        zsite[i] = 2.0 * ico[3*i+2];
       }
     }
 
     // generate a second layer farther away
     // to solve for 3rd-4th moments stably, we need more points
     if (true) {
-      // pull data from a two-level refinement of an r=0.5 icosahedron
-      num_sites += ico1.size();
-      xsite.resize(num_sites);
-      ysite.resize(num_sites);
-      zsite.resize(num_sites);
-      for (size_t i=num_sites/2; i<num_sites; ++i) {
-        xsite[i] = 3.7 * ico2[3*i+0];
-        ysite[i] = 3.7 * ico2[3*i+1];
-        zsite[i] = 3.7 * ico2[3*i+2];
+      // pull data from a multi-level refinement of an r=0.5 icosahedron
+      const size_t add_num_sites = ico.size() / Dimensions;
+      xsite.resize(num_sites+add_num_sites);
+      ysite.resize(num_sites+add_num_sites);
+      zsite.resize(num_sites+add_num_sites);
+      for (size_t i=0; i<add_num_sites; ++i) {
+        const size_t idx = i+num_sites;
+        xsite[idx] = 3.7 * ico[3*i+0];
+        ysite[idx] = 3.7 * ico[3*i+1];
+        zsite[idx] = 3.7 * ico[3*i+2];
       }
+      num_sites += add_num_sites;
     }
   }
 }
@@ -298,7 +302,8 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
   for (size_t i=0; i<initial_n; ++i) {
 
     // find the nearest neighbor particles
-    //std::cout << "\nDiffusing particle " << i << " with strength " << s[i] << std::endl;
+    //std::cout << "\nDiffusing particle " << i << " with strength " << sx[i] << " " << sy[i] << " " << sz[i] << std::endl;
+    //std::cout << "\nDiffusing particle " << i << " at " << x[i] << " " << y[i] << " " << z[i] << std::endl;
 
     // if current particle strength is very small, skip out
     //   (this particle still core-spreads somewhat)
@@ -378,6 +383,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
       //std::cout << "  inear is";
       //for (int32_t j=0; j<inear.size(); ++j) std::cout << " " << inear[j];
       //std::cout << std::endl;
+      //std::cout << "    fill neib with new part at " << newpt[0] << " " << newpt[1] << " " << newpt[2] << std::endl;
     }
 
     bool haveSolution = false;
@@ -385,6 +391,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
 
     // assemble the underdetermined system
     while (not haveSolution and ++numNewParts < maxNewParts) {
+      //std::cout << "  attempt solution with " << inear.size() << " close particles" << std::endl;
 
       // this does the heavy lifting - assemble and solve the VRM equations for the 
       //   diffusion from particle i to particles in inear
@@ -409,6 +416,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
         dsy.push_back(0.0);
         dsz.push_back(0.0);
         n++;
+        //std::cout << "    no solution, added part at " << newpt[0] << " " << newpt[1] << " " << newpt[2] << std::endl;
       }
     }
 
@@ -481,8 +489,8 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
   static const CT second_moment = 2.0;
   static const CT fourth_moment = 12.0;
 
-  // for non-adaptive method, can use 1e-5
-  static const CT nnls_eps = 1.e-6;
+  // for non-adaptive method, 1e-6 fails immediately, 1e-5 fails quickly, 3e-5 seems to work for uniform res
+  static const CT nnls_eps = 3.e-5;
   // default to 1e-6, but drop to 1e-4 for adaptive with high overlap
   static const CT nnls_thresh = 1.e-6;
 
