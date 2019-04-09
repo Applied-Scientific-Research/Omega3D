@@ -32,6 +32,15 @@ inline S length (std::array<S,3> const & vec) {
   return std::sqrt(dot_product<S>(vec, vec));
 }
 
+// basic cross product
+template <class S>
+inline void cross_product (std::array<S,3> const & v1, std::array<S,3> const & v2, std::array<S,3>& result) {
+  result[0] = v1[1]*v2[2] - v1[2]*v2[1];
+  result[1] = v1[2]*v2[0] - v1[0]*v2[2];
+  result[2] = v1[0]*v2[1] - v1[1]*v2[0];
+  return;
+}
+
 //
 // from a single 3D vector, generate a set of orthonormal basis vectors
 //   code is from https://graphics.pixar.com/library/OrthonormalB/paper.pdf

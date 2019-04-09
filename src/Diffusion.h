@@ -107,19 +107,19 @@ void Diffusion<S,A,I>::step(const double                _time,
       Surfaces<S>& surf = std::get<Surfaces<S>>(coll);
 
       // generate particles just above the surface
-      //std::vector<S> new_pts = surf.represent_as_particles(0.0001*(S)_dt, _vdelta);
+      std::vector<S> new_pts = surf.represent_as_particles(0.0001*(S)_dt, _vdelta);
 
       // add those particles to the main particle list
       if (_vort.size() == 0) {
         // no collections yet? make a new collection
-        //_vort.push_back(Points<S>(new_pts, active, lagrangian, nullptr));      // vortons
+        _vort.push_back(Points<S>(new_pts, active, lagrangian, nullptr));      // vortons
       } else {
         // HACK - add all particles to first collection
         auto& coll = _vort.back();
         // only proceed if the last collection is Points
         if (std::holds_alternative<Points<S>>(coll)) {
           Points<S>& pts = std::get<Points<S>>(coll);
-          //pts.add_new(new_pts);
+          pts.add_new(new_pts);
         }
       }
     }

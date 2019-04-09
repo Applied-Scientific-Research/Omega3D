@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Omega3D.h"
+#include "MathHelper.h"
 #include "VectorHelper.h"
 #include "ElementBase.h"
 
@@ -79,6 +80,9 @@ public:
       idx[i] = _idx[i];
     }
     assert(idx_are_all_good);
+
+    // compute all basis vectors
+    compute_bases();
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
@@ -218,6 +222,9 @@ public:
     }
     assert(idx_are_all_good);
 
+    // compute all basis vectors
+    compute_bases();
+
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
       // value is a fixed strength for the element
@@ -290,7 +297,7 @@ public:
         this->u[d][i] += _factor * (float)thisvel[d];
       }
 
-      // now compute the rotational velocity with respect to the geometric center
+      // now compute the rotational velocity with respect to the geometric center - NEEDS WORK
       double thisrotvel = this->B->get_rotvel(_time);
       // center of this panel
       Int id0 = idx[2*i];
@@ -421,6 +428,57 @@ public:
     std::cout << "    geom center is " << utc[0] << " " << utc[1] << " " << utc[2] << " and vol is " << vol << std::endl;
   }
 
+  // need to maintain the 3x3 set of basis vectors for each panel
+  void compute_bases() {
+
+    // how many panels do we have now?
+    const Int nnew = get_npanels();
+
+    // how big is my set of basis vectors?
+    const Int norig = b[0][0].size();
+
+    // resize any vectors
+    for (size_t i=0; i<3; ++i) {
+      for (size_t j=0; j<3; ++j) {
+        b[i][j].resize(nnew);
+      }
+    }
+
+    // we'll reuse these vectors
+    std::array<S,3> x1, x2, norm;
+
+    // update what we need
+    for (size_t i=norig; i<nnew; ++i) {
+      const size_t id0 = idx[3*i];
+      const size_t id1 = idx[3*i+1];
+      const size_t id2 = idx[3*i+2];
+      //std::cout << "elem near " << this->x[0][id0] << " " << this->x[1][id0] << " " << this->x[2][id0] << std::endl;
+
+      // x1 vector is along direction from node 0 to node 1
+      for (size_t j=0; j<3; ++j) x1[j] = this->x[j][id1] - this->x[j][id0];
+      normalizeVec<S>(x1);
+      //std::cout << "  has x1 " << x1[0] << " " << x1[1] << " " << x1[2] << std::endl;
+
+      // x2 vector is perpendicular to x1, and points toward node 2
+      for (size_t j=0; j<3; ++j) x2[j] = this->x[j][id2] - this->x[j][id0];
+      const S dp = dot_product<S>(x2, x1);
+      for (size_t j=0; j<3; ++j) x2[j] -= dp*x1[j];
+      normalizeVec<S>(x2);
+      //std::cout << "  has x2 " << x2[0] << " " << x2[1] << " " << x2[2] << std::endl;
+
+      // x3 is the normal vector, pointing into the fluid
+      cross_product(x1, x2, norm);
+      //std::cout << "  norm " << norm[0] << " " << norm[1] << " " << norm[2] << std::endl;
+
+      // and assign
+      for (size_t j=0; j<3; ++j) b[0][j][i] = x1[j];
+      for (size_t j=0; j<3; ++j) b[1][j][i] = x2[j];
+      for (size_t j=0; j<3; ++j) b[2][j][i] = norm[j];
+
+      //std::cout << "elem near " << this->x[0][id0] << " " << this->x[1][id0] << " " << this->x[2][id0] << " has norm " << b[2][0][i] << " " << b[2][1][i] << " " << b[2][2][i] << std::endl;
+    }
+  }
+
   // when transforming a body-bound object to a new time, we must also transform the geometric center
   void transform(const double _time) {
     // must explicitly call the method in the base class
@@ -436,11 +494,13 @@ public:
       // transform the utc to tc here
       tc[0] = (S)thispos[0] + utc[0]*ct - utc[1]*st;
       tc[1] = (S)thispos[1] + utc[0]*st + utc[1]*ct;
+      tc[2] = (S)thispos[2];
 
     } else {
       // transform the utc to tc here
       tc[0] = utc[0];
       tc[1] = utc[1];
+      tc[2] = utc[2];
     }
   }
 
@@ -515,38 +575,41 @@ public:
   }
 */
 
-  // return a particle version of the panels (useful during Diffusion) - NEEDS WORK
+  //
+  // return a particle version of the panels (useful during Diffusion)
+  // offset is scaled by vdelta
+  //
   std::vector<S> represent_as_particles(const S _offset, const S _vdelta) {
 
     // how many panels?
     const size_t num_pts = get_npanels();
 
-    // init the output vector
+    // init the output vector (x, y, z, sx, sy, sz, r)
     std::vector<S> px(num_pts*7);
 
-    // outside is to the left walking from one point to the next
-    // so go CW around the circle starting at theta=0 (+x axis)
-    S oopanlen, along[3];
+    // get basis vectors
+    std::array<Vector<S>,3>& x1 = b[0];
+    std::array<Vector<S>,3>& x2 = b[1];
+    std::array<Vector<S>,3>& norm = b[2];
+
+    // how far above the surface
+    const S dn = _offset * _vdelta;
 
     for (size_t i=0; i<num_pts; i++) {
-      Int id0 = idx[3*i];
-      Int id1 = idx[3*i+1];
-      //Int id2 = idx[3*i+2];
+      const Int id0 = idx[3*i];
+      const Int id1 = idx[3*i+1];
+      const Int id2 = idx[3*i+2];
+      const Int idx = 7*i;
       // start at center of panel
-      px[4*i+0] = 0.5 * (this->x[0][id1] + this->x[0][id0]);
-      px[4*i+1] = 0.5 * (this->x[1][id1] + this->x[1][id0]);
+      for (size_t j=0; j<3; ++j) px[idx+j] = (1./3.) * (this->x[j][id0] + this->x[j][id1] + this->x[j][id2]);
       // push out a fixed distance
-      along[0] = this->x[0][id1] - this->x[0][id0];
-      along[1] = this->x[1][id1] - this->x[1][id0];
-      // one over the panel length is useful
-      oopanlen = 1.0 / std::sqrt(along[0]*along[0] + along[1]*along[1]);
       // this assumes properly resolved, vdelta and dt
-      px[4*i+0] += _offset * -along[1] * oopanlen;
-      px[4*i+1] += _offset *  along[0] * oopanlen;
-      // complete the element with a strength and radius
-      px[4*i+2] = (*this->s)[0][i] / oopanlen;
-      px[4*i+3] = _vdelta;
-      //std::cout << "  new part is " << px[4*i+0] << " " << px[4*i+1] << " " << px[4*i+2] << " " << px[4*i+3] << std::endl;
+      for (size_t j=0; j<3; ++j) px[idx+j] += dn * norm[j][i];
+      // complete the element with a strength and radius - TIMES AREA?
+      for (size_t j=0; j<3; ++j) px[idx+3+j] = vs[0][i]*x1[j][i] + vs[1][i]*x2[j][i];
+      // and the core size
+      px[idx+6] = _vdelta;
+      //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2] << " with str " << px[idx+3] << std::endl;
     }
 
     return px;
@@ -791,15 +854,17 @@ public:
 protected:
   // ElementBase.h has x, s, u
 
-  // here are the variables special to triangular panels
+  // element-wise variables special to triangular panels
   std::vector<Int>		idx;	// indexes into the x array
   std::vector<Vector<S>>	bc;	// boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
 
   std::array<Vector<S>,2>	vs;	// vortex sheet strengths of the elements (x1,x2)
   std::optional<Vector<S>> 	ss;	// source strengths which represent the vel inf of the rotating volume
 
-  Int istart;	// index of first entry in RHS vector and A matrix
+  std::array<std::array<Vector<S>,3>,3> b;  // transformed basis vectors: x1 is b[0], x2 is b[1], normal is b[2], normal x is b[2][0]
 
+  // parameters for the encompassing body
+  Int istart;	// index of first entry in RHS vector and A matrix
   S vol;			// volume of the body - for augmented BEM solution
   std::array<S,Dimensions> utc;		// untransformed geometric center
   std::array<S,Dimensions>  tc;		// transformed geometric center
