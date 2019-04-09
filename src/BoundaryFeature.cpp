@@ -52,8 +52,6 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
 ElementPacket<float>
 ExteriorFromFile::init_elements(const float _ips) const {
 
-  std::cout << std::endl << "Reading " << m_infile << std::endl;
-  //read_obj(sim, infile);
   return read_geometry_file(m_infile);
 
 /*

@@ -60,9 +60,9 @@ private:
 //
 template <class S, class A, class I>
 void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
-                              std::vector<Collection>&             _vort,
-                              std::vector<Collection>&             _bdry,
-                              std::vector<Collection>&             _targets) {
+                                  std::vector<Collection>&             _vort,
+                                  std::vector<Collection>&             _bdry,
+                                  std::vector<Collection>&             _targets) {
 
   //if (_targets.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
   if (_targets.size() > 0) std::cout << std::endl;
@@ -89,7 +89,7 @@ void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
       std::visit(visitor, src, targ);
     }
 
-    // add freestream and divide by 2pi
+    // add freestream and divide by 4pi
     std::visit([=](auto& elem) { elem.finalize_vels(_fs); }, targ);
   }
 
