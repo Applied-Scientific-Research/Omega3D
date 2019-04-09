@@ -12,6 +12,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <limits>
 #include <variant>
 
 // constructor
@@ -374,19 +375,17 @@ void Simulation::step() {
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
   // for simplicity's sake, just run one full diffusion step here
-  //diff.step(dt, re, get_vdelta(), thisfs, vort, bdry, bem);
-  diff.step(dt, re, thisfs, vort, bdry, bem);
+  diff.step(time, dt, re, get_vdelta(), thisfs, vort, bdry, bem);
 
   // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
-  //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry, bem);
-
+  //diff.step(time, 0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry, bem);
 
   // advect with no diffusion (must update BEM strengths)
   //conv.advect_1st(time, dt, thisfs, vort, bdry, fldpt, bem);
   conv.advect_2nd(time, dt, thisfs, vort, bdry, fldpt, bem);
 
   // operator splitting requires another half-step diffuse (must compute new coefficients)
-  //diff.step(0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry, bem);
+  //diff.step(time, 0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry, bem);
 
   // step complete, now split any elongated particles
   for (auto &coll: vort) {

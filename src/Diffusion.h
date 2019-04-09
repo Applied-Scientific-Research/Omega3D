@@ -11,8 +11,6 @@
 #include "Core.h"
 //#include "Body.h"
 #include "Merge.h"
-//#include "Points.h"
-//#include "Surfaces.h"
 //#include "Reflect.h"
 #include "VRM.h"
 #include "BEM.h"
@@ -47,8 +45,10 @@ public:
   S get_particle_overlap() const { return particle_overlap; }
   CoreType get_core_func() const { return core_func; }
 
-  void step(const float,
-            const float,
+  void step(const double,
+            const double,
+            const S,
+            const S,
             const std::array<double,3>&,
             std::vector<Collection>&,
             std::vector<Collection>&,
@@ -80,8 +80,10 @@ private:
 // take a diffusion step
 //
 template <class S, class A, class I>
-void Diffusion<S,A,I>::step(const float                 _dt,
-                            const float                 _re,
+void Diffusion<S,A,I>::step(const double                _time,
+                            const double                _dt,
+                            const S                     _re,
+                            const S                     _vdelta,
                             const std::array<double,3>& _fs,
                             std::vector<Collection>&    _vort,
                             std::vector<Collection>&    _bdry,
@@ -91,23 +93,39 @@ void Diffusion<S,A,I>::step(const float                 _dt,
 
   std::cout << "Inside Diffusion::step with dt=" << _dt << std::endl;
 
-/*
   // always re-run the BEM calculation before shedding
-  if (_bdry.exists()) {
+  solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
-    // set up and performs the BEM
-    _bdry.reset_vels();
-    add_influence<S,A,I>(_vort, _bdry);
-    _bdry.scale_and_add_freestream(_fs);
-    _bdry.find_strengths();
+  //
+  // generate particles at boundary surfaces
+  //
 
-    // generate particles just above the surface
-    std::vector<S> newparts = _bdry.get_panels().diffuse_onto(0.0001*(S)_dt, _re, _vdelta);
+  for (auto &coll : _bdry) {
 
-    // add those particles to the main particle list
-    _vort.add_new(newparts);
+    // run this step if the collection is Surfaces
+    if (std::holds_alternative<Surfaces<S>>(coll)) {
+      Surfaces<S>& surf = std::get<Surfaces<S>>(coll);
+
+      // generate particles just above the surface
+      //std::vector<S> new_pts = surf.represent_as_particles(0.0001*(S)_dt, _vdelta);
+
+      // add those particles to the main particle list
+      if (_vort.size() == 0) {
+        // no collections yet? make a new collection
+        //_vort.push_back(Points<S>(new_pts, active, lagrangian, nullptr));      // vortons
+      } else {
+        // HACK - add all particles to first collection
+        auto& coll = _vort.back();
+        // only proceed if the last collection is Points
+        if (std::holds_alternative<Points<S>>(coll)) {
+          Points<S>& pts = std::get<Points<S>>(coll);
+          //pts.add_new(new_pts);
+        }
+      }
+    }
+
+    // Kutta points and lifting lines can generate points here
   }
-*/
 
   //
   // diffuse strength among existing particles
@@ -169,71 +187,79 @@ void Diffusion<S,A,I>::step(const float                 _dt,
     }
   }
 
-  // reflect interior particles to exterior because VRM does not account for panels
-/*
-  if (_bdry.exists()) {
-    (void) reflect<S,I>(_bdry, _vort);
+  //
+  // reflect interior particles to exterior because VRM only works in free space
+  //
+
+  //ReflectVisitor<S> rvisitor;
+  // this should only function when _vort is Points and _bdry is Surfaces
+  for (auto &targ : _vort) {
+    if (std::holds_alternative<Points<S>>(targ)) {
+      Points<S>& pts = std::get<Points<S>>(targ);
+
+      for (auto &src : _bdry) {
+        if (std::holds_alternative<Surfaces<S>>(src)) {
+          Surfaces<S>& surf = std::get<Surfaces<S>>(src);
+
+          // call the specific panels-affect-points routine
+          //(void) reflect_panp2<S>(surf, pts);
+        }
+      }
+    }
   }
-*/
-
-  //
-  // diffuse strength from boundaries/bodies
-  //
-
-  // use those BEM strengths to shed now
-  //if (_bdry.exists()) {
-    // initialize the new particles vector
-  //  std::vector<S> newparts = _bdry.get_panels().diffuse_onto((S)_dt, _re, _vdelta);
-
-    // finally, add those particles to the main particle list
-  //  _vort.add_new(newparts);
-  //}
 
   //
   // merge any close particles to clean up potentially-dense areas
   //
-  for (auto &coll: _vort) {
 
-    // but only check particles ("Points")
-    if (std::holds_alternative<Points<float>>(coll)) {
+  for (auto &coll : _vort) {
 
-      Points<float>& pts = std::get<Points<float>>(coll);
+    // if inert, no need to merge (keep all tracer particles)
+    if (std::visit([=](auto& elem) { return elem.is_inert(); }, coll)) continue;
+
+    // run this step if the collection is Points
+    if (std::holds_alternative<Points<S>>(coll)) {
+
+      Points<S>& pts = std::get<Points<S>>(coll);
+
       //std::cout << "    merging among " << pts.get_n() << " particles" << std::endl;
-      std::cout << std::endl;
-
-      // none of these are passed as const, because both may be extended with new particles
-      std::array<Vector<S>,Dimensions>& x = pts.get_pos();
-      Vector<S>&                        r = pts.get_rad();
-      std::array<Vector<S>,Dimensions>& s = pts.get_str();
-
       // last two arguments are: relative distance, allow variable core radii
-      (void)merge_close_particles<S>(x[0], x[1], x[2], r, s[0], s[1], s[2], 
-                                     particle_overlap,
-                                     0.3);
+      (void) merge_close_particles<S>(pts.get_pos(),
+                                      pts.get_str(),
+                                      pts.get_rad(),
+                                      particle_overlap,
+                                      0.3,
+                                      adaptive_radii);
 
-      // we probably have a different number of particles now, resize the u, ug, elong arrays
-      pts.resize(r.size());
+      // resize the rest of the arrays
+      pts.resize(pts.get_rad().size());
     }
   }
 
   //
   // clean up by removing the innermost layer - the one that will be represented by boundary strengths
   //
-/*
-  if (_bdry.exists()) {
-    // may need to do this multiple times to clear out concave zones!
 
-    // new way
-    (void) clear_inner_layer<S,I>(_bdry, _vort, _vdelta/particle_overlap);
+  // may need to do this multiple times to clear out concave zones!
+  // this should only function when _vort is Points and _bdry is Surfaces
+  for (auto &targ : _vort) {
+    if (std::holds_alternative<Points<S>>(targ)) {
+      Points<S>& pts = std::get<Points<S>>(targ);
 
-    // old way
-    //for (auto & elem: _vort.get_collections()) {
-      //std::vector<S> partmod = _bdry.get_panels().remove_inner_layer(_nomsep, elem->get_x());
-      //_p.modify_particles(partmod);
-    //}
+      for (auto &src : _bdry) {
+        if (std::holds_alternative<Surfaces<S>>(src)) {
+          Surfaces<S>& surf = std::get<Surfaces<S>>(src);
+
+          // call the specific panels-affect-points routine
+          //(void) clear_inner_panp2<S>(surf, pts, _vdelta/particle_overlap);
+        }
+      }
+    }
   }
-*/
 
-  //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
+  // now is a fine time to reset the max active/particle strength
+  for (auto &coll : _vort) {
+    std::visit([=](auto& elem) { elem.update_max_str(); }, coll);
+  }
 }
 

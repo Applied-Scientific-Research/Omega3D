@@ -1,17 +1,19 @@
 /*
  * Merge.h - library code for a three-dimensional particle merging scheme
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
 
-#include "nanoflann.hpp"
+#include "Omega3D.h"
 #include "VectorHelper.h"
+#include "nanoflann.hpp"
 
 #include <Eigen/Dense>
 
+#include <array>
 #include <cstdlib>
 #include <cstdio>
 #include <cassert>
@@ -28,34 +30,45 @@
 // templated on storage class S (typically float or double)
 //
 template <class S>
-size_t merge_close_particles(Vector<S>& x, Vector<S>& y, Vector<S>& z,
-                             Vector<S>& r,
-                             Vector<S>& sx, Vector<S>& sy, Vector<S>& sz,
-                             const S particle_overlap, const S threshold) {
+size_t merge_close_particles(std::array<Vector<S>,3>& pos,
+                             std::array<Vector<S>,3>& str,
+                             Vector<S>&               rad,
+                             const S                  particle_overlap,
+                             const S                  threshold,
+                             const bool               adapt_radii) {
+
+  // make sure all vector sizes are identical
+  assert(pos[0].size()==pos[1].size());
+  assert(pos[0].size()==pos[2].size());
+  assert(pos[0].size()==str[0].size());
+  assert(pos[0].size()==str[1].size());
+  assert(pos[0].size()==str[2].size());
+  assert(pos[0].size()==rad.size());
+  const size_t n = rad.size();
+
+  std::cout << "  Merging close particles with n " << n << std::endl;
 
   // start timer
   auto start = std::chrono::system_clock::now();
 
-  // make sure all vector sizes are identical
-  assert(x.size()==y.size());
-  assert(x.size()==z.size());
-  assert(x.size()==r.size());
-  assert(x.size()==sx.size());
-  assert(x.size()==sy.size());
-  assert(x.size()==sz.size());
-  const size_t n = x.size();
-
-  std::cout << "  Merging close particles with n " << n << std::endl;
+  // reference or generate the local set of vectors
+  Vector<S>& x = pos[0];
+  Vector<S>& y = pos[1];
+  Vector<S>& z = pos[2];
+  Vector<S>& r = rad;
+  Vector<S>& sx = str[0];
+  Vector<S>& sy = str[1];
+  Vector<S>& sz = str[2];
 
   // convert particle positions into something nanoflann can understand
-  Eigen::Matrix<S, Eigen::Dynamic, 3> xp;
-  xp.resize(n,3);
+  Eigen::Matrix<S, Eigen::Dynamic, Dimensions> xp;
+  xp.resize(n,Dimensions);
   xp.col(0) = Eigen::Map<Eigen::Matrix<S, Eigen::Dynamic, 1> >(x.data(), n);
   xp.col(1) = Eigen::Map<Eigen::Matrix<S, Eigen::Dynamic, 1> >(y.data(), n);
   xp.col(2) = Eigen::Map<Eigen::Matrix<S, Eigen::Dynamic, 1> >(z.data(), n);
   
   // generate the searchable data structure
-  typedef nanoflann::KDTreeEigenMatrixAdaptor< Eigen::Matrix<S, Eigen::Dynamic, 3> >  my_kd_tree_t;
+  typedef nanoflann::KDTreeEigenMatrixAdaptor< Eigen::Matrix<S, Eigen::Dynamic, Dimensions> >  my_kd_tree_t;
   my_kd_tree_t mat_index(xp, 20);
   mat_index.index->buildIndex();
   std::vector<std::pair<long int,S> > ret_matches;
@@ -81,7 +94,7 @@ size_t merge_close_particles(Vector<S>& x, Vector<S>& y, Vector<S>& z,
     const S distsq_thresh = std::pow(search_rad, 2);
 
     // tree-based search with nanoflann
-    const S query_pt[3] = { x[i], y[i], z[i] };
+    const S query_pt[Dimensions] = { x[i], y[i], z[i] };
     const size_t nMatches = mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
 
     // one match should be self, but we don't know which one
@@ -99,18 +112,20 @@ size_t merge_close_particles(Vector<S>& x, Vector<S>& y, Vector<S>& z,
               //std::cout << "  particles " << i << " and " << iother << " will merge" << std::endl;
               //std::cout << "    first at " << x[i] << " " << y[i] << " " << z[i] << " with str " << sx[i] << " and rad " << r[i] << std::endl;
               //std::cout << "    other at " << x[iother] << " " << y[iother] << " " << z[iother] << " with str " << sx[iother] << " and rad " << r[iother] << std::endl;
-              const S str1 = std::sqrt(sx[i]*sx[i] + sy[i]*sy[i] + sz[i]*sz[i]);
-              const S str2 = std::sqrt(sx[iother]*sx[iother] + sy[iother]*sy[iother] + sz[iother]*sz[iother]);
-              const S strength_mag = str1 + str2;
+              const S si = std::sqrt(sx[i]*sx[i] + sy[i]*sy[i] + sz[i]*sz[i]) + std::numeric_limits<S>::epsilon();
+              const S so = std::sqrt(sx[iother]*sx[iother] + sy[iother]*sy[iother] + sz[iother]*sz[iother]) + std::numeric_limits<S>::epsilon();
+              const S strength_mag = si + so;
               // find center of strength
-              const S newx = (x[i]*str1 + x[iother]*str2) / strength_mag;
-              const S newy = (y[i]*str1 + y[iother]*str2) / strength_mag;
-              const S newz = (z[i]*str1 + z[iother]*str2) / strength_mag;
+              const S newx = (x[i]*si + x[iother]*so) / strength_mag;
+              const S newy = (y[i]*si + y[iother]*so) / strength_mag;
+              const S newz = (z[i]*si + z[iother]*so) / strength_mag;
               // move strengths to particle i
               x[i] = newx;
               y[i] = newy;
               z[i] = newz;
-              r[i] = std::sqrt((str1*r[i]*r[i] + str2*r[iother]*r[iother])/strength_mag);
+              if (adapt_radii) {
+                r[i] = std::cbrt((si*std::pow(r[i],3) + so*std::pow(r[iother],3))/strength_mag);
+              }
               sx[i] = sx[i] + sx[iother];
               sy[i] = sy[i] + sy[iother];
               sz[i] = sz[i] + sz[iother];

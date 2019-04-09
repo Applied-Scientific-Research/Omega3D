@@ -37,7 +37,7 @@ void solve_bem(const double                         _time,
 
   // save the simulation time from the last time we entered this function
   static double last_time = -99.9;
-/*
+
   // if this is the first time through after a reset, recalculate the row indices
   if (not _bem.is_A_current()) {
     I rowcnt = 0;
@@ -52,7 +52,7 @@ void solve_bem(const double                         _time,
   //for (auto &src : _bdry) {
   //  std::visit([=](auto& elem) { elem.add_rot_strengths(1.0, 0.0); }, src);
   //}
-
+/*
   // need this for dispatching velocity influence calls, template param is accumulator type
   InfluenceVisitor<A> ivisitor;
   RHSVisitor rvisitor;
@@ -78,7 +78,7 @@ void solve_bem(const double                         _time,
       std::visit(ivisitor, src, targ);
     }
 
-    // divide by 2pi and add freestream
+    // divide by 4pi and add freestream
     std::visit([=](auto& elem) { elem.finalize_vels(_fs); }, targ);
 
     // include the effects of the motion of the parent body
@@ -115,7 +115,7 @@ void solve_bem(const double                         _time,
     // finally, send it to the BEM
     _bem.set_rhs(tstart, tnum, rhs);
   }
-
+*/
   //
   // rhs is done, update A matrix now
   //
@@ -145,7 +145,7 @@ void solve_bem(const double                         _time,
 
     // need this to inform bem that we need to re-init the solver
     _bem.panels_changed();
-
+/*
     // this is the dispatcher for Points/Surfaces on Points/Surfaces
     CoefficientVisitor cvisitor;
 
@@ -191,13 +191,14 @@ void solve_bem(const double                         _time,
         }
       }
     }
+*/
     _bem.just_made_A();
 
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
     printf("    make A matrix:\t[%.4f] cpu seconds\n", (float)elapsed_seconds.count());
   }
-
+/*
   //
   // solve here
   //
