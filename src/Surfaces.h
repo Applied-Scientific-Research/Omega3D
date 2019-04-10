@@ -165,13 +165,17 @@ public:
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
   const Int get_first_row() const { return istart; }
-  const Int get_num_rows()  const { return bc[0].size() + (this->B ? 1 : 0); }
+  const Int get_num_rows()  const { return bc.size()*bc[0].size() + (this->B ? 3 : 0); }
   const Int get_next_row()  const { return istart+get_num_rows(); }
 
   // vortex and source strengths
   const std::array<Vector<S>,2>&  get_vort_str() const { return vs; }
   const bool                      have_src_str() const { return (bool)ss; }
-  const Vector<S>&                get_src_str() const { return *ss; }
+  const Vector<S>&                get_src_str()  const { return *ss; }
+  const std::array<Vector<S>,3>&  get_x1()       const { return b[0]; }
+  const std::array<Vector<S>,3>&  get_x2()       const { return b[1]; }
+  const std::array<Vector<S>,3>&  get_norm()     const { return b[2]; }
+  const Vector<S>&                get_area()     const { return area; }
 
   // add more nodes and panels to this collection
   void add_new(const std::vector<S>&   _x,
@@ -429,6 +433,7 @@ public:
   }
 
   // need to maintain the 3x3 set of basis vectors for each panel
+  // this also calculates the triangle areas
   void compute_bases() {
 
     // how many panels do we have now?
@@ -443,6 +448,7 @@ public:
         b[i][j].resize(nnew);
       }
     }
+    area.resize(nnew);
 
     // we'll reuse these vectors
     std::array<S,3> x1, x2, norm;
@@ -456,15 +462,20 @@ public:
 
       // x1 vector is along direction from node 0 to node 1
       for (size_t j=0; j<3; ++j) x1[j] = this->x[j][id1] - this->x[j][id0];
-      normalizeVec<S>(x1);
+      const S base = length(x1);
+      for (size_t j=0; j<3; ++j) x1[j] *= (1.0/base);
       //std::cout << "  has x1 " << x1[0] << " " << x1[1] << " " << x1[2] << std::endl;
 
       // x2 vector is perpendicular to x1, and points toward node 2
       for (size_t j=0; j<3; ++j) x2[j] = this->x[j][id2] - this->x[j][id0];
       const S dp = dot_product<S>(x2, x1);
       for (size_t j=0; j<3; ++j) x2[j] -= dp*x1[j];
-      normalizeVec<S>(x2);
+      const S height = length(x2);
+      for (size_t j=0; j<3; ++j) x2[j] *= (1.0/height);
       //std::cout << "  has x2 " << x2[0] << " " << x2[1] << " " << x2[2] << std::endl;
+
+      // now we have the area
+      area[i] = 0.5 * base * height;
 
       // x3 is the normal vector, pointing into the fluid
       cross_product(x1, x2, norm);
@@ -862,6 +873,7 @@ protected:
   std::optional<Vector<S>> 	ss;	// source strengths which represent the vel inf of the rotating volume
 
   std::array<std::array<Vector<S>,3>,3> b;  // transformed basis vectors: x1 is b[0], x2 is b[1], normal is b[2], normal x is b[2][0]
+  Vector<S>                     area;
 
   // parameters for the encompassing body
   Int istart;	// index of first entry in RHS vector and A matrix
