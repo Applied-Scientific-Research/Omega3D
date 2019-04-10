@@ -147,7 +147,7 @@ void Diffusion<S,A,I>::step(const double                _time,
     if (std::holds_alternative<Points<float>>(coll)) {
 
       Points<float>& pts = std::get<Points<float>>(coll);
-      std::cout << "    computing diffusion among " << pts.get_n() << " particles" << std::endl;
+      //std::cout << "    computing diffusion among " << pts.get_n() << " particles" << std::endl;
 
       // none of these are passed as const, because both may be extended with new particles
       std::array<Vector<S>,Dimensions>& x = pts.get_pos();

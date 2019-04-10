@@ -11,8 +11,7 @@
 #include "Collection.h"
 #include "CollectionHelper.h"
 #include "Influence.h"
-//#include "RHS.h"
-//#include "BEM.h"
+#include "BEM.h"
 #include "BEMHelper.h"
 
 #include <cstdlib>
