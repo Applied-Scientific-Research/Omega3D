@@ -158,6 +158,10 @@ public:
   const S                        get_vol()         const { return vol; }
   const std::array<S,Dimensions> get_geom_center() const { return tc; }
 
+  // override the ElementBase versions and send the panel-center vels
+  const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
+  std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
+
   // callers should never have to change this array
   const std::vector<Int>&        get_idx()         const { return idx; }
   const std::vector<Vector<S>>&  get_bcs()         const { return bc; }
@@ -534,17 +538,33 @@ public:
       r[i] = 1.0;
     }
   }
+*/
 
   void zero_vels() {
-    // must explicitly call the method in the base class to zero the vels
+    // must explicitly call the method in the base class to zero the node vels
     ElementBase<S>::zero_vels();
+
+    // but also zero the panel-center vels
+    for (size_t d=0; d<Dimensions; ++d) {
+      pu[d].resize(get_npanels());
+      std::fill(pu[d].begin(), pu[d].end(), 0.0);
+    }
   }
 
   void finalize_vels(const std::array<double,Dimensions>& _fs) {
     // must explicitly call the method in the base class, too
     ElementBase<S>::finalize_vels(_fs);
+
+    // but also zero the panel-center vels
+    const S factor = 0.25/M_PI;
+    for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t i=0; i<pu[d].size(); ++i) {
+        pu[d][i] = _fs[d] + pu[d][i] * factor;
+      }
+    }
   }
 
+/*
   //
   // 1st order Euler advection and stretch
   //
@@ -858,7 +878,7 @@ public:
 #endif
 
   std::string to_string() const {
-    std::string retstr = ElementBase<S>::to_string() + " Panels";
+    std::string retstr = " " + std::to_string(get_npanels()) + ElementBase<S>::to_string() + " Panels";
     return retstr;
   }
 
@@ -867,8 +887,9 @@ protected:
 
   // element-wise variables special to triangular panels
   std::vector<Int>		idx;	// indexes into the x array
-  std::vector<Vector<S>>	bc;	// boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
+  std::array<Vector<S>,3>	pu;	// panel-center velocities (ElementBase stores *node* properties)
 
+  std::vector<Vector<S>>	bc;	// boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
   std::array<Vector<S>,2>	vs;	// vortex sheet strengths of the elements (x1,x2)
   std::optional<Vector<S>> 	ss;	// source strengths which represent the vel inf of the rotating volume
 

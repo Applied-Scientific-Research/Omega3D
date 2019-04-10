@@ -678,7 +678,7 @@ public:
 #endif
 
   std::string to_string() const {
-    std::string retstr = ElementBase<S>::to_string() + " Points";
+    std::string retstr = " " + std::to_string(this->n) + ElementBase<S>::to_string() + " Points";
     if (ug) retstr += " with grads";
     return retstr;
   }

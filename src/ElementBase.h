@@ -208,7 +208,7 @@ public:
   }
 
   std::string to_string() const {
-    std::string mystr = " " + std::to_string(n);
+    std::string mystr;
     if (E == active) {
       mystr += " Active";
     } else if (E == reactive) {

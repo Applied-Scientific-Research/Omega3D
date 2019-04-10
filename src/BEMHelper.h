@@ -12,7 +12,7 @@
 #include "CollectionHelper.h"
 #include "Influence.h"
 //#include "Coeffcients.h"
-//#include "RHS.h"
+#include "RHS.h"
 #include "BEM.h"
 
 #include <cstdlib>
@@ -52,7 +52,7 @@ void solve_bem(const double                         _time,
   //for (auto &src : _bdry) {
   //  std::visit([=](auto& elem) { elem.add_rot_strengths(1.0, 0.0); }, src);
   //}
-/*
+
   // need this for dispatching velocity influence calls, template param is accumulator type
   InfluenceVisitor<A> ivisitor;
   RHSVisitor rvisitor;
@@ -68,7 +68,7 @@ void solve_bem(const double                         _time,
     std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
 
     // transform the collection according to prescribed motion
-    std::visit([=](auto& elem) { elem.transform(_time); }, targ);
+    //std::visit([=](auto& elem) { elem.transform(_time); }, targ);
 
     // zero velocities
     std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
@@ -82,7 +82,7 @@ void solve_bem(const double                         _time,
     std::visit([=](auto& elem) { elem.finalize_vels(_fs); }, targ);
 
     // include the effects of the motion of the parent body
-    std::visit([=](auto& elem) { elem.add_body_motion(-1.0, _time); }, targ);
+    //std::visit([=](auto& elem) { elem.add_body_motion(-1.0, _time); }, targ);
 
     // find portion of RHS vector
     const size_t tstart = std::visit([=](auto& elem) { return elem.get_first_row(); }, targ);
@@ -91,7 +91,7 @@ void solve_bem(const double                         _time,
     // have to convert these velocities into BCs based on the target element and BC type!
     // and send it over to the BEM system
     std::vector<S> rhs = std::visit(rvisitor, targ);
-
+/*
     // optionally augment with an additional value
     if (rhs.size() < tnum) {
       assert(tnum-rhs.size()==1);
@@ -111,11 +111,11 @@ void solve_bem(const double                         _time,
       rhs.push_back(-1.0*tot_circ);
       std::cout << "    augmenting rhs with tot_circ= " << tot_circ << std::endl;
     }
-
+*/
     // finally, send it to the BEM
     _bem.set_rhs(tstart, tnum, rhs);
   }
-*/
+
   //
   // rhs is done, update A matrix now
   //
