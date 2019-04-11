@@ -214,76 +214,69 @@ static inline void kernel_0_0vg (const S* __restrict__ sx, const S __restrict__ 
 
 
 //
-// analytic influence of 2d linear constant-strength vortex panel on target point
-//   ignoring the 1/2pi factor, which will be multiplied later
-//   40 flops average
+// influence of 3d linear constant-strength *vortex* panel on target point
+//   ignoring the 1/4pi factor, which will be multiplied later
+// uses four thick-cored integration points on the source side
+//   168 flops
 //
 template <class S, class A>
-static inline void kernel_1_0v (const S* __restrict__ sx0, const S* __restrict__ sx1, const S str,
-                                const S* __restrict__ tx, A* __restrict__ tu) {
-
-  // side lengths of the triangle s0, s1, t
-  const S rij2  = std::pow(tx[0]-sx0[0],2) + std::pow(tx[1]-sx0[1],2);
-  const S rij   = std::sqrt(rij2);
-  const S rij12 = std::pow(tx[0]-sx1[0],2) + std::pow(tx[1]-sx1[1],2);
-  const S rij1  = std::sqrt(rij12);
-  //std::cout << "rij is " << rij << " and rijp1 is " << rij1 << std::endl;
-  const S vstar = std::log(rij/rij1);
-  S ustar = std::atan2(tx[0]-sx1[0], tx[1]-sx1[1]) - std::atan2(tx[0]-sx0[0], tx[1]-sx0[1]);
-  //std::cout << "ustar started off as " << ustar << std::endl;
-  if (ustar < -M_PI) ustar += 2.*M_PI;
-  if (ustar > M_PI) ustar -= 2.*M_PI;
-  //std::cout << "ustar is " << ustar << " and vstar is " << vstar << std::endl;
-
-  const S px    = sx1[0]-sx0[0];
-  const S py    = sx1[1]-sx0[1];
-  //std::cout << "px is " << px << " and py is " << py << std::endl;
-
-  // finally, rotate back into global coordinates
-  const S velx  = ustar*px - vstar*py;
-  const S vely  = ustar*py + vstar*px;
-  //std::cout << "velx is " << velx << " and vely is " << vely << std::endl;
-  const S mult  = str / std::sqrt(std::pow(px,2) + std::pow(py,2));
-  //std::cout << "finalx is " << (mult*velx) << " and finaly is " << (mult*vely) << std::endl;
-
-  // and multiply by vortex sheet strength
-  tu[0] += mult*velx;
-  tu[1] += mult*vely;
-}
-
-template <class S, class A>
-static inline void kernel_1_0s (const S sx0, const S sy0, const S sz0,
+static inline void kernel_1_0v (const S sx0, const S sy0, const S sz0,
                                 const S sx1, const S sy1, const S sz1,
+                                const S sx2, const S sy2, const S sz2,
                                 const S ssx, const S ssy, const S ssz,
                                 const S tx, const S ty, const S tz,
                                 A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
 
-  // side lengths of the triangle s0, s1, t
-  const S rij2  = std::pow(tx-sx0,2) + std::pow(ty-sy0,2);
-  const S rij   = std::sqrt(rij2);
-  const S rij12 = std::pow(tx-sx1,2) + std::pow(ty-sy1,2);
-  const S rij1  = std::sqrt(rij12);
-  //std::cout << "rij is " << rij << " and rijp1 is " << rij1 << std::endl;
-  const S vstar = std::log(rij/rij1);
-  S ustar = std::atan2(tx-sx1, ty-sy1) - std::atan2(tx-sx0, ty-sy0);
-  //std::cout << "ustar started off as " << ustar << std::endl;
-  if (ustar < -M_PI) ustar += 2.*M_PI;
-  if (ustar > M_PI) ustar -= 2.*M_PI;
-  //std::cout << "ustar is " << ustar << " and vstar is " << vstar << std::endl;
+  // scale the strength by 1/4, to account for the 4 calls below (3 flops)
+  const S strx = S(0.25) * ssx;
+  const S stry = S(0.25) * ssy;
+  const S strz = S(0.25) * ssz;
 
-  const S px    = sx1-sx0;
-  const S py    = sy1-sy0;
-  //std::cout << "px is " << px << " and py is " << py << std::endl;
+  // first source point (39 flops)
+  {
+    // prepare the source points (9 flops)
+    const S sx = (sx0 + sx1 + sx2) / S(3.0);
+    const S sy = (sy0 + sy1 + sy2) / S(3.0);
+    const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-  // finally, rotate back into global coordinates
-  const S velx  = ustar*px - vstar*py;
-  const S vely  = ustar*py + vstar*px;
-  //std::cout << "velx is " << velx << " and vely is " << vely << std::endl;
-  const S mult  = ssx / std::sqrt(std::pow(px,2) + std::pow(py,2));
-  //std::cout << "finalx is " << (mult*velx) << " and finaly is " << (mult*vely) << std::endl;
+    // accumulate the influence (30 flops)
+    (void) kernel_0_0s (sx, sy, sz, (S)0.0,
+                        strx, stry, strz,
+                        tx, ty, tz, (S)0.0,
+                        tu, tv, tw);
+  }
 
-  // and multiply by vortex sheet strength
-  *tu += mult*velx;
-  *tv += mult*vely;
+  // second source point (42)
+  {
+    const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
+    const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
+    const S sz = (S(4.0)*sz0 + sz1 + sz2) / S(6.0);
+    (void) kernel_0_0s (sx, sy, sz, (S)0.0,
+                        strx, stry, strz,
+                        tx, ty, tz, (S)0.0,
+                        tu, tv, tw);
+  }
+
+  // third source point (42)
+  {
+    const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
+    const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
+    const S sz = (sz0 + S(4.0)*sz1 + sz2) / S(6.0);
+    (void) kernel_0_0s (sx, sy, sz, (S)0.0,
+                        strx, stry, strz,
+                        tx, ty, tz, (S)0.0,
+                        tu, tv, tw);
+  }
+
+  // final source point (42)
+  {
+    const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
+    const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
+    const S sz = (sz0 + sz1 + S(4.0)*sz2) / S(6.0);
+    (void) kernel_0_0s (sx, sy, sz, (S)0.0,
+                        strx, stry, strz,
+                        tx, ty, tz, (S)0.0,
+                        tu, tv, tw);
+  }
 }
 

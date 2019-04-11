@@ -11,7 +11,7 @@
 #include "Collection.h"
 #include "CollectionHelper.h"
 #include "Influence.h"
-//#include "Coeffcients.h"
+#include "Coeffcients.h"
 #include "RHS.h"
 #include "BEM.h"
 
@@ -91,27 +91,30 @@ void solve_bem(const double                         _time,
     // have to convert these velocities into BCs based on the target element and BC type!
     // and send it over to the BEM system
     std::vector<S> rhs = std::visit(rvisitor, targ);
-/*
+
     // optionally augment with an additional value
     if (rhs.size() < tnum) {
-      assert(tnum-rhs.size()==1);
-      // first, add up the free circulation
-      S tot_circ = 0.0;
+      assert(tnum-rhs.size()==3);
+      // zero out the array
+      std::array<S,3> tot_circ = {0.0, 0.0, 0.0};
+      // then, add up the free circulation
       for (auto &src : _vort) {
-        tot_circ += std::visit([=](auto& elem) { return elem.get_total_circ(_time); }, src);
+        const std::array<S,3> this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(_time); }, src);
+        for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
       }
-      // then add up the circulation in bodies other than this one
+      // add up the circulation in bodies other than this one
       for (auto &src : _bdry) {
         // only if this is not the same collection!
         if (&src != &targ) {
-          tot_circ += std::visit([=](auto& elem) { return elem.get_total_circ(_time); }, src);
+          const std::array<S,3> this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(_time); }, src);
+          for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
         }
       }
       // negate and append
-      rhs.push_back(-1.0*tot_circ);
-      std::cout << "    augmenting rhs with tot_circ= " << tot_circ << std::endl;
+      for (size_t i=0; i<3; ++i) rhs.push_back(-1.0*tot_circ[i]);
+      std::cout << "    augmenting rhs with tot_circ= " << tot_circ[0] << " " << tot_circ[1] << " " << tot_circ[2] << std::endl;
     }
-*/
+
     // finally, send it to the BEM
     _bem.set_rhs(tstart, tnum, rhs);
   }
@@ -145,7 +148,7 @@ void solve_bem(const double                         _time,
 
     // need this to inform bem that we need to re-init the solver
     _bem.panels_changed();
-/*
+
     // this is the dispatcher for Points/Surfaces on Points/Surfaces
     CoefficientVisitor cvisitor;
 
@@ -178,10 +181,10 @@ void solve_bem(const double                         _time,
           // for augmentation, find the induced velocity from the source on the target
           std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
           std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
-          std::visit([=](auto& elem) { elem.add_rot_strengths(1.0, 0.0); }, src);
+          //std::visit([=](auto& elem) { elem.add_rot_strengths(1.0, 0.0); }, src);
           std::visit(ivisitor, src, targ);
           std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
-          std::visit([=](auto& elem) { elem.finalize_vels(std::array<double,Dimensions>({0.0,0.0})); }, targ);
+          std::visit([=](auto& elem) { elem.finalize_vels(std::array<double,Dimensions>({0.0,0.0,0.0})); }, targ);
 
           // solve for the coefficients in this block
           Vector<S> coeffs = std::visit(cvisitor, src, targ);
@@ -191,12 +194,12 @@ void solve_bem(const double                         _time,
         }
       }
     }
-*/
+
     _bem.just_made_A();
 
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
-    printf("    make A matrix:\t[%.4f] cpu seconds\n", (float)elapsed_seconds.count());
+    printf("  Complete A matrix:\t[%.4f] cpu seconds\n", (float)elapsed_seconds.count());
   }
 /*
   //

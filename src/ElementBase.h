@@ -125,11 +125,10 @@ public:
 
   void zero_vels() {
     for (size_t d=0; d<Dimensions; ++d) {
-      for (size_t i=0; i<get_n(); ++i) {
-        u[d][i] = 0.0;
-      }
+      std::fill(u[d].begin(), u[d].end(), 0.0);
     }
   }
+
   void finalize_vels(const std::array<double,Dimensions>& _fs) {
     const double factor = 0.25/M_PI;
     for (size_t d=0; d<Dimensions; ++d) {
@@ -138,6 +137,15 @@ public:
       }
     }
   }
+
+  void zero_strengths() {
+    if (s) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        std::fill((*s)[d].begin(), (*s)[d].end(), 0.0);
+      }
+    }
+  }
+
   void move(const double _dt) {
     if (M == lagrangian) {
       std::cout << "  Moving" << to_string() << std::endl;

@@ -375,20 +375,16 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
     A accumv = 0.0;
     A accumw = 0.0;
     for (size_t j=0; j<src.get_n(); ++j) {
-      const size_t jp0 = si[2*j];
-      const size_t jp1 = si[2*j+1];
-      //kernel_1_0v<S,A>(&sx[2*si[2*j]], &sx[2*si[2*j+1]], ss[j],
-      //                &tx[2*i], accum.data());
-      kernel_1_0s<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+      const size_t jp0 = si[3*j];
+      const size_t jp1 = si[3*j+1];
+      const size_t jp2 = si[3*j+2];
+      kernel_1_0v<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                        sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                       sx[0][jp2], sx[1][jp2], sx[2][jp2],
                        ss[0][j], ss[1][j], ss[2][j],
                        tx[0][i], tx[1][i], tx[2][i],
-                       //accum.data());
                        &accumu, &accumv, &accumw);
     }
-    //tu[0][i] += accum[0];
-    //tu[1][i] += accum[1];
-    //tu[2][i] += accum[2];
     tu[0][i] += accumu;
     tu[1][i] += accumv;
     tu[2][i] += accumw;
@@ -413,29 +409,28 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
 
   float flops = (float)targ.get_n();
 
+// NEED A VC VERSION OF THIS LOOP
+
   #pragma omp parallel for
   for (size_t i=0; i<targ.get_n(); ++i) {
     //std::array<A,3> accum = {0.0};
     A accumu = 0.0;
     A accumv = 0.0;
     A accumw = 0.0;
-    const size_t ip0 = ti[2*i];
-    const size_t ip1 = ti[2*i+1];
+    const size_t ip0 = ti[3*i];
+    const size_t ip1 = ti[3*i+1];
+    const size_t ip2 = ti[3*i+2];
     for (size_t j=0; j<src.get_n(); ++j) {
       // note that this is the same kernel as panels_affect_points!
-      //kernel_1_0v<S,A>(&tx[2*ti[2*i]], &tx[2*ti[2*i+1]], ss[j],
-      //                 &sx[2*j], accum.data());
-      kernel_1_0s<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
+      kernel_1_0v<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
                        tx[0][ip1], tx[1][ip1], tx[2][ip1],
+                       tx[0][ip2], tx[1][ip2], tx[2][ip2],
                        ss[0][j], ss[1][j], ss[2][j],
                        sx[0][j], sx[1][j], sx[2][j],
                        //accum.data());
                        &accumu, &accumv, &accumw);
     }
     // we use it backwards, so the resulting velocities are negative
-    //tu[0][i] -= accum[0];
-    //tu[1][i] -= accum[1];
-    //tu[2][i] -= accum[2];
     tu[0][i] -= accumu;
     tu[1][i] -= accumv;
     tu[2][i] -= accumw;

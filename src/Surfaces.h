@@ -33,12 +33,9 @@
 template <class S>
 class Surfaces: public ElementBase<S> {
 public:
-  // constructor - accepts vector of vectors of (x,y,z,s) pairs
-  //               makes one closed body for each outer vector
-  //               each inner vector must have even number of floats
-  //               and first pair must equal last pair to close the shape
-  //               last parameter (s) is either fixed strength or boundary
-  //               condition for next segment
+  // constructor - accepts vector of (x,y,z) triples, vector of indicies, vector of BCs
+  //               and makes one closed body
+  //               last parameter (_val) is either fixed strength or boundary condition
   Surfaces(const std::vector<S>&   _x,
            const std::vector<Int>& _idx,
            const std::vector<S>&   _val,
@@ -86,6 +83,7 @@ public:
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
+      assert(_val.size() == 2*nsurfs);
       // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths
       for (size_t d=0; d<2; ++d) {
         vs[d].resize(nsurfs);
@@ -95,6 +93,7 @@ public:
       }
 
       // we still need general strengths
+      // NOTE that this means that a vector in ElementBase is NOT sized to n, but to nsurfs!
       std::array<Vector<S>,3> new_s;
       for (size_t d=0; d<3; ++d) {
         new_s[d].resize(nsurfs);
@@ -104,6 +103,7 @@ public:
     } else if (this->E == reactive) {
       // value is a boundary condition
       const size_t nper = _val.size()/nsurfs;
+      assert(nper>0 and nper<4);
       bc.resize(nper);
       for (size_t d=0; d<nper; ++d) {
         bc[d].resize(nsurfs);
@@ -193,7 +193,6 @@ public:
     // make sure input arrays are correctly-sized
     assert(_x.size() % Dimensions == 0);
     assert(_idx.size() % Dimensions == 0);
-    //assert(_idx.size()/2 == _val.size());
     const size_t nnodes = _x.size() / Dimensions;
     const size_t nsurfs = _idx.size() / Dimensions;
 
@@ -235,6 +234,7 @@ public:
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
+      assert(_val.size() == 2*nsurfs);
       // value is a fixed strength for the element
       for (size_t d=0; d<2; ++d) {
         vs[d].resize(neold+nsurfs);
@@ -245,6 +245,9 @@ public:
 
     } else if (this->E == reactive) {
       // value is a boundary condition
+      // make sure we have the same number of components in the new array as in the old
+      assert(bc.size() == _val.size()/nsurfs);
+      // copy them into place
       for (size_t d=0; d<3; ++d) {
         bc[d].resize(neold+nsurfs);
         for (size_t i=0; i<nsurfs; ++i) {

@@ -41,7 +41,7 @@ ElementPacket<float> read_geometry_file(const std::string _infile) {
   const size_t num_panels = f.size();
   std::vector<float> x(num_nodes*3);
   std::vector<Int>   idx(num_panels*3);
-  std::vector<float> val(num_panels);
+  std::vector<float> val;
 
   // and fill them up
   for (size_t i=0; i<v.size(); ++i) {
@@ -56,7 +56,9 @@ ElementPacket<float> read_geometry_file(const std::string _infile) {
     idx[3*i+2] = f[i][2];
     //std::cout << "tri " << i << " at " << idx[3*i+0] << " " << idx[3*i+1] << " " << idx[3*i+2] << std::endl;
   }
-  std::fill(val.begin(), val.end(), 0.0);
+
+  // do not set val! let caller specialize
+  //std::fill(val.begin(), val.end(), 0.0);
 
   return ElementPacket<float>({x, idx, val});
 }

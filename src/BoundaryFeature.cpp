@@ -52,7 +52,14 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
 ElementPacket<float>
 ExteriorFromFile::init_elements(const float _ips) const {
 
-  return read_geometry_file(m_infile);
+  ElementPacket<float> epack = read_geometry_file(m_infile);
+
+  // assume standard behavior: reactive, no-tangential-flow panels
+  const size_t nsurfs = epack.idx.size() / 3;
+  epack.val.resize(2*nsurfs);
+  std::fill(epack.val.begin(), epack.val.end(), 0.0);
+
+  return epack;
 
 /*
   // how many panels?
