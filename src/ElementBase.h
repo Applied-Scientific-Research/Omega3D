@@ -45,12 +45,24 @@ public:
   const std::array<Vector<S>,Dimensions>& get_vel() const { return u; }
   std::array<Vector<S>,Dimensions>&       get_vel()       { return u; }
 
+  void set_str(const size_t ioffset, const size_t icnt, Vector<S> _in) {
+    // only Points use s, and only Surfaces are supported in BEM
+    assert(false && "Should not be in here");
+
+    //assert(s && "Strength array does not exist");
+    //assert(_in.size() == (*s).size() && "Set strength array size does not match");
+    //assert(ioffset == 0 && "Offset is not zero");
+
+    // copy over the strengths
+    //*s = _in;
+  }
+
   void add_new(std::vector<float>& _in) {
 
     // check inputs
     if (_in.size() == 0) return;
     const size_t nper = (this->E == inert) ? 3 : 7;
-    assert(_in.size() % nper == 0);
+    assert(_in.size() % nper == 0 && "Input vector not a multiple of 3 or 7");
     const size_t nnew = _in.size()/nper;
 
     // this initialization is specific to Points - so should we do it there?

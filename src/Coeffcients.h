@@ -144,6 +144,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   const std::vector<Int>&                  si = src.get_idx();
   const std::array<Vector<S>,Dimensions>& sb1 = src.get_x1();
   const std::array<Vector<S>,Dimensions>& sb2 = src.get_x2();
+  const Vector<S>&                         sa = src.get_area();
 
   const std::array<Vector<S>,Dimensions>&  tx = targ.get_pos();
   const std::vector<Int>&                  ti = targ.get_idx();
@@ -256,6 +257,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
     const S sx2 = sx[0][sthird];
     const S sy2 = sx[1][sthird];
     const S sz2 = sx[2][sthird];
+    const S sarea = sa[j];
 
     for (size_t i=0; i<ntarg; i++) {
       // 382 flops for each of these, assuming vortex-only interactions
@@ -282,10 +284,10 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                        &resultu, &resultv, &resultw);
 
       // dot product with tangent vector, applying normalization here
-      coeffs[jptr[0]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]);
+      coeffs[jptr[0]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
 
       // recompute for other target vector
-      coeffs[jptr[0]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]);
+      coeffs[jptr[0]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
 
       // now, along x2 direction (another 168+20 flops)
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
@@ -295,8 +297,8 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                        sb2[0][j], sb2[1][j], sb2[2][j],
                        txi, tyi, tzi,
                        &resultu, &resultv, &resultw);
-      coeffs[jptr[1]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]);
-      coeffs[jptr[1]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]);
+      coeffs[jptr[1]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
+      coeffs[jptr[1]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
 
       // HACK - we are assuming vortex/tangential only!
     }
@@ -308,10 +310,10 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       size_t dptr = j*ntarg*nunk*nunk + j*nunk;
       // and set to 0 or pi
       coeffs[dptr]   = 0.0;
-      coeffs[dptr+1] = -2.0*M_PI;
+      coeffs[dptr+1] = 2.0*M_PI;
       // next column
       dptr += ntarg*nunk;
-      coeffs[dptr]   = 2.0*M_PI;
+      coeffs[dptr]   = -2.0*M_PI;
       coeffs[dptr+1] = 0.0;
     }
   }

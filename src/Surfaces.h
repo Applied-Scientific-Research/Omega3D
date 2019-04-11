@@ -181,6 +181,20 @@ public:
   const std::array<Vector<S>,3>&  get_norm()     const { return b[2]; }
   const Vector<S>&                get_area()     const { return area; }
 
+  // accept results from BEM and place in the proper place
+  void set_str(const size_t ioffset, const size_t icnt, Vector<S> _in) {
+    assert(vs.size() == 2 && "Vortex strength array not initialized");
+    assert(_in.size() == vs[0].size()*2 && "Set strength array size does not match");
+    assert(ioffset == 0 && "Offset is not zero");
+
+    // copy over the strengths
+    for (size_t i=0; i<get_npanels(); ++i) {
+      vs[0][i] = _in[2*i+0];
+      vs[1][i] = _in[2*i+1];
+      //std::cout << "elem " << i << " with area " << area[i] << " has vs " << vs[0][i] << " " << vs[1][i] << std::endl;
+    }
+  }
+
   // add more nodes and panels to this collection
   void add_new(const std::vector<S>&   _x,
                const std::vector<Int>& _idx,

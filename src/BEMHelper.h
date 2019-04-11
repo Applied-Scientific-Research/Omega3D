@@ -201,7 +201,7 @@ void solve_bem(const double                         _time,
     std::chrono::duration<double> elapsed_seconds = end-start;
     printf("  Complete A matrix:\t[%.4f] cpu seconds\n", (float)elapsed_seconds.count());
   }
-/*
+
   //
   // solve here
   //
@@ -238,7 +238,7 @@ void solve_bem(const double                         _time,
     // and send it to the elements
     std::visit([=](auto& elem) { elem.set_str(tstart, new_s.size(), new_s);  }, targ);
   }
-*/
+
   // save the simulation time to compare to the next call
   last_time = _time;
 }
