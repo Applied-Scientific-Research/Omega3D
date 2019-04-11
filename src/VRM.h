@@ -234,16 +234,16 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
                                     const ST particle_overlap) {
 
   // make sure all vector sizes are identical
-  assert(x.size()==y.size());
-  assert(x.size()==z.size());
-  assert(x.size()==r.size());
-  assert(x.size()==newr.size());
-  assert(x.size()==sx.size());
-  assert(x.size()==sy.size());
-  assert(x.size()==sz.size());
-  assert(x.size()==dsx.size());
-  assert(x.size()==dsy.size());
-  assert(x.size()==dsz.size());
+  assert(x.size()==y.size() && "Input array sizes do not match");
+  assert(x.size()==z.size() && "Input array sizes do not match");
+  assert(x.size()==r.size() && "Input array sizes do not match");
+  assert(x.size()==newr.size() && "Input array sizes do not match");
+  assert(x.size()==sx.size() && "Input array sizes do not match");
+  assert(x.size()==sy.size() && "Input array sizes do not match");
+  assert(x.size()==sz.size() && "Input array sizes do not match");
+  assert(x.size()==dsx.size() && "Input array sizes do not match");
+  assert(x.size()==dsy.size() && "Input array sizes do not match");
+  assert(x.size()==dsz.size() && "Input array sizes do not match");
   size_t n = x.size();
 
   // start timers

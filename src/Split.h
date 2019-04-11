@@ -39,13 +39,13 @@ size_t split_elongated(Vector<S>& x, Vector<S>& y, Vector<S>& z,
   auto start = std::chrono::system_clock::now();
 
   // make sure all vector sizes are identical
-  assert(x.size()==y.size());
-  assert(x.size()==z.size());
-  assert(x.size()==r.size());
-  assert(x.size()==elong.size());
-  assert(x.size()==sx.size());
-  assert(x.size()==sy.size());
-  assert(x.size()==sz.size());
+  assert(x.size()==y.size() && "Input array sizes do not match");
+  assert(x.size()==z.size() && "Input array sizes do not match");
+  assert(x.size()==r.size() && "Input array sizes do not match");
+  assert(x.size()==elong.size() && "Input array sizes do not match");
+  assert(x.size()==sx.size() && "Input array sizes do not match");
+  assert(x.size()==sy.size() && "Input array sizes do not match");
+  assert(x.size()==sz.size() && "Input array sizes do not match");
   const size_t n = x.size();
 
   std::cout << "  Splitting elongated particles with n " << n << std::endl;
