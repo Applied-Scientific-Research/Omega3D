@@ -32,7 +32,7 @@ inline S length (std::array<S,3> const & vec) {
   return std::sqrt(dot_product<S>(vec, vec));
 }
 
-// basic cross product
+// basic cross product v1 x v2
 template <class S>
 inline void cross_product (std::array<S,3> const & v1, std::array<S,3> const & v2, std::array<S,3>& result) {
   result[0] = v1[1]*v2[2] - v1[2]*v2[1];
