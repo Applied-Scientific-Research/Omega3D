@@ -670,8 +670,6 @@ public:
     std::vector<S> px(num_pts*7);
 
     // get basis vectors
-    std::array<Vector<S>,3>& x1 = b[0];
-    std::array<Vector<S>,3>& x2 = b[1];
     std::array<Vector<S>,3>& norm = b[2];
 
     // how far above the surface
@@ -688,7 +686,7 @@ public:
       // this assumes properly resolved, vdelta and dt
       for (size_t j=0; j<3; ++j) px[idx+j] += dn * norm[j][i];
       // complete the element with a strength and radius - TIMES AREA?
-      for (size_t j=0; j<3; ++j) px[idx+3+j] = vs[0][i]*x1[j][i] + vs[1][i]*x2[j][i];
+      for (size_t j=0; j<3; ++j) px[idx+3+j] = (*this->s)[j][i];
       // and the core size
       px[idx+6] = _vdelta;
       //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2] << " with str " << px[idx+3] << std::endl;
