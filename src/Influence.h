@@ -23,6 +23,7 @@
 #include <optional>
 #include <chrono>
 #include <cmath>
+#include <cassert>
 
 
 //
@@ -44,14 +45,19 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   std::optional<std::array<Vector<S>,9>>& opttug = targ.get_velgrad();
 
 #ifdef USE_VC
+  // define vector types for Vc (still only S==A supported here)
+  typedef Vc::Vector<S> StoreVec;
+  typedef Vc::Vector<A> AccumVec;
+  assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
+
   // create float_v versions of the source vectors
-  const Vc::Memory<Vc::Vector<S>> sxv  = stdvec_to_vcvec<S>(sx[0], 0.0);
-  const Vc::Memory<Vc::Vector<S>> syv  = stdvec_to_vcvec<S>(sx[1], 0.0);
-  const Vc::Memory<Vc::Vector<S>> szv  = stdvec_to_vcvec<S>(sx[2], 0.0);
-  const Vc::Memory<Vc::Vector<S>> srv  = stdvec_to_vcvec<S>(sr,    1.0);
-  const Vc::Memory<Vc::Vector<S>> ssxv = stdvec_to_vcvec<S>(ss[0], 0.0);
-  const Vc::Memory<Vc::Vector<S>> ssyv = stdvec_to_vcvec<S>(ss[1], 0.0);
-  const Vc::Memory<Vc::Vector<S>> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
+  const Vc::Memory<StoreVec> sxv  = stdvec_to_vcvec<S>(sx[0], 0.0);
+  const Vc::Memory<StoreVec> syv  = stdvec_to_vcvec<S>(sx[1], 0.0);
+  const Vc::Memory<StoreVec> szv  = stdvec_to_vcvec<S>(sx[2], 0.0);
+  const Vc::Memory<StoreVec> srv  = stdvec_to_vcvec<S>(sr,    1.0);
+  const Vc::Memory<StoreVec> ssxv = stdvec_to_vcvec<S>(ss[0], 0.0);
+  const Vc::Memory<StoreVec> ssyv = stdvec_to_vcvec<S>(ss[1], 0.0);
+  const Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
 #endif
 
   float flops = (float)targ.get_n();
@@ -76,27 +82,27 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
     #pragma omp parallel for
     for (size_t i=0; i<targ.get_n(); ++i) {
 #ifdef USE_VC
-      const Vc::Vector<S> txv(tx[0][i]);
-      const Vc::Vector<S> tyv(tx[1][i]);
-      const Vc::Vector<S> tzv(tx[2][i]);
+      const StoreVec txv(tx[0][i]);
+      const StoreVec tyv(tx[1][i]);
+      const StoreVec tzv(tx[2][i]);
       // care must be taken if S != A, because these vectors must have the same length
-      Vc::Vector<A> accumu(0.0);
-      Vc::Vector<A> accumv(0.0);
-      Vc::Vector<A> accumw(0.0);
-      Vc::Vector<A> accumux = 0.0;
-      Vc::Vector<A> accumvx = 0.0;
-      Vc::Vector<A> accumwx = 0.0;
-      Vc::Vector<A> accumuy = 0.0;
-      Vc::Vector<A> accumvy = 0.0;
-      Vc::Vector<A> accumwy = 0.0;
-      Vc::Vector<A> accumuz = 0.0;
-      Vc::Vector<A> accumvz = 0.0;
-      Vc::Vector<A> accumwz = 0.0;
+      AccumVec accumu(0.0);
+      AccumVec accumv(0.0);
+      AccumVec accumw(0.0);
+      AccumVec accumux = 0.0;
+      AccumVec accumvx = 0.0;
+      AccumVec accumwx = 0.0;
+      AccumVec accumuy = 0.0;
+      AccumVec accumvy = 0.0;
+      AccumVec accumwy = 0.0;
+      AccumVec accumuz = 0.0;
+      AccumVec accumvz = 0.0;
+      AccumVec accumwz = 0.0;
       // loop over source particles
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
         // NOTE: .vectorAt(i) gets the vector at scalar position i
         //       .vector(i) gets the i'th vector!!!
-        kernel_0v_0pg<Vc::Vector<S>,Vc::Vector<A>>(
+        kernel_0v_0pg<StoreVec,AccumVec>(
                            sxv.vector(j), syv.vector(j), szv.vector(j), srv.vector(j),
                            ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                            txv, tyv, tzv,
@@ -163,15 +169,14 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
     #pragma omp parallel for
     for (size_t i=0; i<targ.get_n(); ++i) {
 #ifdef USE_VC
-      const Vc::Vector<S> txv = tx[0][i];
-      const Vc::Vector<S> tyv = tx[1][i];
-      const Vc::Vector<S> tzv = tx[2][i];
-      // care must be taken if S != A, because these vectors must have the same length
-      Vc::Vector<A> accumu = 0.0;
-      Vc::Vector<A> accumv = 0.0;
-      Vc::Vector<A> accumw = 0.0;
+      const StoreVec txv = tx[0][i];
+      const StoreVec tyv = tx[1][i];
+      const StoreVec tzv = tx[2][i];
+      AccumVec accumu = 0.0;
+      AccumVec accumv = 0.0;
+      AccumVec accumw = 0.0;
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
-        kernel_0v_0p<Vc::Vector<S>,Vc::Vector<A>>(
+        kernel_0v_0p<StoreVec,AccumVec>(
                           sxv[j], syv[j], szv[j], srv[j],
                           ssxv[j], ssyv[j], sszv[j],
                           txv, tyv, tzv,
@@ -215,28 +220,28 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
     #pragma omp parallel for
     for (size_t i=0; i<targ.get_n(); ++i) {
 #ifdef USE_VC
-      const Vc::Vector<S> txv(tx[0][i]);
-      const Vc::Vector<S> tyv(tx[1][i]);
-      const Vc::Vector<S> tzv(tx[2][i]);
-      const Vc::Vector<S> trv(tr[i]);
+      const StoreVec txv(tx[0][i]);
+      const StoreVec tyv(tx[1][i]);
+      const StoreVec tzv(tx[2][i]);
+      const StoreVec trv(tr[i]);
       // care must be taken if S != A, because these vectors must have the same length
-      Vc::Vector<A> accumu(0.0);
-      Vc::Vector<A> accumv(0.0);
-      Vc::Vector<A> accumw(0.0);
-      Vc::Vector<A> accumux = 0.0;
-      Vc::Vector<A> accumvx = 0.0;
-      Vc::Vector<A> accumwx = 0.0;
-      Vc::Vector<A> accumuy = 0.0;
-      Vc::Vector<A> accumvy = 0.0;
-      Vc::Vector<A> accumwy = 0.0;
-      Vc::Vector<A> accumuz = 0.0;
-      Vc::Vector<A> accumvz = 0.0;
-      Vc::Vector<A> accumwz = 0.0;
+      AccumVec accumu(0.0);
+      AccumVec accumv(0.0);
+      AccumVec accumw(0.0);
+      AccumVec accumux = 0.0;
+      AccumVec accumvx = 0.0;
+      AccumVec accumwx = 0.0;
+      AccumVec accumuy = 0.0;
+      AccumVec accumvy = 0.0;
+      AccumVec accumwy = 0.0;
+      AccumVec accumuz = 0.0;
+      AccumVec accumvz = 0.0;
+      AccumVec accumwz = 0.0;
       // loop over source particles
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
         // NOTE: .vectorAt(i) gets the vector at scalar position i
         //       .vector(i) gets the i'th vector!!!
-        kernel_0_0sg<Vc::Vector<S>,Vc::Vector<A>>(
+        kernel_0_0sg<StoreVec,AccumVec>(
                           sxv.vector(j), syv.vector(j), szv.vector(j), srv.vector(j),
                           ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                           txv, tyv, tzv, trv,
@@ -303,16 +308,16 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
     #pragma omp parallel for
     for (size_t i=0; i<targ.get_n(); ++i) {
 #ifdef USE_VC
-      const Vc::Vector<S> txv = tx[0][i];
-      const Vc::Vector<S> tyv = tx[1][i];
-      const Vc::Vector<S> tzv = tx[2][i];
-      const Vc::Vector<S> trv = tr[i];
+      const StoreVec txv = tx[0][i];
+      const StoreVec tyv = tx[1][i];
+      const StoreVec tzv = tx[2][i];
+      const StoreVec trv = tr[i];
       // care must be taken if S != A, because these vectors must have the same length
-      Vc::Vector<A> accumu = 0.0;
-      Vc::Vector<A> accumv = 0.0;
-      Vc::Vector<A> accumw = 0.0;
+      AccumVec accumu = 0.0;
+      AccumVec accumv = 0.0;
+      AccumVec accumw = 0.0;
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
-        kernel_0_0s<Vc::Vector<S>,Vc::Vector<A>>(
+        kernel_0_0s<StoreVec,AccumVec>(
                          sxv[j], syv[j], szv[j], srv[j],
                          ssxv[j], ssyv[j], sszv[j],
                          txv, tyv, tzv, trv,
@@ -357,24 +362,79 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 template <class S, class A>
 void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   std::cout << "    1_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
-  //auto start = std::chrono::system_clock::now();
+  auto start = std::chrono::system_clock::now();
+  float flops = (float)targ.get_n();
 
   // get references to use locally
   const std::array<Vector<S>,Dimensions>& sx = src.get_pos();
-  //const Vector<S>&                      sr = src.get_rad();
   const std::vector<Int>&                 si = src.get_idx();
   const std::array<Vector<S>,Dimensions>& ss = src.get_str();
+
   const std::array<Vector<S>,Dimensions>& tx = targ.get_pos();
   //const Vector<S>&                      tr = targ.get_rad();
   std::array<Vector<S>,Dimensions>&       tu = targ.get_vel();
 
+#ifdef USE_VC
+  // define vector types for Vc (still only S==A supported here)
+  typedef Vc::Vector<S> StoreVec;
+  typedef Vc::Vector<A> AccumVec;
+  assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
+
+  #pragma omp parallel for
+  for (size_t j=0; j<src.get_npanels(); ++j) {
+    // source triangular panel stays the same
+    const Int sfirst  = si[3*j];
+    const Int ssecond = si[3*j+1];
+    const Int sthird  = si[3*j+2];
+
+    const StoreVec sx0 = sx[0][sfirst];
+    const StoreVec sy0 = sx[1][sfirst];
+    const StoreVec sz0 = sx[2][sfirst];
+    const StoreVec sx1 = sx[0][ssecond];
+    const StoreVec sy1 = sx[1][ssecond];
+    const StoreVec sz1 = sx[2][ssecond];
+    const StoreVec sx2 = sx[0][sthird];
+    const StoreVec sy2 = sx[1][sthird];
+    const StoreVec sz2 = sx[2][sthird];
+
+    const size_t ntarg = targ.get_n();
+    const size_t ntargvec = 1 + (ntarg-1) / StoreVec::size();
+
+    for (size_t i=0; i<ntargvec; i++) {
+
+      // fill a 4- or 8-wide vector with the target coordinates
+      StoreVec txx, txy, txz;
+      for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
+        const size_t idx = i*StoreVec::size() + ii;
+        txx[ii] = tx[0][idx];
+        txy[ii] = tx[1][idx];
+        txz[ii] = tx[2][idx];
+      }
+
+      // we are ignoring the accumulator type for now
+      AccumVec accumu = 0.0;
+      AccumVec accumv = 0.0;
+      AccumVec accumw = 0.0;
+
+      kernel_1_0v<StoreVec,AccumVec>(sx0, sy0, sz0,
+                       sx1, sy1, sz1,
+                       sx2, sy2, sz2,
+                       StoreVec(ss[0][j]), StoreVec(ss[1][j]), StoreVec(ss[2][j]),
+                       txx, txy, txz,
+                       &accumu, &accumv, &accumw);
+
+      tu[0][i] += accumu.sum();
+      tu[1][i] += accumv.sum();
+      tu[2][i] += accumw.sum();
+    }
+  }
+#else  // no Vc
   #pragma omp parallel for
   for (size_t i=0; i<targ.get_n(); ++i) {
-    //std::array<A,3> accum = {0.0};
     A accumu = 0.0;
     A accumv = 0.0;
     A accumw = 0.0;
-    for (size_t j=0; j<src.get_n(); ++j) {
+    for (size_t j=0; j<src.get_npanels(); ++j) {
       const size_t jp0 = si[3*j];
       const size_t jp1 = si[3*j+1];
       const size_t jp2 = si[3*j+2];
@@ -389,31 +449,94 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
     tu[1][i] += accumv;
     tu[2][i] += accumw;
   }
+#endif // no Vc
+
+  flops *= 3.0 + 168.0*(float)src.get_npanels();
+
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
+  printf("    panels_affect_points: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
 }
 
 
 //
 // Vc and x86 versions of Points/Particles affecting Panels/Surfaces
+// Should never need grads here - we only use it to calculate RHS
+// And sources are never inert points, always active particles
 //
 template <class S, class A>
 void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
   std::cout << "    0_1 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
+  float flops = (float)targ.get_npanels();
 
   // get references to use locally
   const std::array<Vector<S>,Dimensions>& sx = src.get_pos();
   const std::array<Vector<S>,Dimensions>& ss = src.get_str();
+
   const std::array<Vector<S>,Dimensions>& tx = targ.get_pos();
   const std::vector<Int>&                 ti = targ.get_idx();
   std::array<Vector<S>,Dimensions>&       tu = targ.get_vel();
 
-  float flops = (float)targ.get_n();
+#ifdef USE_VC
+  // define vector types for Vc (still only S==A supported here)
+  typedef Vc::Vector<S> StoreVec;
+  typedef Vc::Vector<A> AccumVec;
+  assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
 
-// NEED A VC VERSION OF THIS LOOP
+  // process source particles into Vc-ready memory format
+  const Vc::Memory<StoreVec> sxv  = stdvec_to_vcvec<S>(sx[0], 0.0);
+  const Vc::Memory<StoreVec> syv  = stdvec_to_vcvec<S>(sx[1], 0.0);
+  const Vc::Memory<StoreVec> szv  = stdvec_to_vcvec<S>(sx[2], 0.0);
+  //const Vc::Memory<StoreVec> srv  = stdvec_to_vcvec<S>(sr,    1.0);
+  const Vc::Memory<StoreVec> ssxv = stdvec_to_vcvec<S>(ss[0], 0.0);
+  const Vc::Memory<StoreVec> ssyv = stdvec_to_vcvec<S>(ss[1], 0.0);
+  const Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
 
   #pragma omp parallel for
-  for (size_t i=0; i<targ.get_n(); ++i) {
-    //std::array<A,3> accum = {0.0};
+  for (size_t i=0; i<targ.get_npanels(); ++i) {
+
+    // prepare vector registers for target accumulators
+    const size_t ip0 = ti[3*i];
+    const size_t ip1 = ti[3*i+1];
+    const size_t ip2 = ti[3*i+2];
+    const StoreVec tx0 = tx[0][ip0];
+    const StoreVec ty0 = tx[1][ip0];
+    const StoreVec tz0 = tx[2][ip0];
+    const StoreVec tx1 = tx[0][ip1];
+    const StoreVec ty1 = tx[1][ip1];
+    const StoreVec tz1 = tx[2][ip1];
+    const StoreVec tx2 = tx[0][ip2];
+    const StoreVec ty2 = tx[1][ip2];
+    const StoreVec tz2 = tx[2][ip2];
+
+    AccumVec accumu = 0.0;
+    AccumVec accumv = 0.0;
+    AccumVec accumw = 0.0;
+
+    //const size_t nsrc = src.get_n();
+    //const size_t nsrcvec = 1 + (nsrc-1) / StoreVec::size();
+    //for (size_t j=0; j<nsrcvec; j++) {
+
+    for (size_t j=0; j<sxv.vectorsCount(); ++j) {
+      // NOTE: .vectorAt(i) gets the vector at scalar position i
+      //       .vector(i) gets the i'th vector!!!
+      kernel_1_0v<StoreVec,AccumVec>(tx0, ty0, tz0,
+                                     tx1, ty1, tz1,
+                                     tx2, ty2, tz2,
+                                     ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                     sxv.vector(j), syv.vector(j), szv.vector(j),
+                                     &accumu, &accumv, &accumw);
+    }
+    tu[0][i] -= accumu.sum();
+    tu[1][i] -= accumv.sum();
+    tu[2][i] -= accumw.sum();
+  }
+
+#else  // no Vc
+  #pragma omp parallel for
+  for (size_t i=0; i<targ.get_npanels(); ++i) {
     A accumu = 0.0;
     A accumv = 0.0;
     A accumw = 0.0;
@@ -427,7 +550,6 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
                        tx[0][ip2], tx[1][ip2], tx[2][ip2],
                        ss[0][j], ss[1][j], ss[2][j],
                        sx[0][j], sx[1][j], sx[2][j],
-                       //accum.data());
                        &accumu, &accumv, &accumw);
     }
     // we use it backwards, so the resulting velocities are negative
@@ -435,7 +557,9 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
     tu[1][i] -= accumv;
     tu[2][i] -= accumw;
   }
-  flops *= 11.0 + 0.0*(float)src.get_n();
+#endif // no Vc
+
+  flops *= 3.0 + 168.0*(float)src.get_n();
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
@@ -448,6 +572,7 @@ template <class S, class A>
 void panels_affect_panels (Surfaces<S> const& src, Surfaces<S>& targ) {
   std::cout << "    1_1 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   // not sure how to do this - find field points of one and apply a function above?
+  assert(false && "Should never get here");
 }
 
 

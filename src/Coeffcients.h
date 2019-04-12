@@ -195,6 +195,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
     const StoreVec sx2 = sx[0][sthird];
     const StoreVec sy2 = sx[1][sthird];
     const StoreVec sz2 = sx[2][sthird];
+    const S sarea = sa[j];
 
     const size_t ntargvec = 1 + (ntarg-1) / StoreVec::size();
 
@@ -225,6 +226,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
       // influence of vortex panel j with unit circulation on center of panel i
       StoreVec resultu, resultv, resultw;
+      resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
       // first, strength along panel-centric x1 vector
       kernel_1_0v<StoreVec,StoreVec>(sx0, sy0, sz0,
@@ -238,13 +240,27 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       // spread the results from a vector register back to the primary array
       for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
         const size_t idx = i*StoreVec::size() + ii;
-        coeffs[jptr[0]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]);
+        coeffs[jptr[0]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]) * sarea;
 
         // recompute for other target vector
-        //coeffs[jptr[0]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]);
-        coeffs[jptr[0]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]);
+        coeffs[jptr[0]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]) * sarea;
       }
 
+      // now, along x2 direction (another 168+20 flops)
+      resultu = 0.0; resultv = 0.0; resultw = 0.0;
+      kernel_1_0v<StoreVec,StoreVec>(sx0, sy0, sz0,
+                                     sx1, sy1, sz1,
+                                     sx2, sy2, sz2,
+                                     StoreVec(sb2[0][j]), StoreVec(sb2[1][j]), StoreVec(sb2[2][j]),
+                                     txi, tyi, tzi,
+                                     &resultu, &resultv, &resultw);
+      for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
+        const size_t idx = i*StoreVec::size() + ii;
+        coeffs[jptr[1]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]) * sarea;
+        coeffs[jptr[1]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]) * sarea;
+      }
+
+      // HACK - we are assuming vortex/tangential only!
     }
 #else	// no Vc
 
@@ -326,7 +342,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   flops += 2.0 + (float)coeffs.size();
 
   // debug print the top-left and bottom-right corners
-  if (true) {
+  if (false) {
     const size_t nrows = nunk*ntarg;
     const size_t ncols = nunk*nsrc;
     std::cout << "Influence matrix is " << nrows << " by " << ncols << std::endl;

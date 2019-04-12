@@ -190,8 +190,8 @@ void BEM<S,I>::solve() {
   printf("    solver.solve:\t[%.6f] cpu seconds\n", (float)elapsed_seconds.count());
 
   if (false) {
-    //const size_t nr = 50;
-    const size_t nr = b.size();
+    const size_t nr = 20;
+    //const size_t nr = b.size();
     std::cout << "Matrix equation is" << std::endl;
     std::cout << A.block(0,0,nr,8) << std::endl;
     std::cout << "RHS vector is" << std::endl;

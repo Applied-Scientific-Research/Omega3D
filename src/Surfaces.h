@@ -78,7 +78,7 @@ public:
     }
     assert(idx_are_all_good);
 
-    // compute all basis vectors
+    // compute all basis vectors and panel areas
     compute_bases();
 
     // now, depending on the element type, put the value somewhere
@@ -94,11 +94,7 @@ public:
 
       // we still need general strengths
       // NOTE that this means that a vector in ElementBase is NOT sized to n, but to nsurfs!
-      std::array<Vector<S>,3> new_s;
-      for (size_t d=0; d<3; ++d) {
-        new_s[d].resize(nsurfs);
-      }
-      this->s = std::move(new_s);
+      vortex_sheet_to_panel_strength();
 
     } else if (this->E == reactive) {
       // value is a boundary condition
@@ -115,14 +111,11 @@ public:
       // make space for panel-centric strengths
       for (size_t d=0; d<2; ++d) {
         vs[d].resize(nsurfs);
+        std::fill(vs[d].begin(), vs[d].end(), 0.0);
       }
 
       // we still need general strengths
-      std::array<Vector<S>,3> new_s;
-      for (size_t d=0; d<3; ++d) {
-        new_s[d].resize(nsurfs);
-      }
-      this->s = std::move(new_s);
+      vortex_sheet_to_panel_strength();
 
     } else if (this->E == inert) {
       // value is ignored (probably zero)
@@ -193,6 +186,41 @@ public:
       vs[1][i] = _in[2*i+1];
       //std::cout << "elem " << i << " with area " << area[i] << " has vs " << vs[0][i] << " " << vs[1][i] << std::endl;
     }
+
+    // now recompute the absolute panel strengths
+    vortex_sheet_to_panel_strength();
+  }
+
+  // convert vortex sheet strength to absolute panel strength
+  void vortex_sheet_to_panel_strength() {
+    // make sure (*s) even exists
+    if (not this->s) {
+      std::array<Vector<S>,3> new_s;
+      this->s = std::move(new_s);
+    }
+
+    // make sure the arrays are sized properly
+    const size_t nold = (*this->s)[0].size();
+    for (size_t d=0; d<3; ++d) {
+      (*this->s)[d].resize(get_npanels());
+    }
+
+    // convenience references
+    std::array<Vector<S>,3>& x1 = b[0];
+    std::array<Vector<S>,3>& x2 = b[1];
+
+    // now copy the values over
+    for (size_t i=nold; i<get_npanels(); ++i) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        (*this->s)[d][i] = (vs[0][i]*x1[d][i] + vs[1][i]*x2[d][i]) * area[i];
+      }
+      //std::cout << "elem " << i << " has" << std::endl;
+      //std::cout << "  x1 " << x1[0][i] << " " << x1[1][i] << " " << x1[2][i] << std::endl;
+      //std::cout << "  x2 " << x2[0][i] << " " << x2[1][i] << " " << x2[2][i] << std::endl;
+      //std::cout << "  vs " << vs[0][i] << " " << vs[1][i] << std::endl;
+      //std::cout << "   s " << (*this->s)[0][i] << " " << (*this->s)[1][i] << " " << (*this->s)[2][i] << std::endl;
+      //std::cout << "elem " << i << " has s " << (*this->s)[0][i] << " " << (*this->s)[1][i] << " " << (*this->s)[2][i] << std::endl;
+    }
   }
 
   // add more nodes and panels to this collection
@@ -243,7 +271,7 @@ public:
     }
     assert(idx_are_all_good);
 
-    // compute all basis vectors
+    // compute all basis vectors and panel areas
     compute_bases();
 
     // now, depending on the element type, put the value somewhere
@@ -257,6 +285,9 @@ public:
         }
       }
 
+      // and ensure that the raw strengths are resized and set
+      vortex_sheet_to_panel_strength();
+
     } else if (this->E == reactive) {
       // value is a boundary condition
       // make sure we have the same number of components in the new array as in the old
@@ -268,7 +299,10 @@ public:
           bc[d][neold+i] = _val[3*i+d];
         }
       }
-      // upsize strength arrays, too
+      // upsize vortex sheet and raw strength arrays, too
+      for (size_t d=0; d<2; ++d) {
+        vs[d].resize(neold+nsurfs);
+      }
       for (size_t d=0; d<3; ++d) {
         (*this->s)[d].resize(neold+nsurfs);
       }

@@ -249,10 +249,10 @@ void read_json (Simulation& sim,
         // iterate through vector of meshes, all on this body
         for (auto const& bf: bf_json) {
           // pass bf into a function in BoundaryFeature to generate the object
-          parse_boundary_json(bfeatures, bp, bf);
+          //parse_boundary_json(bfeatures, bp, bf);
 
           // this turns off augmentation!
-          //parse_boundary_json(bfeatures, nullptr, bf);
+          parse_boundary_json(bfeatures, nullptr, bf);
         }
       }
 

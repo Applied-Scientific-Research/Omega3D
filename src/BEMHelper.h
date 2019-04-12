@@ -180,9 +180,9 @@ void solve_bem(const double                         _time,
 
           // for augmentation, find the induced velocity from the source on the target
           std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
-          std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
+          //std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
           //std::visit([=](auto& elem) { elem.add_rot_strengths(1.0, 0.0); }, src);
-          std::visit(ivisitor, src, targ);
+          //std::visit(ivisitor, src, targ);
           std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
           std::visit([=](auto& elem) { elem.finalize_vels(std::array<double,Dimensions>({0.0,0.0,0.0})); }, targ);
 
