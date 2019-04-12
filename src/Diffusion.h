@@ -11,7 +11,7 @@
 #include "Core.h"
 //#include "Body.h"
 #include "Merge.h"
-//#include "Reflect.h"
+#include "Reflect.h"
 #include "VRM.h"
 #include "BEM.h"
 
@@ -191,7 +191,6 @@ void Diffusion<S,A,I>::step(const double                _time,
   // reflect interior particles to exterior because VRM only works in free space
   //
 
-  //ReflectVisitor<S> rvisitor;
   // this should only function when _vort is Points and _bdry is Surfaces
   for (auto &targ : _vort) {
     if (std::holds_alternative<Points<S>>(targ)) {
@@ -202,7 +201,7 @@ void Diffusion<S,A,I>::step(const double                _time,
           Surfaces<S>& surf = std::get<Surfaces<S>>(src);
 
           // call the specific panels-affect-points routine
-          //(void) reflect_panp2<S>(surf, pts);
+          (void) reflect_panp2<S>(surf, pts);
         }
       }
     }
@@ -236,6 +235,7 @@ void Diffusion<S,A,I>::step(const double                _time,
     }
   }
 
+  assert(false && "Stop here");
   //
   // clean up by removing the innermost layer - the one that will be represented by boundary strengths
   //
