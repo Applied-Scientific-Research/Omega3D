@@ -31,6 +31,8 @@ struct ClosestReturn {
 // find closest distance from a point to a triangle
 // logic taken from pointElemDistance3d
 //
+// most likely 147 flops
+//
 template <class S>
 ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
                                       const S sx1, const S sy1, const S sz1,
@@ -72,23 +74,24 @@ ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
     retval.cpy = sy2;
     retval.cpz = sz2;
   }
+  // 27 flops to here
 
-  std::cout << "test point " << tx << " " << ty << " " << tz << std::endl;
-  std::cout << "  current distsq " << retval.distsq << std::endl;
+  //std::cout << "test point " << tx << " " << ty << " " << tz << std::endl;
+  //std::cout << "  current distsq " << retval.distsq << std::endl;
 
   // compare to the edges
   const std::array<S,3> ds01 = {sx1-sx0, sy1-sy0, sz1-sz0};
-  std::cout << "  ds01 " << ds01[0] << " " << ds01[1] << " " << ds01[2] << std::endl;
+  //std::cout << "  ds01 " << ds01[0] << " " << ds01[1] << " " << ds01[2] << std::endl;
   const S ds01ds = 1.0 / dot_product(ds01, ds01);
-  std::cout << "  ds01ds " << ds01ds << std::endl;
+  //std::cout << "  ds01ds " << ds01ds << std::endl;
   std::array<S,3> rx;
   cross_product(ds01, dt0, rx);
-  std::cout << "  rx   " << rx[0] << " " << rx[1] << " " << rx[2] << std::endl;
+  //std::cout << "  rx   " << rx[0] << " " << rx[1] << " " << rx[2] << std::endl;
   const S dt01ds = dot_product(rx, rx) * ds01ds;
-  std::cout << "  dt01ds " << dt01ds << std::endl;
+  //std::cout << "  dt01ds " << dt01ds << std::endl;
   if (dt01ds < retval.distsq) {
     const S t = dot_product(ds01, dt0) * ds01ds;
-    std::cout << "  t " << t << std::endl;
+    //std::cout << "  t " << t << std::endl;
     if (0.0 < t and t < 1.0) {
       retval.distsq = dt01ds;
       retval.disttype = edge;
@@ -97,15 +100,16 @@ ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
       retval.cpz = sz0 + t*ds01[2];
     }
   }
+  // 25 minimum, 33 maybe, 39 possibly
 
   const std::array<S,3> ds12 = {sx2-sx1, sy2-sy1, sz2-sz1};
   const S ds12ds = 1.0 / dot_product(ds12, ds12);
   cross_product(ds12, dt1, rx);
   const S dt12ds = dot_product(rx, rx) * ds12ds;
-  std::cout << "  dt12ds " << dt12ds << std::endl;
+  //std::cout << "  dt12ds " << dt12ds << std::endl;
   if (dt12ds < retval.distsq) {
     const S t = dot_product(ds12, dt1) * ds12ds;
-    std::cout << "  t " << t << std::endl;
+    //std::cout << "  t " << t << std::endl;
     if (0.0 < t and t < 1.0) {
       retval.distsq = dt12ds;
       retval.disttype = edge;
@@ -119,10 +123,10 @@ ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
   const S ds20ds = 1.0 / dot_product(ds20, ds20);
   cross_product(ds20, dt2, rx);
   const S dt20ds = dot_product(rx, rx) * ds20ds;
-  std::cout << "  dt20ds " << dt20ds << std::endl;
+  //std::cout << "  dt20ds " << dt20ds << std::endl;
   if (dt20ds < retval.distsq) {
     const S t = dot_product(ds20, dt2) * ds20ds;
-    std::cout << "  t " << t << std::endl;
+    //std::cout << "  t " << t << std::endl;
     if (0.0 < t and t < 1.0) {
       retval.distsq = dt20ds;
       retval.disttype = edge;
@@ -131,6 +135,7 @@ ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
       retval.cpz = sz2 + t*ds20[2];
     }
   }
+  // 102 minimum flops to here
 
   // finally, check vs. the panel prism
   // test to see if the test point is in the positive half-space of each edge
@@ -142,7 +147,7 @@ ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
   const S in12 = dot_product(dt1, interior);
   cross_product(norm, ds20, interior);
   const S in20 = dot_product(dt2, interior);
-  std::cout << "  interior distances are " << in01 << " " << in12 << " " << in20 << std::endl;
+  //std::cout << "  interior distances are " << in01 << " " << in12 << " " << in20 << std::endl;
   if (in01 > 0.0 and in12 > 0.0 and in20 > 0.0) {
     retval.disttype = panel;
     const S truedist = dot_product(dt0, norm);
@@ -151,6 +156,7 @@ ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
     retval.cpy = ty - syn*truedist;
     retval.cpz = tz - szn*truedist;
   }
+  // minumum 45 more flops here, possibly 57 if match
 
   return retval;
 }
@@ -175,22 +181,22 @@ void reflect_panp2 (Surfaces<S> const& _src, Points<S>& _targ) {
   const S eps = 10.0*std::numeric_limits<S>::epsilon();
 
   // run some tests first
-  ClosestReturn<S> r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 20.0,0.001,0.0);
+  //ClosestReturn<S> r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 20.0,0.001,0.0);
   //std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
-  r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 20.0,-0.001,0.0);
+  //r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 20.0,-0.001,0.0);
   //std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
-  r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 0.001,-20.0,1.0);
-  std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
-  r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, -0.001,-20.0,1.0);
-  std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
-  r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 0.1,-20.0,1.0);
-  std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
-  r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 0.1,0.001,20.0);
-  std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
-  r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 0.1,-0.001,20.0);
-  std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
+  //r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 0.001,-20.0,1.0);
+  //std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
+  //r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, -0.001,-20.0,1.0);
+  //std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
+  //r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 0.1,-20.0,1.0);
+  //std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
+  //r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 0.1,0.001,20.0);
+  //std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
+  //r = panel_point_distance<S>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0, 0.1,-0.001,20.0);
+  //std::cout << "  type " << r.disttype << " dist " << std::sqrt(r.distsq) << " cp " << r.cpx << " " << r.cpy << " " << r.cpz << std::endl;
 
-  assert(false && "quit");
+  //assert(false && "quit");
 
   #pragma omp parallel for
   for (size_t i=0; i<_targ.get_n(); ++i) {
@@ -199,9 +205,9 @@ void reflect_panp2 (Surfaces<S> const& _src, Points<S>& _targ) {
 
     // iterate and search for closest panel
     for (size_t j=0; j<_src.get_npanels(); ++j) {
-      const Int jp0 = 3*j+0;
-      const Int jp1 = 3*j+1;
-      const Int jp2 = 3*j+2;
+      const Int jp0 = si[3*j+0];
+      const Int jp1 = si[3*j+1];
+      const Int jp2 = si[3*j+2];
       ClosestReturn<S> result = panel_point_distance<S>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                                         sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                                         sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -226,88 +232,57 @@ void reflect_panp2 (Surfaces<S> const& _src, Points<S>& _targ) {
 
     // dump out the hits
     if (false) {
-    std::cout << "point " << i << " is " << tx[0][i] << " " << tx[1][i] << std::endl;
-    for (auto & ahit: hits) {
-      if (ahit.disttype == node) {
-        std::cout << "  node " << ahit.jpanel << " is " << std::sqrt(ahit.distsq) << std::endl;
-      } else {
-        std::cout << "  panel " << ahit.jpanel << " is " << std::sqrt(ahit.distsq) << std::endl;
+      std::cout << "point " << i << " is " << tx[0][i] << " " << tx[1][i] << std::endl;
+      for (auto & ahit: hits) {
+        if (ahit.disttype == node) {
+          std::cout << "  node " << ahit.jpanel << " is " << std::sqrt(ahit.distsq) << std::endl;
+        } else {
+          std::cout << "  panel " << ahit.jpanel << " is " << std::sqrt(ahit.distsq) << std::endl;
+        }
       }
     }
-    }
 
-    //std::cout << "  REFLECTING pt at " << tx[0][i] << " " << tx[1][i] << std::endl;
+    //std::cout << "  REFLECTING pt at " << tx[0][i] << " " << tx[1][i] << " " << tx[2][i] << std::endl;
 
     // now look at the vector of return values and decide if we're under or above the panel!
-    if (hits.size() == 1) {
-      // this is easy if the closest is a panel!
-      if (hits[0].disttype == panel) {
-        // compare vector to normal vector
-        const size_t j = hits[0].jpanel;
-        const S bx = sx[0][si[2*j+1]] - sx[0][si[2*j]];
-        const S by = sx[1][si[2*j+1]] - sx[1][si[2*j]];
-        const S blen  = 1.0 / std::sqrt(bx*bx + by*by);
-        const S normx = -by * blen;
-        const S normy =  bx * blen;
-        const S dist  = normx*(tx[0][i]-hits[0].cpx) + normy*(tx[1][i]-hits[0].cpy);
-        //std::cout << "  dist is actually " << dist << std::endl;
-        if (dist < 0.0) {
-          // this point is under the panel - reflect it
-          tx[0][i] -= 2.0*dist*normx;
-          tx[1][i] -= 2.0*dist*normy;
-          //std::cout << "    TYPE 1 TO " << tx[0][i] << " " << tx[1][i] << std::endl;
-          num_reflected++;
-        }
+    // init the mean normal and the mean contact point
+    std::array<S,3> mnorm = {0.0, 0.0, 0.0};
+    std::array<S,3> mcp = {0.0, 0.0, 0.0};
+
+    // find the mean normal and the mean contact point
+    for (size_t k=0; k<hits.size(); ++k) {
+      //std::cout << "    cp at " << hits[k].cpx << " " << hits[k].cpy << std::endl;
+
+      const size_t j = hits[k].jpanel;
+      if (hits[k].disttype == panel) {
+        // hit a panel, norm is easy
+        for (size_t d=0; d<3; ++d) mnorm[d] += sn[d][j];
       } else {
-        // this should never happen - any single hit must be a panel because every
-        //   node effectively gets checked twice
-        const S dist = std::sqrt(hits[0].distsq);
-        // if the distance is large enough, we don't need to care
-        if (dist < 0.1) {
-          std::cout << "WARNING: point at " << tx[0][i] << " " << tx[1][i] << std::endl;
-          std::cout << "  only hits one node on panel " << hits[0].jpanel << " with dist " << dist << std::endl;
-        }
-        // we cannot define a distance!
+        // hit is a node or edge, normal requires some math
+        std::array<S,3> dx = {tx[0][i]-hits[k].cpx, tx[1][i]-hits[k].cpy, tx[2][i]-hits[k].cpz};
+        normalizeVec(dx);
+        for (size_t d=0; d<3; ++d) mnorm[d] += dx[d];
       }
-    } else if (hits.size() == 2) {
-      // if two hits, they should both be nodes, but in rare cases can be anything
-      S normx = 0.0;
-      S normy = 0.0;
-      S cpx = 0.0;
-      S cpy = 0.0;
-      // find the mean normal and the mean contact point
-      for (size_t k=0; k<hits.size(); ++k) {
-        //std::cout << "    cp at " << hits[k].cpx << " " << hits[k].cpy << std::endl;
-        const size_t j = hits[k].jpanel;
-        const S bx = sx[0][si[2*j+1]] - sx[0][si[2*j]];
-        const S by = sx[1][si[2*j+1]] - sx[1][si[2*j]];
-        const S blen = 1.0 / std::sqrt(bx*bx + by*by);
-        normx += -by * blen;
-        normy +=  bx * blen;
-        cpx += hits[k].cpx;
-        cpy += hits[k].cpy;
-      }
-      const S normilen = 1.0 / std::sqrt(normx*normx + normy*normy);
-      normx *= normilen;
-      normy *= normilen;
-      cpx /= (S)hits.size();
-      cpy /= (S)hits.size();
-      // compare this mean norm to the vector from the contact point to the particle
-      const S dotp = normx*(tx[0][i]-cpx) + normy*(tx[1][i]-cpy);
-      if (dotp < 0.0) {
-        // this point is under the panel - reflect it off entry 0
-        // this is reasonable for most cases, except very sharp angles between adjacent panels
-        const S dist = std::sqrt(hits[0].distsq);
-        //std::cout << "  REFLECTING " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]);
-        tx[0][i] = hits[0].cpx + dist*normx;
-        tx[1][i] = hits[0].cpy + dist*normy;
-        //std::cout << " to " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]) << std::endl;
-        //std::cout << "    TYPE 2 TO " << tx[0][i] << " " << tx[1][i] << std::endl;
-        num_reflected++;
-      }
-    } else {
-      // this should never happen!
-      std::cout << "WARNING: point at " << tx[0][i] << " " << tx[1][i] << " hits " << hits.size() << " nodes/panels!" << std::endl;
+
+      mcp[0] += hits[k].cpx;
+      mcp[1] += hits[k].cpy;
+      mcp[2] += hits[k].cpz;
+    }
+
+    normalizeVec(mnorm);
+    for (size_t d=0; d<3; ++d) mcp[d] /= (S)hits.size();
+
+    // compare this mean norm to the vector from the contact point to the particle
+    std::array<S,3> dx = {tx[0][i]-mcp[0], tx[1][i]-mcp[1], tx[2][i]-mcp[2]};
+    const S dotp = dot_product(mnorm, dx);
+    if (dotp < 0.0) {
+      // this point is under the panel - reflect it off entry 0
+      // this is reasonable for most cases, except very sharp angles between adjacent panels
+      const S dist = std::sqrt(hits[0].distsq);
+      //std::cout << "  REFLECTING pt at rad " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]+tx[2][i]*tx[2][i]);
+      for (size_t d=0; d<3; ++d) tx[d][i] = mcp[d] + dist*mnorm[d];
+      //std::cout << "  to " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]+tx[2][i]*tx[2][i]) << std::endl;
+      num_reflected++;
     }
   }
 

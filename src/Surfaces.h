@@ -200,7 +200,6 @@ public:
     }
 
     // make sure the arrays are sized properly
-    const size_t nold = (*this->s)[0].size();
     for (size_t d=0; d<3; ++d) {
       (*this->s)[d].resize(get_npanels());
     }
@@ -209,8 +208,8 @@ public:
     std::array<Vector<S>,3>& x1 = b[0];
     std::array<Vector<S>,3>& x2 = b[1];
 
-    // now copy the values over
-    for (size_t i=nold; i<get_npanels(); ++i) {
+    // now copy the values over (do them all)
+    for (size_t i=0; i<get_npanels(); ++i) {
       for (size_t d=0; d<Dimensions; ++d) {
         (*this->s)[d][i] = (vs[0][i]*x1[d][i] + vs[1][i]*x2[d][i]) * area[i];
       }
@@ -685,11 +684,12 @@ public:
       // push out a fixed distance
       // this assumes properly resolved, vdelta and dt
       for (size_t j=0; j<3; ++j) px[idx+j] += dn * norm[j][i];
-      // complete the element with a strength and radius - TIMES AREA?
+      // complete the element with a strength
       for (size_t j=0; j<3; ++j) px[idx+3+j] = (*this->s)[j][i];
       // and the core size
       px[idx+6] = _vdelta;
-      //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2] << " with str " << px[idx+3] << std::endl;
+      //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2];
+      //std::cout << "     with str " << px[idx+3] << " " << px[idx+4] << " " << px[idx+5] << std::endl;
     }
 
     return px;
