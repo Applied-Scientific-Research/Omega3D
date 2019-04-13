@@ -146,7 +146,7 @@ ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
   if (in01 > 0.0 and in12 > 0.0 and in20 > 0.0) {
     retval.disttype = panel;
     const S truedist = dot_product(dt0, norm);
-    retval.distsq = truedist*truedist
+    retval.distsq = truedist*truedist;
     retval.cpx = tx - sxn*truedist;
     retval.cpy = ty - syn*truedist;
     retval.cpz = tz - szn*truedist;
