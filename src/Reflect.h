@@ -285,14 +285,14 @@ void reflect_panp2 (Surfaces<S> const& _src, Points<S>& _targ) {
       num_reflected++;
     }
   }
+  const S flops = 149.0 * (float)_targ.get_n() * (float)_src.get_npanels();
 
   std::cout << "    reflected " << num_reflected << " particles" << std::endl;
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
-  printf("    reflect_panp2:\t[%.4f] seconds\n", (float)elapsed_seconds.count());
-  //const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
-  //printf("    panels_affect_points: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
+  const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
+  printf("    reflect_panp2:\t[%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
 }
 
 
@@ -308,16 +308,15 @@ void clear_inner_panp2 (Surfaces<S> const & _src, Points<S>& _targ, const S _cut
   // get handles for the vectors
   std::array<Vector<S>,Dimensions> const& sx = _src.get_pos();
   std::vector<Int> const&                 si = _src.get_idx();
+  std::array<Vector<S>,3> const&          sn = _src.get_norm();
+
   std::array<Vector<S>,Dimensions>&       tx = _targ.get_pos();
   std::array<Vector<S>,Dimensions>&       ts = _targ.get_str();
   Vector<S>&                              tr = _targ.get_rad();
 
   size_t num_cropped = 0;
   const S eps = 5.0*std::numeric_limits<S>::epsilon();
-  //const S opeps = 1.0 + eps;
-  //const S omeps = 1.0 - eps;
 
-  // accumulate results into targvel
   #pragma omp parallel for reduction(+:num_cropped)
   for (size_t i=0; i<_targ.get_n(); ++i) {
 
