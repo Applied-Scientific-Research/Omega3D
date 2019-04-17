@@ -38,12 +38,12 @@ size_t merge_close_particles(std::array<Vector<S>,3>& pos,
                              const bool               adapt_radii) {
 
   // make sure all vector sizes are identical
-  assert(pos[0].size()==pos[1].size());
-  assert(pos[0].size()==pos[2].size());
-  assert(pos[0].size()==str[0].size());
-  assert(pos[0].size()==str[1].size());
-  assert(pos[0].size()==str[2].size());
-  assert(pos[0].size()==rad.size());
+  assert(pos[0].size()==pos[1].size() && "Input array sizes do not match");
+  assert(pos[0].size()==pos[2].size() && "Input array sizes do not match");
+  assert(pos[0].size()==str[0].size() && "Input array sizes do not match");
+  assert(pos[0].size()==str[1].size() && "Input array sizes do not match");
+  assert(pos[0].size()==str[2].size() && "Input array sizes do not match");
+  assert(pos[0].size()==rad.size() && "Input array sizes do not match");
   const size_t n = rad.size();
 
   std::cout << "  Merging close particles with n " << n << std::endl;

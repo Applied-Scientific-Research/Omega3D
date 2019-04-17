@@ -40,7 +40,7 @@ public:
 
   const bool get_diffuse() { return !is_inviscid; }
   void set_diffuse(const bool _do_diffuse) { is_inviscid = not _do_diffuse; }
-  //void set_amr(const bool _do_amr) { adaptive_radii = _do_amr; }
+  void set_amr(const bool _do_amr) { adaptive_radii = _do_amr; }
   S get_nom_sep_scaled() const { return nom_sep_scaled; }
   S get_particle_overlap() const { return particle_overlap; }
   CoreType get_core_func() const { return core_func; }
@@ -135,7 +135,7 @@ void Diffusion<S,A,I>::step(const double                _time,
   vrm.set_hnu(std::sqrt(_dt/_re));
 
   // ensure that it knows to allow or disallow adaptive radii
-  //vrm.set_adaptive_radii(adaptive_radii);
+  vrm.set_adaptive_radii(adaptive_radii);
 
   // loop over active vorticity
   for (auto &coll : _vort) {
@@ -143,11 +143,11 @@ void Diffusion<S,A,I>::step(const double                _time,
     // if no strength, skip
     if (std::visit([=](auto& elem) { return elem.is_inert(); }, coll)) continue;
 
-    // but only check particles ("Points")
-    if (std::holds_alternative<Points<float>>(coll)) {
+    // run this step if the collection is Points
+    if (std::holds_alternative<Points<S>>(coll)) {
 
-      Points<float>& pts = std::get<Points<float>>(coll);
-      //std::cout << "    computing diffusion among " << pts.get_n() << " particles" << std::endl;
+      Points<S>& pts = std::get<Points<S>>(coll);
+      std::cout << "    computing diffusion among " << pts.get_n() << " particles" << std::endl;
 
       // none of these are passed as const, because both may be extended with new particles
       std::array<Vector<S>,Dimensions>& x = pts.get_pos();
@@ -186,6 +186,7 @@ void Diffusion<S,A,I>::step(const double                _time,
       pts.resize(r.size());
     }
   }
+
 
   //
   // reflect interior particles to exterior because VRM only works in free space

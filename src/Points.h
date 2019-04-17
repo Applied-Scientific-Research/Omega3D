@@ -52,7 +52,7 @@ public:
     this->n = _in.size()/nper;
 
     // make sure we have a complete input vector
-    assert(_in.size() % nper == 0);
+    assert(_in.size() % nper == 0 && "Input array size is not a multiple of 3 or 7");
 
     // this initialization specific to Points
     for (size_t d=0; d<Dimensions; ++d) {
@@ -127,6 +127,8 @@ public:
     const size_t nold = this->n;
 
     const size_t nper = (this->E == inert) ? 3 : 7;
+    assert(_in.size() % nper == 0 && "Input array size is not a multiple of 3 or 7");
+
     const size_t nnew = _in.size()/nper;
     std::cout << "  adding " << nnew << " particles to collection..." << std::endl;
 
@@ -183,16 +185,16 @@ public:
       // no radii or elongation
 
     } else {
-      size_t thisn = r.size();
+      const size_t thisrn = r.size();
       r.resize(_nnew);
-      for (size_t i=thisn; i<_nnew; ++i) {
+      for (size_t i=thisrn; i<_nnew; ++i) {
         r[i] = 1.0;
       }
 
       // elongations here
-      thisn = elong.size();
+      const size_t thisen = elong.size();
       elong.resize(_nnew);
-      for (size_t i=thisn; i<_nnew; ++i) {
+      for (size_t i=thisen; i<_nnew; ++i) {
         elong[i] = 1.0;
       }
     }
@@ -380,7 +382,7 @@ public:
       if (max_strength < 0.0) {
         max_strength = std::sqrt(thismax);
       } else {
-        max_strength = 0.1*std::sqrt(thismax) + 0.9*max_strength;
+        max_strength = 0.05*std::sqrt(thismax) + 0.95*max_strength;
       }
 
     } else {

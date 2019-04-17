@@ -7,6 +7,7 @@
 
 #include "Simulation.h"
 #include "Points.h"
+#include "BEMHelper.h"
 #include "VtkXmlHelper.h"
 #include "Split.h"
 
@@ -114,10 +115,10 @@ const bool Simulation::get_diffuse() {
   return diff.get_diffuse();
 }
 
-//void Simulation::set_amr(const bool _do_amr) {
-//  diff.set_amr(_do_amr);
-//  diff.set_diffuse(true);
-//}
+void Simulation::set_amr(const bool _do_amr) {
+  diff.set_amr(_do_amr);
+  diff.set_diffuse(true);
+}
 
 #ifdef USE_GL
 void Simulation::initGL(std::vector<float>& _projmat,
@@ -369,7 +370,7 @@ void Simulation::async_step() {
 // here's the vortex method: convection and diffusion with operator splitting
 //
 void Simulation::step() {
-  std::cout << std::endl << "Taking step at t=" << time << " with n=" << get_nparts() << std::endl;
+  std::cout << std::endl << "Taking step " << nstep << " at t=" << time << " with n=" << get_nparts() << std::endl;
 
   // we wind up using this a lot
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
@@ -378,14 +379,14 @@ void Simulation::step() {
   diff.step(time, dt, re, get_vdelta(), thisfs, vort, bdry, bem);
 
   // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
-  //diff.step(time, 0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry, bem);
+  //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
 
   // advect with no diffusion (must update BEM strengths)
   //conv.advect_1st(time, dt, thisfs, vort, bdry, fldpt, bem);
   conv.advect_2nd(time, dt, thisfs, vort, bdry, fldpt, bem);
 
   // operator splitting requires another half-step diffuse (must compute new coefficients)
-  //diff.step(time, 0.5*dt, get_vdelta(), get_ips(), thisfs, vort, bdry, bem);
+  //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
 
   // step complete, now split any elongated particles
   for (auto &coll: vort) {
@@ -414,7 +415,7 @@ void Simulation::step() {
     }
   }
 
-  // update strength for coloring purposes (eventually should be taken care of automatically)
+  // update strengths for coloring purposes (eventually should be taken care of automatically)
   //vort.update_max_str();
 
   // update dt and return
@@ -435,6 +436,10 @@ void Simulation::dump_stats_to_status() {
     // the basics
     sf.append_value((float)time);
     sf.append_value((int)get_nparts());
+
+    // update the BEM solution before we compute these numbers
+    std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
+    solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
 
     // more advanced info
 
@@ -503,7 +508,7 @@ void Simulation::add_particles(std::vector<float> _invec) {
   if (_invec.size() == 0) return;
 
   // make sure we're getting full particles
-  assert(_invec.size() % 7 == 0);
+  assert(_invec.size() % 7 == 0 && "Input vector not a multiple of 7");
 
   // add the vdelta to each particle and pass it on
   const float thisvd = get_vdelta();
@@ -548,7 +553,7 @@ void Simulation::add_fldpts(std::vector<float> _invec, const bool _moves) {
   if (_invec.size() == 0) return;
 
   // make sure we're getting full points
-  assert(_invec.size() % Dimensions == 0);
+  assert(_invec.size() % Dimensions == 0 && "Input vector not a multiple of dimensions");
 
   const move_t move_type = _moves ? lagrangian : fixed;
 

@@ -7,6 +7,14 @@
 
 #pragma once
 
+#ifdef _WIN32
+#define __restrict__ __restrict
+#endif
+
+#ifdef USE_VC
+#include <Vc/Vc>
+#endif
+
 #include <cmath>
 
 

@@ -77,6 +77,7 @@ public:
 
     // strength
     if (s) {
+      // must dereference s to get the actual vector
       for (size_t d=0; d<Dimensions; ++d) {
         (*s)[d].resize(n+nnew);
         for (size_t i=0; i<nnew; ++i) {

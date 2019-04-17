@@ -188,7 +188,7 @@ void solve_bem(const double                         _time,
 
           // solve for the coefficients in this block
           Vector<S> coeffs = std::visit(cvisitor, src, targ);
-          assert(coeffs.size() == tnum*snum);
+          assert(coeffs.size() == tnum*snum && "Number of coefficients does not match predicted");
           // targets are rows, sources are cols
           _bem.set_block(tstart, tnum, sstart, snum, coeffs);
         }

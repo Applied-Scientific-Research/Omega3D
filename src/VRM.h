@@ -7,24 +7,24 @@
 
 #pragma once
 
-#include "nnls.h"
-#include "nanoflann.hpp"
 #include "Core.h"
 #include "Icosahedron.h"
 #include "VectorHelper.h"
+#include "nanoflann.hpp"
+#include "nnls.h"
 
 #include <Eigen/Dense>
 
-#include <cstdlib>
-#include <cstdio>
-#include <cstdint>
-#include <cassert>
-#include <iostream>
-#include <cmath>
-#include <array>
-#include <vector>
 #include <algorithm>
+#include <array>
+#include <cassert>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <vector>
 
 //
 // Class to hold VRM parameters and temporaries
@@ -38,6 +38,7 @@ public:
   VRM(const CT);
   void set_hnu(const ST);
   ST get_hnu();
+  void set_adaptive_radii(const bool);
 
   // all-to-all diffuse; can change array sizes
   void diffuse_all(Vector<ST>&, Vector<ST>&, Vector<ST>&,
@@ -80,9 +81,16 @@ private:
   std::vector<ST> xsite,ysite,zsite;
   void initialize_sites();
 
+  // for adaptive particle size VRM
+  bool adapt_radii = false;
+  //const ST radius_lapse = 0.3;
+  // only adapt particles if their strength is less than this
+  //   fraction of max particle strength
+  //const ST adapt_thresh = 1.e-2;
+
   // do not perform VRM if source particle strength is less than
   //   this fraction of max particle strength
-  const ST ignore_thresh = 1.e-4;
+  const ST ignore_thresh = 1.e-5;
   // are thresholds absolute or relative to strongest particle?
   const bool thresholds_are_relative = true;
 
@@ -170,6 +178,13 @@ void VRM<ST,CT,MAXMOM>::set_hnu(const ST _newhnu) {
 }
 
 template <class ST, class CT, uint8_t MAXMOM>
+void VRM<ST,CT,MAXMOM>::set_adaptive_radii(const bool _doamr) {
+  //if (!adapt_radii and _doamr) std::cout << "Particle radii will adapt to solution" << std::endl;
+  //if (adapt_radii and !_doamr) std::cout << "Particle radii will not adapt to solution" << std::endl;
+  adapt_radii = _doamr;
+}
+
+template <class ST, class CT, uint8_t MAXMOM>
 ST VRM<ST,CT,MAXMOM>::get_hnu() {
   return (ST)h_nu;
 }
@@ -221,6 +236,7 @@ std::array<ST,3> VRM<ST,CT,MAXMOM>::fill_neighborhood_search(const int32_t idx,
   return retval;
   //return std::array<ST,3>(tx[iopen], ty[iopen], tz[iopen]);
 }
+
 
 //
 // Find the change in strength and radius that would occur over one dt
@@ -289,7 +305,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
   nanoflann::SearchParams params;
   params.sorted = true;
 
-  // do not adapt radii -- copy current to new
+  // do not adapt particle radii -- copy current to new
   newr = r;
 
   // for each particle (can parallelize this part)
@@ -578,6 +594,8 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
   // solve with non-negative least-squares
   Eigen::NNLS<Eigen::Matrix<CT,Eigen::Dynamic,Eigen::Dynamic> > nnls_solver(A, 100, nnls_eps);
 
+  //std::cout << "A is" << std::endl << A << std::endl;
+  //std::cout << "b is" << std::endl << b.transpose() << std::endl;
   if (nnls_solver.solve(b)) {
     fractions = nnls_solver.x();
     //std::cout << "  success! required " << nnls_solver.numLS() << " LS problems" << std::endl;

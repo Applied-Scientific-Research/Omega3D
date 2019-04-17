@@ -47,11 +47,11 @@ public:
       max_strength(-1.0) {
 
     // make sure input arrays are correctly-sized
-    assert(_x.size() % Dimensions == 0);
-    assert(_idx.size() % Dimensions == 0);
+    assert(_x.size() % Dimensions == 0 && "Position array is not an even multiple of dimensions");
+    assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
     const size_t nnodes = _x.size() / Dimensions;
     const size_t nsurfs = _idx.size() / Dimensions;
-    assert(_val.size() % nsurfs == 0);
+    assert(_val.size() % nsurfs == 0 && "Value array is not an even multiple of panel count");
 
     std::cout << "  new collection with " << nsurfs << " panels and " << nnodes << " nodes" << std::endl;
 
@@ -76,13 +76,14 @@ public:
       if (_idx[i] >= nnodes) idx_are_all_good = false;
       idx[i] = _idx[i];
     }
-    assert(idx_are_all_good);
+    assert(idx_are_all_good && "Some indicies are bad");
 
     // compute all basis vectors and panel areas
     compute_bases();
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
+      // value is a fixed strength for the segment
       assert(_val.size() == 2*nsurfs);
       // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths
       for (size_t d=0; d<2; ++d) {
@@ -232,8 +233,8 @@ public:
     const size_t neold = get_npanels();
 
     // make sure input arrays are correctly-sized
-    assert(_x.size() % Dimensions == 0);
-    assert(_idx.size() % Dimensions == 0);
+    assert(_x.size() % Dimensions == 0 && "Position array is not an even multiple of dimensions");
+    assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
     const size_t nnodes = _x.size() / Dimensions;
     const size_t nsurfs = _idx.size() / Dimensions;
 
@@ -268,13 +269,14 @@ public:
       if (_idx[i] >= nnold+nnodes) idx_are_all_good = false;
       idx[2*neold+i] = nnold + _idx[i];
     }
-    assert(idx_are_all_good);
+    assert(idx_are_all_good && "Some indicies are bad");
 
     // compute all basis vectors and panel areas
     compute_bases();
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
+      // value is a fixed strength for the element
       assert(_val.size() == 2*nsurfs);
       // value is a fixed strength for the element
       for (size_t d=0; d<2; ++d) {
@@ -343,7 +345,7 @@ public:
     if (not this->B) return;
 
     // make sure we've calculated transformed center (we do this when we do vol)
-    assert(vol > 0.0);
+    assert(vol > 0.0 && "Have not calculated transformed center");
     // and we trust that we've transformed utc to tc
 
     // apply a factor times the body motion
@@ -394,7 +396,7 @@ public:
     //if (std::abs(rotvel) < std::numeric_limits<float>::epsilon()) return;
 
     // make sure we've calculated transformed center (we do this when we do vol)
-    assert(vol > 0.0);
+    assert(vol > 0.0 && "Have not calculated transformed center");
     // and we trust that we've transformed utc to tc
 
     // have we made ss yet? or is it the right size?
@@ -407,7 +409,7 @@ public:
     }
 
     //std::cout << "Inside add_rot_strengths, sizes are: " << get_npanels() << " " << this->s->size() << " " << ss->size() << std::endl;
-    assert(this->s->size() == get_npanels());
+    assert(this->s->size() == get_npanels() && "Strength array is not the same as panel count");
 
     // what is the actual factor that we will add?
     const S factor = _constfac + rotvel*_rotfactor;
@@ -449,8 +451,8 @@ public:
   void set_geom_center() {
 
     // we must have an attached body and a set of untransformed coordinates
-    assert(this->B);
-    assert(this->ux);
+    assert(this->B && "Body pointer has not been set");
+    assert(this->ux && "Untransformed positions have not been set");
 
     std::cout << "  inside Surfaces::set_geom_center with " << get_npanels() << " panels" << std::endl;
 
@@ -708,7 +710,29 @@ public:
   }
 
   // add and return the total circulation of all elements
+  //   specializing the one in ElementBase because we need
+  //   to scale by panel area here
   std::array<S,3> get_total_circ(const double _time) {
+    std::array<S,3> circ;
+    circ.fill(0.0);
+
+    if (this->s) {
+      // make this easy - represent as particles
+      std::vector<S> pts = represent_as_particles(0.0, 1.0);
+
+      // now compute impulse of those
+      for (size_t i=0; i<get_npanels(); ++i) {
+        const size_t idx = 7*i;
+        circ[0] += pts[idx+3+0];
+        circ[1] += pts[idx+3+1];
+        circ[2] += pts[idx+3+2];
+      }
+    }
+
+    return circ;
+  }
+
+  std::array<S,3> get_body_circ(const double _time) {
     std::array<S,3> circ;
     circ.fill(0.0);
 
