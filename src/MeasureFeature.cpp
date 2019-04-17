@@ -10,7 +10,7 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
-//#include <random>
+#include <random>
 
 // write out any object of parent type MeasureFeature by dispatching to appropriate "debug" method
 std::ostream& operator<<(std::ostream& os, MeasureFeature const& ff) {
@@ -98,8 +98,15 @@ TracerEmitter::init_particles(float _ips) const {
 
 std::vector<float>
 TracerEmitter::step_particles(float _ips) const {
-  // emits one per step
-  return std::vector<float>({m_x, m_y, m_z});
+  // set up the random number generator
+  static std::random_device rd;  //Will be used to obtain a seed for the random number engine
+  static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+  static std::uniform_real_distribution<float> zmean_dist(-0.5, 0.5);
+
+  // emits one per step, jittered slightly
+  return std::vector<float>({m_x + _ips*zmean_dist(gen),
+                             m_y + _ips*zmean_dist(gen),
+                             m_z + _ips*zmean_dist(gen)});
 }
 
 void
@@ -137,6 +144,11 @@ TracerEmitter::to_json() const {
 std::vector<float>
 TracerBlob::init_particles(float _ips) const {
 
+  // set up the random number generator
+  static std::random_device rd;  //Will be used to obtain a seed for the random number engine
+  static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+  static std::uniform_real_distribution<float> zmean_dist(-0.5, 0.5);
+
   // create a new vector to pass on
   std::vector<float> x;
 
@@ -153,9 +165,9 @@ TracerBlob::init_particles(float _ips) const {
     float dr = sqrt((float)(i*i+j*j+k*k)) * _ips;
     if (dr < m_rad) {
       // create a particle here
-      x.emplace_back(m_x + _ips*(float)i);
-      x.emplace_back(m_y + _ips*(float)j);
-      x.emplace_back(m_z + _ips*(float)k);
+      x.emplace_back(m_x + _ips*((float)i+zmean_dist(gen)));
+      x.emplace_back(m_y + _ips*((float)j+zmean_dist(gen)));
+      x.emplace_back(m_z + _ips*((float)k+zmean_dist(gen)));
     }
   }
   }
