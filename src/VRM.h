@@ -346,6 +346,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
       (void) mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
       //const size_t nMatches = mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
       //std::cout << "radiusSearch(): radius " << search_rad << " found " << nMatches;
+      //if (ret_matches.size() > 100) std::cout << "part " << i << " at " << x[i] << " " << y[i] << " " << z[i] << " has " << ret_matches.size() << " matches" << std::endl;
 
       // copy the indexes into my vector
       for (size_t j=0; j<ret_matches.size(); ++j) inear.push_back(ret_matches[j].first);

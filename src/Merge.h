@@ -97,14 +97,7 @@ size_t merge_close_particles(std::array<Vector<S>,3>& pos,
     const S query_pt[Dimensions] = { x[i], y[i], z[i] };
     const size_t nMatches = mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
 
-    // one match should be self, but we don't know which one (really?)
-    if (nMatches > 1 and false)  {
-      std::cout << "part " << i << std::endl;
-      for (size_t j=0; j<ret_matches.size(); ++j) {
-        std::cout << "\t" << j << "\t" << std::sqrt(ret_matches[j].second)/r[i] << std::endl;
-      }
-    }
-
+    // match 0 should be self, match 1 is closest
     // if there are more than one, check the radii
     if (nMatches > 1) {
       for (size_t j=0; j<ret_matches.size(); ++j) {
