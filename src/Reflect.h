@@ -566,7 +566,7 @@ void clear_inner_panp2 (Surfaces<S> const & _src,
 
   std::cout << "    cropped " << num_cropped << " particles" << std::endl;
   // flops count here is taken from reflect - might be different here
-  const S flops = _targ.get_n() * (0.0 + 0.0*_src.get_npanels());
+  const S flops = 149.0 * (float)_targ.get_n() * (float)_src.get_npanels();
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
