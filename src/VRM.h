@@ -1,7 +1,7 @@
 /*
  * VRM.h - the Vorticity Redistribution Method for 3D vortex particles
  *
- * (c)2017-8 Applied Scientific Research, Inc.
+ * (c)2017-9 Applied Scientific Research, Inc.
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
@@ -41,11 +41,11 @@ public:
   void set_adaptive_radii(const bool);
 
   // all-to-all diffuse; can change array sizes
-  void diffuse_all(Vector<ST>&, Vector<ST>&, Vector<ST>&,
-                   Vector<ST>&, Vector<ST>&, Vector<ST>&,
-                   Vector<ST>&, Vector<ST>&, Vector<ST>&,
-                   Vector<ST>&, Vector<ST>&,
-                   const CoreType, const ST);
+  void diffuse_all(std::array<Vector<ST>,3>&,
+                   std::array<Vector<ST>,3>&,
+                   Vector<ST>&,
+                   const CoreType,
+                   const ST);
 
 protected:
   // search for new target location
@@ -56,6 +56,7 @@ protected:
                                             const std::vector<int32_t>&,
                                             const ST);
 
+  // set up and call the solver
   bool attempt_solution(const int32_t,
                         std::vector<int32_t>&,
                         Vector<ST>&,
@@ -239,40 +240,51 @@ std::array<ST,3> VRM<ST,CT,MAXMOM>::fill_neighborhood_search(const int32_t idx,
 
 
 //
-// Find the change in strength and radius that would occur over one dt
+// Find the change in strength and radius that would occur over one dt and apply it
 //
 template <class ST, class CT, uint8_t MAXMOM>
-void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
-                                    Vector<ST>& r, Vector<ST>& newr,
-                                    Vector<ST>& sx, Vector<ST>& sy, Vector<ST>& sz,
-                                    Vector<ST>& dsx, Vector<ST>& dsy, Vector<ST>& dsz,
+void VRM<ST,CT,MAXMOM>::diffuse_all(std::array<Vector<ST>,3>& pos,
+                                    std::array<Vector<ST>,3>& str,
+                                    Vector<ST>& rad,
                                     const CoreType core_func,
                                     const ST particle_overlap) {
 
   // make sure all vector sizes are identical
-  assert(x.size()==y.size() && "Input array sizes do not match");
-  assert(x.size()==z.size() && "Input array sizes do not match");
-  assert(x.size()==r.size() && "Input array sizes do not match");
-  assert(x.size()==newr.size() && "Input array sizes do not match");
-  assert(x.size()==sx.size() && "Input array sizes do not match");
-  assert(x.size()==sy.size() && "Input array sizes do not match");
-  assert(x.size()==sz.size() && "Input array sizes do not match");
-  assert(x.size()==dsx.size() && "Input array sizes do not match");
-  assert(x.size()==dsy.size() && "Input array sizes do not match");
-  assert(x.size()==dsz.size() && "Input array sizes do not match");
-  size_t n = x.size();
-
-  // start timers
-  std::chrono::system_clock::time_point start, end;
-  std::chrono::duration<double> elapsed_seconds;
-  start = std::chrono::system_clock::now();
+  assert(pos[0].size()==pos[1].size() && "Input arrays are not uniform size");
+  assert(pos[0].size()==pos[2].size() && "Input arrays are not uniform size");
+  assert(pos[0].size()==str[0].size() && "Input arrays are not uniform size");
+  assert(pos[0].size()==str[1].size() && "Input arrays are not uniform size");
+  assert(pos[0].size()==str[2].size() && "Input arrays are not uniform size");
+  assert(pos[0].size()==rad.size() && "Input arrays are not uniform size");
+  size_t n = rad.size();
 
   std::cout << "  Running VRM with n " << n << std::endl;
+
+  // start timer
+  auto start = std::chrono::system_clock::now();
+
+  // reference or generate the local set of vectors
+  Vector<ST>& x = pos[0];
+  Vector<ST>& y = pos[1];
+  Vector<ST>& z = pos[2];
+  Vector<ST>& r = rad;
+  Vector<ST>& sx = str[0];
+  Vector<ST>& sy = str[1];
+  Vector<ST>& sz = str[2];
+
+  Vector<ST> newr, dsx, dsy, dsz;
+  newr.resize(n);
+  dsx.resize(n);
+  dsy.resize(n);
+  dsz.resize(n);
 
   // zero out delta vector
   std::fill(dsx.begin(), dsx.end(), 0.0);
   std::fill(dsy.begin(), dsy.end(), 0.0);
   std::fill(dsz.begin(), dsz.end(), 0.0);
+
+  // and copy the new radius
+  std::copy(r.begin(), r.end(), newr.begin());
 
   // create the matrix elements, reusable, and dynamically allocated
   Eigen::Matrix<CT, Eigen::Dynamic, 1> fractions;
@@ -322,7 +334,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
     //std::cout << "\nDiffusing particle " << i << " at " << x[i] << " " << y[i] << " " << z[i] << std::endl;
 
     // if current particle strength is very small, skip out
-    //   (this particle still core-spreads somewhat)
+    //   (this particle could still core-spread if adaptive particle size is on)
     const ST thisstr = sx[i]*sx[i] + sy[i]*sy[i] + sz[i]*sz[i];
     if ((thresholds_are_relative && (thisstr < maxStrSqrd * std::pow(ignore_thresh,2))) or
         (!thresholds_are_relative && (thisstr < std::pow(ignore_thresh,2)))) continue;
@@ -344,8 +356,6 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
       const ST distsq_thresh = std::pow(search_rad, 2);
       const ST query_pt[3] = { x[i], y[i], z[i] };
       (void) mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
-      //const size_t nMatches = mat_index.index->radiusSearch(query_pt, distsq_thresh, ret_matches, params);
-      //std::cout << "radiusSearch(): radius " << search_rad << " found " << nMatches;
       //if (ret_matches.size() > 100) std::cout << "part " << i << " at " << x[i] << " " << y[i] << " " << z[i] << " has " << ret_matches.size() << " matches" << std::endl;
 
       // copy the indexes into my vector
@@ -361,6 +371,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
       // is the closest of these "too close"? Start at 0.5 if you want to catch the most egregious.
       //if (std::sqrt(ret_matches[1].second) < 0.5*nom_sep) ntooclose++;
 
+      //std::cout << "radiusSearch(): radius " << search_rad << " found " << inear.size();
       //std::cout << std::endl;
       //for (size_t j=0; j<ret_matches.size(); ++j) std::cout << "   " << ret_matches[j].first << "\t" << ret_matches[j].second << std::endl;
     } else {
@@ -471,11 +482,27 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(Vector<ST>& x, Vector<ST>& y, Vector<ST>& z,
   //std::cout << "  number of close pairs " << (ntooclose/2) << std::endl;
   std::cout << "    after VRM, n is " << n << std::endl;
 
-  end = std::chrono::system_clock::now();
-  elapsed_seconds = end-start;
-  //const float gflops = (flops / 1.e+9) / (float)elapsed_seconds.count();
-  //printf("    diffuse_all:\t[%.6f] seconds at [%.3f] GFlop/s\n", (float)elapsed_seconds.count(), gflops);
-  printf("    diffuse_all:\t[%.4f] seconds\n", (float)elapsed_seconds.count());
+  // apply the changes to the master vectors
+  for (size_t i=0; i<n; ++i) {
+    r[i] = newr[i];
+  }
+  assert(n==sx.size() and dsx.size()==sx.size());
+  for (size_t i=0; i<n; ++i) {
+    sx[i] += dsx[i];
+  }
+  assert(n==sy.size() and dsy.size()==sy.size());
+  for (size_t i=0; i<n; ++i) {
+    sy[i] += dsy[i];
+  }
+  assert(n=sz.size() and dsz.size()==sz.size());
+  for (size_t i=0; i<n; ++i) {
+    sz[i] += dsz[i];
+  }
+
+  // finish timer and report
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  printf("    vrm.diffuse_all:\t[%.4f] seconds\n", (float)elapsed_seconds.count());
 }
 
 //

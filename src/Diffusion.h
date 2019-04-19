@@ -148,41 +148,17 @@ void Diffusion<S,A,I>::step(const double                _time,
       Points<S>& pts = std::get<Points<S>>(coll);
       std::cout << "    computing diffusion among " << pts.get_n() << " particles" << std::endl;
 
-      // none of these are passed as const, because both may be extended with new particles
-      std::array<Vector<S>,Dimensions>& x = pts.get_pos();
-      Vector<S>&                        r = pts.get_rad();
-      std::array<Vector<S>,Dimensions>& s = pts.get_str();
+      // vectors are not passed as const, because they may be extended with new particles
+      // this call also applies the changes, though we may want to save any changes into another
+      //   vector of derivatives to be applied later
+      vrm.diffuse_all(pts.get_pos(),
+                      pts.get_str(),
+                      pts.get_rad(),
+                      core_func,
+                      particle_overlap);
 
-      // and make vectors for the new values
-      Vector<S> newr = r;
-      Vector<S> dsx, dsy, dsz;
-      dsx.resize(r.size());
-      dsy.resize(r.size());
-      dsz.resize(r.size());
-
-      // finally call VRM
-      vrm.diffuse_all(x[0], x[1], x[2], r, newr, s[0], s[1], s[2], dsx, dsy, dsz, core_func, particle_overlap);
-
-      // apply the strength change to the particles
-      //elem->increment_in_place();
-      assert(dsx.size()==s[0].size());
-      for (size_t i=0; i<s[0].size(); ++i) {
-        s[0][i] += dsx[i];
-      }
-      assert(dsy.size()==s[1].size());
-      for (size_t i=0; i<s[1].size(); ++i) {
-        s[1][i] += dsy[i];
-      }
-      assert(dsz.size()==s[2].size());
-      for (size_t i=0; i<s[2].size(); ++i) {
-        s[2][i] += dsz[i];
-      }
-
-      // and update the strength
-      //elem->update_max_str();
-
-      // we probably have a different number of particles now, resize the u, ug, elong arrays
-      pts.resize(r.size());
+      // resize the rest of the arrays
+      pts.resize(pts.get_rad().size());
     }
   }
 
