@@ -56,15 +56,18 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
-* Port over variable-core-size drawing techniques from O2D
+* Augment BEM to make it work for rotating bodies
+* Get BEM working for moving bodies
 * Allow general spheres - use the ips to scale refinement of an icosahedron
 * Add some pics, maybe aGIF, to this readme
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
-* Use the actual core function to draw the blobs - but what is the real core function?
 * Add arcball rotation to the viewport - see [here](https://www.3dgep.com/understanding-the-view-matrix/) for some glm code
 * Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
+* ~~Get basic BEM working for non-moving bodies~~
+* ~~Port over variable-core-size drawing techniques from O2D~~
+* ~~Use the actual core function to draw the blobs - but what is the real core function?~~ NO
 * ~~Allow reading obj/stl/off/ply file using `igl/read_triangle_mesh.h`~~
 * ~~Draw the triangular elements, even if very basically~~
 * ~~Keep updated with Omega2D development and features: vtk, png, json, etc.~~
