@@ -494,7 +494,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::array<Vector<ST>,3>& pos,
   for (size_t i=0; i<n; ++i) {
     sy[i] += dsy[i];
   }
-  assert(n=sz.size() and dsz.size()==sz.size());
+  assert(n==sz.size() and dsz.size()==sz.size());
   for (size_t i=0; i<n; ++i) {
     sz[i] += dsz[i];
   }
