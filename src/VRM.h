@@ -486,15 +486,15 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::array<Vector<ST>,3>& pos,
   for (size_t i=0; i<n; ++i) {
     r[i] = newr[i];
   }
-  assert(n==sx.size() and dsx.size()==sx.size());
+  assert(n==sx.size() and dsx.size()==sx.size() && "Array size mismatch in VRM");
   for (size_t i=0; i<n; ++i) {
     sx[i] += dsx[i];
   }
-  assert(n==sy.size() and dsy.size()==sy.size());
+  assert(n==sy.size() and dsy.size()==sy.size() && "Array size mismatch in VRM");
   for (size_t i=0; i<n; ++i) {
     sy[i] += dsy[i];
   }
-  assert(n==sz.size() and dsz.size()==sz.size());
+  assert(n==sz.size() and dsz.size()==sz.size() && "Array size mismatch in VRM");
   for (size_t i=0; i<n; ++i) {
     sz[i] += dsz[i];
   }
