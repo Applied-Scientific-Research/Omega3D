@@ -299,11 +299,11 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::array<Vector<ST>,3>& pos,
     if (thisstr > maxStr) maxStr = thisstr;
   }
   const ST maxStrSqrd = maxStr;
-  std::cout << "    maxStrSqrd " << maxStrSqrd << std::endl;
+  //std::cout << "    maxStrSqrd " << maxStrSqrd << std::endl;
 
   // convert particle positions into something nanoflann can understand
-  Eigen::Matrix<ST, Eigen::Dynamic, 3> xp;
-  xp.resize(n,3);
+  Eigen::Matrix<ST, Eigen::Dynamic, Dimensions> xp;
+  xp.resize(n,Dimensions);
   xp.col(0) = Eigen::Map<Eigen::Matrix<ST, Eigen::Dynamic, 1> >(x.data(), n);
   xp.col(1) = Eigen::Map<Eigen::Matrix<ST, Eigen::Dynamic, 1> >(y.data(), n);
   xp.col(2) = Eigen::Map<Eigen::Matrix<ST, Eigen::Dynamic, 1> >(z.data(), n);
