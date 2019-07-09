@@ -235,12 +235,16 @@ int main(int argc, char const *argv[]) {
   std::vector<std::string> recent_json_files;
   std::vector<std::string> recent_geom_files;
 
+  float fontSize = 13.0f;
+
   // a string to hold any error messages
   std::string sim_err_msg;
 
   // GUI and drawing parameters
   bool export_vtk_this_frame = false;	// write a vtk with the current data
-  bool draw_this_frame = false;		// draw the frame immediately
+  std::vector<std::string> vtk_out_files; // list of just-output files
+  bool draw_this_frame = false;		// draw the frame as soon as its done
+  std::string png_out_file;		// the name of the recently-written png
   bool record_all_frames = false;	// save a frame when a new one is ready
   bool show_stats_window = false;
   bool show_terminal_window = false;
@@ -315,8 +319,31 @@ int main(int argc, char const *argv[]) {
 
     // before we start again, write the vtu output
     if (sim.get_nparts() > 0 and export_vtk_this_frame) {
-      sim.write_vtk();
+      vtk_out_files = sim.write_vtk();
       export_vtk_this_frame = false;
+    }
+
+    // draw a notification box
+    if (not vtk_out_files.empty()) {
+      static int32_t vtkframect = 0;
+      ++vtkframect;
+
+      // draw the notification
+      ImGui::SetNextWindowSize(ImVec2(10+fontSize*12, 10+fontSize*(2+vtk_out_files.size())));
+      ImGui::SetNextWindowPosCenter();
+      ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
+      ImGui::Begin("Vtk written", NULL, window_flags);
+      ImGui::Text("Wrote %ld file(s):", vtk_out_files.size());
+      for (auto &thisfile : vtk_out_files) {
+        ImGui::Text("  %s", thisfile.c_str());
+      }
+      ImGui::End();
+
+      // make sure this isn't up for too long
+      if (vtkframect == 90) {
+        vtkframect = 0;
+        vtk_out_files.clear();
+      }
     }
 
     // see if we should start a new step
@@ -1144,8 +1171,7 @@ int main(int argc, char const *argv[]) {
     }
 
     // Show the terminal output of the program
-    if (show_terminal_window)
-    {
+    if (show_terminal_window) {
       ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
       ImGui::Begin("Terminal", &show_terminal_window);
       ImGui::Text("Hello");
@@ -1153,8 +1179,7 @@ int main(int argc, char const *argv[]) {
     }
 
     // Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
-    if (show_test_window)
-    {
+    if (show_test_window) {
       ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
       ImGui::ShowTestWindow(&show_test_window);
     }
@@ -1178,10 +1203,31 @@ int main(int argc, char const *argv[]) {
       static int frameno = 0;
       std::stringstream pngfn;
       pngfn << "img_" << std::setfill('0') << std::setw(5) << frameno << ".png";
-      (void) saveFramePNG(pngfn.str());
-      std::cout << "Wrote screenshot to " << pngfn.str() << std::endl;
+      png_out_file = pngfn.str();
+      (void) saveFramePNG(png_out_file);
+      std::cout << "Wrote screenshot to " << png_out_file << std::endl;
       frameno++;
       draw_this_frame = false;
+    }
+
+    // if we're just drawing this one frame, then announce that we wrote it
+    if (not png_out_file.empty()) {
+      static int32_t pngframect = 0;
+      ++pngframect;
+
+      // draw the notification
+      ImGui::SetNextWindowSize(ImVec2(10+fontSize*12, 10+fontSize*2));
+      ImGui::SetNextWindowPosCenter();
+      ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
+      ImGui::Begin("Png written", NULL, window_flags);
+      ImGui::Text("Wrote %s", png_out_file.c_str());
+      ImGui::End();
+
+      // make sure this isn't up for too long
+      if (pngframect == 90) {
+        pngframect = 0;
+        png_out_file.clear();
+      }
     }
 
     // draw the GUI
