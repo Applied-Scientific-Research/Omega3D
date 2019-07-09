@@ -246,7 +246,8 @@ int main(int argc, char const *argv[]) {
   bool draw_this_frame = false;		// draw the frame as soon as its done
   std::string png_out_file;		// the name of the recently-written png
   bool record_all_frames = false;	// save a frame when a new one is ready
-  bool show_stats_window = false;
+  bool show_stats_window = true;
+  bool show_welcome_window = true;
   bool show_terminal_window = false;
   bool show_test_window = false;
   bool show_geom_input_window = false;
@@ -411,8 +412,9 @@ int main(int argc, char const *argv[]) {
     //
     {
 
+    ImGui::SetNextWindowSize(ImVec2(140+fontSize*24,100+fontSize*12), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(20,20), ImGuiSetCond_FirstUseEver);
     ImGui::Begin("Omega3D");
-    ImGui::TextWrapped("Welcome to Omega3D. Select a simulation from the drop-down, or manually set your simulation globals, then add one or more flow structures. Space bar starts and stops the run. Have fun!");
     ImGui::Spacing();
 
     // Select pre-populated simulations
@@ -1161,12 +1163,41 @@ int main(int argc, char const *argv[]) {
     ImGui::End();
     }
 
-    // Show the simulation stats as 2D plots
-    if (show_stats_window)
-    {
-      ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
-      ImGui::Begin("Statistics", &show_stats_window);
-      ImGui::Text("Hello");
+    // Rendering
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(rparams.clear_color[0], rparams.clear_color[1], rparams.clear_color[2], rparams.clear_color[3]);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Show the welcome window
+    if (show_welcome_window) {
+      ImGui::OpenPopup("Welcome!");
+      ImGui::SetNextWindowSize(ImVec2(500,300));
+      ImGui::SetNextWindowPosCenter();
+      ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+      if (ImGui::BeginPopupModal("Welcome!", NULL, window_flags)) {
+        //ImGui::Begin("Welcome", &show_welcome_window);
+        ImGui::TextWrapped("Welcome to Omega2D! Select a simulation from the drop-down, load from a file, or manually set your simulation global properites and add one or more flow, boundary, or measurement structures. Space bar starts and stops the run, Reset clears and loads new simulation properties. Left mouse button drags the frame around, mouse scroll wheel zooms. Save your flow set-up to json or your flow image to png or vtu. Have fun!");
+        ImGui::Spacing();
+        //if (ImGui::Button("Got it.", ImVec2(120,0))) { show_welcome_window = false; }
+        //ImGui::End();
+        // const float xwid = ImGui::GetWindowContentRegionWidth();
+        if (ImGui::Button("Got it", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); show_welcome_window = false; }
+        ImGui::EndPopup();
+      }
+    }
+
+    // Show the simulation stats in the corner
+    if (show_stats_window) {
+      // there's no way to have this appear in the output png without the rest of the GUI
+      ImGui::SetNextWindowSize(ImVec2(10+fontSize*11, 10+fontSize*4));
+      ImGui::SetNextWindowPos(ImVec2(20, display_h-fontSize*5));
+      ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+      ImGui::Begin("Statistics", &show_stats_window, window_flags);
+      ImGui::Text("Step %13ld", sim.get_nstep());
+      ImGui::Text("Time %13.4f", sim.get_time());
+      ImGui::Text("Particles %8ld", sim.get_nparts());
       ImGui::End();
     }
 
@@ -1183,13 +1214,6 @@ int main(int argc, char const *argv[]) {
       ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
       ImGui::ShowTestWindow(&show_test_window);
     }
-
-    // Rendering
-    int display_w, display_h;
-    glfwGetFramebufferSize(window, &display_w, &display_h);
-    glViewport(0, 0, display_w, display_h);
-    glClearColor(rparams.clear_color[0], rparams.clear_color[1], rparams.clear_color[2], rparams.clear_color[3]);
-    glClear(GL_COLOR_BUFFER_BIT);
 
     // draw the simulation: panels and particles
     compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
