@@ -516,13 +516,13 @@ int main(int argc, char const *argv[]) {
 
     // or load a simulation from a JSON file
     ImGui::SameLine();
-    if (ImGui::Button("Or load a json file", ImVec2(160,0))) show_json_input_window = true;
+    if (ImGui::Button("Load from json", ImVec2(10+fontSize*8,0))) show_json_input_window = true;
 
     if (show_json_input_window) {
       bool try_it = false;
       static std::string infile = "input.json";
 
-      if (fileIOWindow( try_it, infile, recent_json_files, "Open", {"*.json", "*.*"}, true, ImVec2(500,250))) {
+      if (fileIOWindow( try_it, infile, recent_json_files, "Open", {"*.json", "*.*"}, true, ImVec2(200+26*fontSize,300))) {
         show_json_input_window = false;
 
         if (try_it and !infile.empty()) {
@@ -713,7 +713,7 @@ int main(int argc, char const *argv[]) {
 
         // show different inputs based on what is selected
         switch(item) {
-          case 0:
+          case 0: {
             // a blob of multiple vortons
             ImGui::InputFloat3("strength", vstr);
             ImGui::SliderFloat("radius", &rad, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
@@ -728,9 +728,9 @@ int main(int argc, char const *argv[]) {
             ImGui::SameLine();
             // it would be nice to be able to put this all in
             //SingleParticle::draw_creation_gui();
-            break;
+            } break;
 
-          case 1:
+          case 1: {
             // random particles in a block
             ImGui::SliderInt("number", &npart, 10, 100000);
             ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
@@ -742,9 +742,9 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            break;
+            } break;
 
-          case 2:
+          case 2: {
             // oriented singular vortex ring
             ImGui::InputFloat3("direction", vstr);
             ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
@@ -757,9 +757,9 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            break;
+            } break;
 
-          case 3:
+          case 3: {
             // oriented thick-cored vortex ring
             ImGui::InputFloat3("direction", vstr);
             ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
@@ -773,7 +773,7 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            break;
+            } break;
         }
 
         if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
@@ -810,13 +810,13 @@ int main(int argc, char const *argv[]) {
             // this geometry is attached to a new moving body
             ImGui::InputText("x position", strx, 512);
             ImGui::SameLine();
-            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * \% ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
+            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
             ImGui::InputText("y position", stry, 512);
             ImGui::SameLine();
-            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * \% ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
+            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
             ImGui::InputText("z position", stry, 512);
             ImGui::SameLine();
-            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * \% ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
+            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
             break;
         }
 
@@ -834,7 +834,7 @@ int main(int argc, char const *argv[]) {
 
         // show different inputs based on what is selected
         switch(item) {
-          case 0:
+          case 0: {
             // create a solid sphere
             ImGui::SliderFloat("diameter", &scale, 0.01f, 10.0f, "%.4f", 2.0);
             ImGui::TextWrapped("This feature will add a solid spherical body centered at the given coordinates");
@@ -864,8 +864,9 @@ int main(int argc, char const *argv[]) {
               show_bdry_create_window = false;
             }
             ImGui::SameLine();
-            break;
-          case 1:
+            } break;
+
+          case 1: {
             // create a solid rectangle
             static float xs[3] = {1.0f, 1.0f, 1.0f};
             ImGui::InputFloat3("side lengths", xs);
@@ -898,8 +899,9 @@ int main(int argc, char const *argv[]) {
               show_bdry_create_window = false;
             }
             ImGui::SameLine();
-            break;
-          case 2:
+            } break;
+
+          case 2: {
             // load a geometry file
             static std::string infile = "input.obj";
             static std::string shortname = infile;
@@ -951,7 +953,7 @@ int main(int argc, char const *argv[]) {
               show_bdry_create_window = false;
             }
             ImGui::SameLine();
-            break;
+            } break;
         }
 
         if (ImGui::Button("Cancel", ImVec2(120,0))) { show_bdry_create_window = false; }
@@ -976,7 +978,7 @@ int main(int argc, char const *argv[]) {
 
         // show different inputs based on what is selected
         switch(item) {
-          case 0:
+          case 0: {
             // a single measurement point
             ImGui::InputFloat3("position", xc);
             ImGui::Checkbox("Point follows flow", &is_lagrangian);
@@ -987,8 +989,8 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            break;
-          case 1:
+            } break;
+          case 1: {
             // a tracer emitter
             ImGui::InputFloat3("position", xc);
             ImGui::TextWrapped("This feature will add 1 tracer emitter");
@@ -998,8 +1000,8 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            break;
-          case 2:
+            } break;
+          case 2: {
             // a tracer circle
             ImGui::InputFloat3("center", xc);
             ImGui::SliderFloat("radius", &rad, 0.5f*sim.get_ips(), 0.5f, "%.4f");
@@ -1011,8 +1013,8 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            break;
-          case 3:
+            } break;
+          case 3: {
             // a tracer line
             ImGui::InputFloat3("start", xc);
             ImGui::InputFloat3("finish", xf);
@@ -1024,8 +1026,8 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            break;
-          case 4:
+            } break;
+          case 4: {
             // a static, measurement line
             ImGui::InputFloat3("start", xc);
             ImGui::InputFloat3("finish", xf);
@@ -1037,7 +1039,7 @@ int main(int argc, char const *argv[]) {
               ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            break;
+            } break;
         }
 
         if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
