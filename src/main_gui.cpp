@@ -1069,64 +1069,23 @@ int main(int argc, char const *argv[]) {
       // help separate this from the final info
       ImGui::Separator();
     }
+
+
+    // Output buttons, under a header
     ImGui::Spacing();
-
-    nframes++;
-
-    // check vs. end conditions, if present
-    if (sim.test_vs_stop_async()) sim_is_running = false;
-
-    // all the other stuff
-    {
-      if (sim_is_running) {
-        ImGui::Text("Simulation is running...step = %ld, time = %g", sim.get_nstep(), sim.get_time());
-        if (ImGui::Button("PAUSE", ImVec2(200,0))) sim_is_running = false;
-        // space bar pauses
-        if (ImGui::IsKeyPressed(32)) sim_is_running = false;
-      } else {
-        ImGui::Text("Simulation is not running, step = %ld, time = %g", sim.get_nstep(), sim.get_time());
-        if (ImGui::Button("RUN", ImVec2(200,0))) sim_is_running = true;
-        ImGui::SameLine();
-        if (ImGui::Button("Step", ImVec2(120,0))) begin_single_step = true;
-        // and space bar resumes
-        if (ImGui::IsKeyPressed(32)) sim_is_running = true;
-      }
-      ImGui::SameLine();
-      if (ImGui::Button("Reset", ImVec2(120,0))) {
-        std::cout << std::endl << "Reset requested" << std::endl;
-        // remove all particles and reset timer
-        sim.reset();
-        std::cout << "Reset complete" << std::endl;
-      }
-
-      ImGui::Spacing();
-      //ImGui::Separator();
-      /*
-      ImGui::Text("Open additional windows");
-      if (ImGui::Button("Plot statistics")) show_stats_window ^= 1;
-      ImGui::SameLine();
-      if (ImGui::Button("Show terminal output")) show_terminal_window ^= 1;
-      ImGui::SameLine();
-      */
-      //if (ImGui::Button("ImGui Samples")) show_test_window ^= 1;
-
-      ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)",
-                  1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
-      ImGui::Text("Number of panels: %ld  particles: %ld  field points: %ld",
-                  sim.get_npanels(), sim.get_nparts(), sim.get_nfldpts());
+    if (ImGui::CollapsingHeader("Save output")) {
 
       // save the simulation to a JSON or VTK file
       ImGui::Spacing();
-      if (ImGui::Button("Save setup to json", ImVec2(180,0))) show_file_output_window = true;
+      if (ImGui::Button("Save setup to JSON", ImVec2(20+12*fontSize,0))) show_file_output_window = true;
       ImGui::SameLine();
-      if (ImGui::Button("Save parts to vtk", ImVec2(170,0))) export_vtk_this_frame = true;
+      if (ImGui::Button("Save parts to VTU", ImVec2(20+12*fontSize,0))) export_vtk_this_frame = true;
 
       if (show_file_output_window) {
         bool try_it = false;
         static std::string outfile = "output.json";
 
-        if (fileIOWindow( try_it, outfile, recent_json_files, "Save", {"*.json", "*.*"}, false, ImVec2(500,250))) {
+        if (fileIOWindow( try_it, outfile, recent_json_files, "Save", {"*.json", "*.*"}, false, ImVec2(200+26*fontSize,300))) {
           show_file_output_window = false;
 
           if (try_it) {
@@ -1144,20 +1103,86 @@ int main(int argc, char const *argv[]) {
       }
 
       // PNG output of the render frame
-      if (ImGui::Button("Save screenshot to png", ImVec2(180,0))) draw_this_frame = true;
+      if (ImGui::Button("Save screenshot to PNG", ImVec2(20+12*fontSize,0))) draw_this_frame = true;
       ImGui::SameLine();
       if (record_all_frames) {
-        if (ImGui::Button("STOP", ImVec2(80,0))) {
+        if (ImGui::Button("STOP RECORDING", ImVec2(20+12*fontSize,0))) {
           record_all_frames = false;
           sim_is_running = false;
         }
       } else {
-        if (ImGui::Button("RECORD to png", ImVec2(120,0))) {
+        if (ImGui::Button("RECORD to PNG", ImVec2(20+12*fontSize,0))) {
           record_all_frames = true;
           sim_is_running = true;
         }
       }
     }
+
+
+    nframes++;
+
+    // check vs. end conditions, if present
+    if (sim.test_vs_stop_async()) {
+      // just pause sim
+      sim_is_running = false;
+
+      // fully quit if asked
+      if (sim.quitonstop()) {
+        if (is_ready) {
+          // this simulation step has finished, write png and exit
+          draw_this_frame = true;
+
+          // tell glfw to close the window next time around
+          glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+      }
+    }
+
+    // all the other stuff
+    {
+      ImGui::Spacing();
+      ImGui::Separator();
+      ImGui::Spacing();
+
+      if (sim_is_running) {
+        //ImGui::Text("Simulation is running...step = %ld, time = %g", sim.get_nstep(), sim.get_time());
+        if (ImGui::Button("PAUSE", ImVec2(200,20+fontSize))) sim_is_running = false;
+        // space bar pauses
+        if (ImGui::IsKeyPressed(32)) sim_is_running = false;
+      } else {
+        //ImGui::Text("Simulation is not running, step = %ld, time = %g", sim.get_nstep(), sim.get_time());
+        if (ImGui::Button("RUN", ImVec2(200,20+fontSize))) sim_is_running = true;
+        ImGui::SameLine();
+        if (ImGui::Button("Step", ImVec2(120,0))) begin_single_step = true;
+        // and space bar resumes
+        if (ImGui::IsKeyPressed(32)) sim_is_running = true;
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Reset", ImVec2(120,0))) {
+        std::cout << std::endl << "Reset requested" << std::endl;
+        // remove all particles and reset timer
+        sim.reset();
+        std::cout << "Reset complete" << std::endl;
+      }
+
+      //ImGui::Spacing();
+      //ImGui::Separator();
+      /*
+      ImGui::Text("Open additional windows");
+      if (ImGui::Button("Plot statistics")) show_stats_window ^= 1;
+      ImGui::SameLine();
+      if (ImGui::Button("Show terminal output")) show_terminal_window ^= 1;
+      ImGui::SameLine();
+      */
+      //if (ImGui::Button("ImGui Samples")) show_test_window ^= 1;
+
+      //ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)",
+      //            1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+      //ImGui::Text("Number of panels: %ld  particles: %ld  field points: %ld",
+      //            sim.get_npanels(), sim.get_nparts(), sim.get_nfldpts());
+    }
+
 
     // done drawing the UI window
     ImGui::End();
