@@ -36,10 +36,6 @@ int main(int argc, char const *argv[]) {
   std::vector< std::unique_ptr<MeasureFeature> > mfeatures;
   RenderParams rparams;
 
-  sim.set_diffuse(false);
-  sim.set_re_for_ips(0.1);
-  *(sim.addr_dt()) = 0.1;
-
   // a string to hold any error messages
   std::string sim_err_msg;
 
@@ -47,7 +43,6 @@ int main(int argc, char const *argv[]) {
   if (argc == 2) {
     std::string infile = argv[1];
     read_json(sim, ffeatures, bfeatures, mfeatures, rparams, infile);
-    std::cout << std::endl << "Loaded simulation from " << infile << std::endl;
   } else {
     std::cout << std::endl << "Usage:" << std::endl;
     std::cout << "  " << argv[0] << " filename.json" << std::endl << std::endl;
