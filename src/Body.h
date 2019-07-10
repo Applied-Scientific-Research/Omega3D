@@ -11,8 +11,9 @@
 
 #define TE_NAT_LOG
 #include "tinyexpr.h"
-
 #include "json/json.hpp"
+
+#include <Eigen/Geometry>
 
 #include <string>
 #include <memory>
@@ -81,11 +82,13 @@ private:
   std::vector<te_expr*> pos_func;
   te_expr* apos_func;
 
-  // 2D position and velocity (initial, or constant)
+  // 3D position and velocity (initial, or constant)
   Vec pos;
   Vec vel;
 
   // angular position and velocity (initial, or constant)
+  Eigen::Quaternion<double> qpos;
+  Eigen::Quaternion<double> qvel;
   double apos;
   double avel;
 
