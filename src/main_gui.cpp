@@ -6,6 +6,8 @@
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
+#define PROGNAME Omega3D
+
 #include "FlowFeature.h"
 #include "BoundaryFeature.h"
 #include "MeasureFeature.h"
@@ -187,7 +189,7 @@ static void ShowHelpMarker(const char* desc)
 // execution starts here
 
 int main(int argc, char const *argv[]) {
-  std::cout << std::endl << "Omega3D GUI" << std::endl;
+  std::cout << std::endl << "PROGNAME GUI" << std::endl;
 
   // Set up vortex particle simulation
   Simulation sim;
@@ -211,7 +213,7 @@ int main(int argc, char const *argv[]) {
 #if __APPLE__
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-  GLFWwindow* window = glfwCreateWindow(1280, 720, "Omega3D GUI", nullptr, nullptr);
+  GLFWwindow* window = glfwCreateWindow(1280, 720, "PROGNAME GUI", nullptr, nullptr);
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1); // Enable vsync
 
@@ -408,13 +410,13 @@ int main(int argc, char const *argv[]) {
     //}
 
     //
-    // The main Omega3D window
+    // The main window
     //
     {
 
     ImGui::SetNextWindowSize(ImVec2(140+fontSize*24,100+fontSize*12), ImGuiSetCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(20,20), ImGuiSetCond_FirstUseEver);
-    ImGui::Begin("Omega3D");
+    ImGui::Begin("PROGNAME");
     ImGui::Spacing();
 
     // Select pre-populated simulations
