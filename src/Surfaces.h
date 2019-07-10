@@ -160,14 +160,19 @@ public:
   const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
   std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
 
-  // vortex and source strengths
-  const std::array<Vector<S>,2>&  get_vort_str() const { return vs; }
-  const bool                      have_src_str() const { return (bool)ss; }
-  const Vector<S>&                get_src_str()  const { return *ss; }
+  // panel properties
   const std::array<Vector<S>,3>&  get_x1()       const { return b[0]; }
   const std::array<Vector<S>,3>&  get_x2()       const { return b[1]; }
   const std::array<Vector<S>,3>&  get_norm()     const { return b[2]; }
   const Vector<S>&                get_area()     const { return area; }
+
+  // vortex strengths
+  const std::array<Vector<S>,2>&  get_vort_str() const { return vs; }
+  std::array<Vector<S>,2>&        get_vort_str()       { return vs; }
+
+  // source strengths
+  const bool                      have_src_str() const { return (bool)ss; }
+  const Vector<S>&                get_src_str()  const { return *ss; }
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
@@ -239,6 +244,19 @@ public:
     //if (FORCE_NO_AUGMENTATION) augment = false;
     //augment = false;
     return augment;
+  }
+
+  const float get_max_bc_value() const {
+    S max_bc = 0.0;
+    
+    // no matter how many directions of bc, check each one for the max
+    for (size_t d=0; d<bc.size(); ++d) {
+      const S this_max = *std::max_element(std::begin(bc[d]), std::end(bc[d]));
+      const S this_min = *std::min_element(std::begin(bc[d]), std::end(bc[d]));
+      max_bc = std::max(max_bc, std::max(this_max, -this_min));
+    }
+
+    return (float)max_bc;
   }
 
   // add more nodes and panels to this collection
