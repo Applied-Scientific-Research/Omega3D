@@ -58,10 +58,12 @@ size_t split_elongated(Vector<S>& x, Vector<S>& y, Vector<S>& z,
   xp.col(2) = Eigen::Map<Eigen::Matrix<S, Eigen::Dynamic, 1> >(z.data(), n);
   
   // generate the searchable data structure
-  typedef nanoflann::KDTreeEigenMatrixAdaptor< Eigen::Matrix<S, Eigen::Dynamic, 3> >  my_kd_tree_t;
+  typedef typename Eigen::Matrix<S, Eigen::Dynamic, Dimensions> EigenMatType;
+  typedef typename EigenMatType::Index EigenIndexType;
+  typedef nanoflann::KDTreeEigenMatrixAdaptor< EigenMatType >  my_kd_tree_t;
   my_kd_tree_t mat_index(xp, 20);
   mat_index.index->buildIndex();
-  std::vector<std::pair<long int,S> > ret_matches;
+  std::vector<std::pair<EigenIndexType,S> > ret_matches;
   ret_matches.reserve(48);
   nanoflann::SearchParams params;
   params.sorted = true;
