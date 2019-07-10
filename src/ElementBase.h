@@ -258,17 +258,17 @@ protected:
   std::shared_ptr<Body> B;
 
   // common arrays for all derived types
-  size_t n;
+  size_t n;						// number of nodes
 
   // state vector
-  std::array<Vector<S>,Dimensions> x;                   // position
-  std::optional<std::array<Vector<S>,Dimensions>> s;    // strength
+  std::array<Vector<S>,Dimensions> x;                   // position of nodes
+  std::optional<std::array<Vector<S>,Dimensions>> s;    // strength at nodes
 
   // time derivative of state vector
-  std::array<Vector<S>,Dimensions> u;                   // velocity
+  std::array<Vector<S>,Dimensions> u;                   // velocity at nodes
   //std::optional<std::array<Vector<S>,Dimensions>> dsdt; // strength change
 
   // for objects moving with a body
-  std::optional<std::array<Vector<S>,Dimensions>> ux;   // untransformed position
+  std::optional<std::array<Vector<S>,Dimensions>> ux;   // untransformed position of nodes
 };
 

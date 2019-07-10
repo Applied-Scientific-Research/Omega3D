@@ -55,7 +55,7 @@ public:
 
     std::cout << "  new collection with " << nsurfs << " panels and " << nnodes << " nodes" << std::endl;
 
-    // pull out the node locations
+    // pull out the node locations, they go in the base class
     for (size_t d=0; d<Dimensions; ++d) {
       this->x[d].resize(nnodes);
       for (size_t i=0; i<nnodes; ++i) {
@@ -122,7 +122,7 @@ public:
       // value is ignored (probably zero)
     }
 
-    // velocity is in the base class - just resize it here
+    // velocity is per node, in the base class - just resize it here
     for (size_t d=0; d<Dimensions; ++d) {
       this->u[d].resize(nnodes);
     }
@@ -152,19 +152,13 @@ public:
   const S                        get_vol()         const { return vol; }
   const std::array<S,Dimensions> get_geom_center() const { return tc; }
 
-  // override the ElementBase versions and send the panel-center vels
-  const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
-  std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
-
   // callers should never have to change this array
   const std::vector<Int>&        get_idx()         const { return idx; }
   const std::vector<Vector<S>>&  get_bcs()         const { return bc; }
 
-  // find out the next row index in the BEM after this collection
-  void set_first_row(const Int _i) { istart = _i; }
-  const Int get_first_row() const { return istart; }
-  const Int get_num_rows()  const { return bc.size()*bc[0].size() + (this->B ? 3 : 0); }
-  const Int get_next_row()  const { return istart+get_num_rows(); }
+  // override the ElementBase versions and send the panel-center vels
+  const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
+  std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
 
   // vortex and source strengths
   const std::array<Vector<S>,2>&  get_vort_str() const { return vs; }
@@ -175,7 +169,13 @@ public:
   const std::array<Vector<S>,3>&  get_norm()     const { return b[2]; }
   const Vector<S>&                get_area()     const { return area; }
 
-  // accept results from BEM and place in the proper place
+  // find out the next row index in the BEM after this collection
+  void set_first_row(const Int _i) { istart = _i; }
+  const Int get_first_row() const { return istart; }
+  const Int get_num_rows()  const { return bc.size()*bc[0].size() + (is_augmented() ? 3 : 0); }
+  const Int get_next_row()  const { return istart+get_num_rows(); }
+
+  // assign the new strengths from BEM - do not let base class do this
   void set_str(const size_t ioffset, const size_t icnt, Vector<S> _in) {
     assert(vs.size() == 2 && "Vortex strength array not initialized");
     assert(_in.size() == vs[0].size()*2 && "Set strength array size does not match");
@@ -223,6 +223,24 @@ public:
     }
   }
 
+  // a little logic to see if we should augment the BEM equations for this object
+  const bool is_augmented() const {
+    bool augment = true;
+    if (this->B) {
+      // is the body pointer ground?
+      if (std::string("ground").compare(this->B->get_name()) == 0) {
+        // now, does the object bound internal flow?
+        if (vol < 0.0) augment = false;
+      }
+    } else {
+      // nullptr for Body? no augment (old way of turning it off)
+      augment = false;
+    }
+    //if (FORCE_NO_AUGMENTATION) augment = false;
+    //augment = false;
+    return augment;
+  }
+
   // add more nodes and panels to this collection
   void add_new(const std::vector<S>&   _x,
                const std::vector<Int>& _idx,
@@ -238,12 +256,12 @@ public:
     const size_t nnodes = _x.size() / Dimensions;
     const size_t nsurfs = _idx.size() / Dimensions;
 
-    std::cout << "  adding " << nsurfs << " new surface panels to collection..." << std::endl;
+    std::cout << "  adding " << nsurfs << " new surface panels and " << nnodes << " new points to collection..." << std::endl;
 
     // DON'T call the method in the base class, because we do things differently here
     //ElementBase<S>::add_new(_in);
 
-    // pull out the node locations
+    // pull out the node locations, they are base class
     for (size_t d=0; d<Dimensions; ++d) {
       this->x[d].resize(nnold+nnodes);
       for (size_t i=0; i<nnodes; ++i) {
@@ -342,7 +360,9 @@ public:
     // no need to call base class now
     //ElementBase<S>::add_body_motion(_factor);
 
+    // if no body pointer, or attached to ground, return
     if (not this->B) return;
+    if (std::string("ground").compare(this->B->get_name()) == 0) return;
 
     // make sure we've calculated transformed center (we do this when we do vol)
     assert(vol > 0.0 && "Have not calculated transformed center");
@@ -377,9 +397,7 @@ public:
 
     // and reset the source strengths here
     if (ss) {
-      for (size_t i=0; i<ss->size(); ++i) {
-        (*ss)[i] = 0.0;
-      }
+      std::fill(ss->begin(), ss->end(), 0.0);
     }
   }
 
@@ -389,9 +407,11 @@ public:
   // AND we don't have the time - assume bodies have been transformed
   void add_rot_strengths(const S _constfac, const S _rotfactor) {
 
-    // if no rotation, strengths, or no parent Body, then no problem!
+    // if no rotation, strengths, or no parent Body, or attached to ground, then no problem!
     if (not this->B) return;
     if (not this->s) return;
+    if (std::string("ground").compare(this->B->get_name()) == 0) return;
+
     const S rotvel = (S)this->B->get_rotvel();
     //if (std::abs(rotvel) < std::numeric_limits<float>::epsilon()) return;
 
@@ -572,26 +592,6 @@ public:
   }
 
 
-/*
-  // up-size all arrays to the new size, filling with sane values
-  void resize(const size_t _nnew) {
-    const size_t currn = this->n;
-    //std::cout << "  inside Surfaces::resize with " << currn << " " << _nnew << std::endl;
-
-    // must explicitly call the method in the base class - this sets n
-    ElementBase<S>::resize(_nnew);
-
-    if (_nnew == currn) return;
-
-    // radii here
-    const size_t thisn = r.size();
-    r.resize(_nnew);
-    for (size_t i=thisn; i<_nnew; ++i) {
-      r[i] = 1.0;
-    }
-  }
-*/
-
   void zero_vels() {
     // must explicitly call the method in the base class to zero the node vels
     ElementBase<S>::zero_vels();
@@ -617,6 +617,24 @@ public:
   }
 
 /*
+  // up-size all arrays to the new size, filling with sane values
+  void resize(const size_t _nnew) {
+    const size_t currn = this->n;
+    //std::cout << "  inside Surfaces::resize with " << currn << " " << _nnew << std::endl;
+
+    // must explicitly call the method in the base class - this sets n
+    ElementBase<S>::resize(_nnew);
+
+    if (_nnew == currn) return;
+
+    // radii here
+    const size_t thisn = r.size();
+    r.resize(_nnew);
+    for (size_t i=thisn; i<_nnew; ++i) {
+      r[i] = 1.0;
+    }
+  }
+
   //
   // 1st order Euler advection and stretch
   //
@@ -732,6 +750,7 @@ public:
     return circ;
   }
 
+  // add and return the total circulation of all elements
   std::array<S,3> get_body_circ(const double _time) {
     std::array<S,3> circ;
     circ.fill(0.0);
@@ -956,10 +975,10 @@ public:
   }
 
 protected:
-  // ElementBase.h has x, s, u
+  // ElementBase.h has x, s, u, ux on the *nodes*
 
   // element-wise variables special to triangular panels
-  std::vector<Int>		idx;	// indexes into the x array
+  std::vector<Int>		   idx;	// indexes into the x array
   std::array<Vector<S>,3>	pu;	// panel-center velocities (ElementBase stores *node* properties)
 
   std::vector<Vector<S>>	bc;	// boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
@@ -971,6 +990,7 @@ protected:
 
   // parameters for the encompassing body
   Int istart;	// index of first entry in RHS vector and A matrix
+
   S vol;			// volume of the body - for augmented BEM solution
   std::array<S,Dimensions> utc;		// untransformed geometric center
   std::array<S,Dimensions>  tc;		// transformed geometric center

@@ -94,10 +94,9 @@ void solve_bem(const double                         _time,
 
     // optionally augment with an additional value
     if (rhs.size() < tnum) {
-      assert(tnum-rhs.size()==3);
-      // zero out the array
+      assert(tnum-rhs.size()==3 && "Number of augmented rows is not 3");
+      // first, add up the free circulation
       std::array<S,3> tot_circ = {0.0, 0.0, 0.0};
-      // then, add up the free circulation
       for (auto &src : _vort) {
         const std::array<S,3> this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(_time); }, src);
         for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
@@ -199,7 +198,7 @@ void solve_bem(const double                         _time,
 
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
-    printf("  Complete A matrix:\t[%.4f] cpu seconds\n", (float)elapsed_seconds.count());
+    printf("    make A matrix:\t[%.4f] cpu seconds\n", (float)elapsed_seconds.count());
   }
 
   //
@@ -228,9 +227,9 @@ void solve_bem(const double                         _time,
       }
     }
 
-    // peel off the last entry - the rotation rate - if there is a body pointer
-    const std::shared_ptr<Body> bptr = std::visit([=](auto& elem) { return elem.get_body_ptr(); }, targ);
-    if (bptr) {
+    // peel off the last entry - the rotation rate - if the equations were augmented
+    const bool is_aug = std::visit([=](auto& elem) { return elem.is_augmented(); }, targ);
+    if (is_aug) {
       std::cout << "    solved rotation rate is " << new_s.back() << std::endl;
       new_s.pop_back();
     }

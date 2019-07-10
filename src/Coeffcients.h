@@ -139,6 +139,10 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   float flops = 0.0;
   auto start = std::chrono::system_clock::now();
 
+  // how large of a problem do we have?
+  const size_t nsrc  = src.get_npanels();
+  const size_t ntarg = targ.get_npanels();
+
   // pull references to the element arrays
   const std::array<Vector<S>,Dimensions>&  sx = src.get_pos();
   const std::vector<Int>&                  si = src.get_idx();
@@ -158,10 +162,6 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   assert(nunk>0 and nunk<4);
   // each panel-panel chunk needs nunk*nunk coefficients
 
-  // how large of a problem do we have?
-  const size_t nsrc  = src.get_npanels();
-  const size_t ntarg = targ.get_npanels();
-
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
   typedef Vc::Vector<S> StoreVec;
@@ -173,7 +173,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
   // run a panels-on-points algorithm - THIS CAN BE MORE EFFICIENT
   #pragma omp parallel for
-  for (size_t j=0; j<nsrc; j++) {
+  for (int32_t j=0; j<(int32_t)nsrc; j++) {
     // we are looping over sources first, so we're computing the next nunk *columns* in the A matrix
 
     // store separate pointers for each of the nunk columns
@@ -382,8 +382,8 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   // now we augment this "matrix" with an optional new row and column
   //
 
-  const size_t nrows = nunk*ntarg + (targ.get_body_ptr() ? 3 : 0);
-  const size_t ncols = nunk*nsrc  + ( src.get_body_ptr() ? 3 : 0);
+  const size_t nrows = nunk*ntarg + (targ.is_augmented() ? 3 : 0);
+  const size_t ncols = nunk*nsrc  + ( src.is_augmented() ? 3 : 0);
   std::cout << "    augmenting the " << ntarg << " x " << nsrc << " block to " << nrows << " x " << ncols << std::endl;
 
   // make a new 1-D vector to contain the coefficients
@@ -403,7 +403,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
     std::copy(c_iter, c_iter+ntarg, a_iter);
 
     // and add the bottom value to this column
-    if (src.get_body_ptr()) {
+    if (src.is_augmented()) {
       // always include the panel lengths of the source body
       a_iter += nsrc;
       // then write the last value in this column - the length of this panel
@@ -422,7 +422,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   coeffs.clear();
 
   // then add the last column, if necessary, if target rotates
-  if (targ.get_body_ptr()) {
+  if (targ.is_augmented()) {
     auto a_iter = augcoeff.begin() + nsrc*nrows;
 
     // this is the velocity influence from the source body with unit rotational rate on these target panels

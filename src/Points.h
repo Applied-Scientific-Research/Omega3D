@@ -115,6 +115,9 @@ public:
   const Vector<S>& get_rad() const { return r; }
   Vector<S>&       get_rad()       { return r; }
 
+  // a little logic to see if we should augment the BEM equations for this object (see Surfaces.h)
+  const bool is_augmented() const { return false; }
+
   // find out the next row index in the BEM after this collection
   // once we start supporting BEM unknowns on points, we'll have to change these
   void set_first_row(const Int _i) { return; }
@@ -183,7 +186,6 @@ public:
     // radii here
     if (this->E == inert) {
       // no radii or elongation
-
     } else {
       const size_t thisrn = r.size();
       r.resize(_nnew);
