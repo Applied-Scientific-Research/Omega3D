@@ -247,7 +247,7 @@ public:
       augment = false;
     }
     //if (FORCE_NO_AUGMENTATION) augment = false;
-    //augment = false;
+    augment = false;
     return augment;
   }
 
