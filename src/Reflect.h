@@ -194,8 +194,7 @@ void reflect_panp2 (Surfaces<S> const& _src, Points<S>& _targ) {
   const S eps = 10.0*std::numeric_limits<S>::epsilon();
 
   #pragma omp parallel for reduction(+:num_reflected)
-  for (size_t i=0; i<_targ.get_n(); ++i) {
-
+  for (int32_t i=0; i<(int32_t)_targ.get_n(); ++i) {
     S mindist = std::numeric_limits<S>::max();
     std::vector<ClosestReturn<S>> hits;
 
@@ -336,7 +335,7 @@ std::vector<std::tuple<S,S,S>> init_cut_tables (const S _dx) {
   //std::cout << "Making cut tables with nx " << nx << " and dx " << dx << std::endl;
 
   // add the first entry (remove all strength, set dshift later)
-  ct.push_back(std::make_tuple((S)(-nx-0.5)*dx, 0.0, 0.0));
+  ct.push_back(std::make_tuple((S)(-nx-0.5)*dx, (S)0.0, (S)0.0));
 
   // generate the entries
   S twgt = 0.0;
@@ -377,7 +376,7 @@ std::vector<std::tuple<S,S,S>> init_cut_tables (const S _dx) {
   //std::cout << "  total weight " << twgt << std::endl;
 
   // add the last entry (keep all strength, set dshift to zero)
-  ct.push_back(std::make_tuple((S)(nx+1.5)*dx, 1.0, 0.0));
+  ct.push_back(std::make_tuple((S)(nx+1.5)*dx, (S)1.0, (S)0.0));
 
   //std::cout << "Cut table is" << std::endl;
   //for (auto &entry : ct) {
@@ -442,7 +441,7 @@ void clear_inner_panp2 (Surfaces<S> const & _src,
   static bool made_cut_tables = false;
   static std::vector<std::tuple<S,S,S>> ct;
   if (not made_cut_tables) {
-    ct = init_cut_tables<S>(0.1);
+    ct = init_cut_tables<S>((S)0.1);
     made_cut_tables = true;
   }
 
@@ -461,7 +460,7 @@ void clear_inner_panp2 (Surfaces<S> const & _src,
   const S eps = 10.0*std::numeric_limits<S>::epsilon();
 
   #pragma omp parallel for reduction(+:num_cropped)
-  for (size_t i=0; i<_targ.get_n(); ++i) {
+  for (int32_t i=0; i<(int32_t)_targ.get_n(); ++i) {
 
     S mindist = std::numeric_limits<S>::max();
     std::vector<ClosestReturn<S>> hits;

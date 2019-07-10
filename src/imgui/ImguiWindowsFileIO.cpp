@@ -8,24 +8,34 @@
 #include <experimental/filesystem>
 
 #if defined(_WIN32)
-#include <windows.h>
-#include <direct.h>
-#include <tchar.h>
-#define GetCurrentDir _getcwd
+  #include <windows.h>
+  #include <direct.h>
+  #include <tchar.h>
+  #include <IO.h>
+  #define GetCurrentDir _getcwd
+  #include <filesystem> // Microsoft-specific implementation header file name
 #else
-#include <unistd.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#define GetCurrentDir getcwd
+  #include <unistd.h>
+  #include <dirent.h>
+  #include <sys/stat.h>
+  #define GetCurrentDir getcwd
+#endif
+
+#ifdef _MSC_VER 
+//not #if defined(_WIN32) || defined(_WIN64) because we have strncasecmp in mingw
+  #define strncasecmp _strnicmp
+  #define strcasecmp _stricmp
 #endif
 
 #define IM_ARRAYSIZE(_ARR)  ((int)(sizeof(_ARR)/sizeof(*_ARR)))
 
 #if defined(ICON_FA_CARET_DOWN)
-#define CARET_DOWN ICON_FA_CARET_DOWN
+  #define CARET_DOWN ICON_FA_CARET_DOWN
 #else
-#define CARET_DOWN "v"
+  #define CARET_DOWN "v"
 #endif
+
+#undef min
 
 using namespace std;
 using namespace ImGui;
@@ -233,7 +243,7 @@ bool MiniPath::isAbsoluteFilePath( const string& s )
 std::list<string> MiniPath::listDirectories( const string& s )
 {
 #if defined(_WIN32)
-    using namespace experimental::filesystem;
+	using namespace experimental::filesystem::v1;
 
     list<string> directories;
 
@@ -284,7 +294,7 @@ std::list<string> MiniPath::listDirectories( const string& s )
 std::list<string> MiniPath::listFiles( const string& s, string filter )
 {
 #if defined(_WIN32)
-    using namespace experimental::filesystem;
+    using namespace experimental::filesystem::v1;
     list<string> files;
 
 
@@ -471,7 +481,9 @@ bool fileIOWindow(
         size.y += std::min( size_t( 8 ), std::max( dir_list.size(), file_list.size() ) ) *  GetFontSize();
 
     SetNextWindowSize( size );
-    Begin( "FileIO" );
+    // I have no idea why I can't resize this window!?!
+    ImGuiWindowFlags window_flags = !ImGuiWindowFlags_AlwaysAutoResize;
+    Begin( "FileIO", NULL, window_flags );
 
     Text("Directory: "); SameLine();
     PushItemWidth( GetWindowWidth() - 145 );
@@ -558,7 +570,7 @@ bool fileIOWindow(
 #endif
         SameLine();
 
-        PushItemWidth( GetWindowWidth()/2 - 60 );
+        PushItemWidth( (GetWindowWidth()-60)*0.4 );
         if( ListBox( " ", &directory_selected, dir_list.data(), dir_list.size() ) )
         {
             string new_path;
@@ -582,7 +594,7 @@ bool fileIOWindow(
         }
 
         SameLine();
-        PushItemWidth( GetWindowWidth()/2 - 60 );
+        PushItemWidth( (GetWindowWidth()-60)*0.6 );
         if( ListBox( "", &file_selected, file_list.data(), file_list.size() ) )
         {
             strcpy( current_file, file_list[file_selected] );
