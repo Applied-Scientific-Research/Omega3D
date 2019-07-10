@@ -151,6 +151,10 @@ public:
     }
   }
 
+  void add_body_motion(const S factor, const double _time) {
+    // do nothing here
+  }
+
   void zero_strengths() {
     if (s) {
       for (size_t d=0; d<Dimensions; ++d) {
@@ -159,7 +163,38 @@ public:
     }
   }
 
-  void move(const double _dt) {
+  void add_rot_strengths(const S _constfac, const S _rotfactor) {
+    // do nothing here
+  }
+
+  // THIS IS 2D - FIX FOR 3D
+  void transform(const double _time) {
+    // reset positions according to prescribed motion
+    if (B and M == bodybound) {
+      // tell the Body to compute and save its position, vel, angular pos and angular vel
+      B->transform(_time);
+
+      // for the no-rotation case, we can just transform here
+      std::array<double,Dimensions> thispos = B->get_pos();
+      const double theta = B->get_orient();
+      const S st = std::sin(theta);
+      const S ct = std::cos(theta);
+
+      std::cout << "    transforming body at time " << (S)_time << " to " << (S)thispos[0] << " " << (S)thispos[1]
+                << " and theta " << theta << " omega " << B->get_rotvel() << std::endl;
+
+      // and do the transform
+      for (size_t i=0; i<get_n(); ++i) {
+        // rotate and translate
+        x[0][i] = (S)thispos[0] + (*ux)[0][i]*ct - (*ux)[1][i]*st;
+        x[1][i] = (S)thispos[1] + (*ux)[0][i]*st + (*ux)[1][i]*ct;
+        x[2][i] = (S)thispos[2];
+      }
+    }
+  }
+
+  // time is the starting time, time+dt is the ending time
+  void move(const double _time, const double _dt) {
     if (M == lagrangian) {
       std::cout << "  Moving" << to_string() << std::endl;
 
@@ -171,9 +206,14 @@ public:
       }
 
       // update strengths (in derived class)
+
+    } else if (B and M == bodybound) {
+      transform(_time+_dt);
     }
   }
-  void move(const double _dt,
+
+  // time is the starting time, time+dt is the ending time
+  void move(const double _time, const double _dt,
             const double _wt1, ElementBase<S> const & _u1,
             const double _wt2, ElementBase<S> const & _u2) {
     // must confirm that incoming time derivates include velocity
@@ -191,7 +231,7 @@ public:
       // update strengths (in derived class)
 
     } else if (B and M == bodybound) {
-      //transform(_time+_dt);
+      transform(_time+_dt);
     }
   }
 
@@ -225,6 +265,14 @@ public:
       }
     }
 
+    return circ;
+  }
+
+  // add and return the total circulation of the rotating body volume
+  //   will be specialized by Surface
+  std::array<S,3> get_body_circ(const double _time) {
+    std::array<S,3> circ;
+    circ.fill(0.0);
     return circ;
   }
 

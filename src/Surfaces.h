@@ -593,27 +593,25 @@ public:
 
 
   void zero_vels() {
-    // must explicitly call the method in the base class to zero the node vels
-    ElementBase<S>::zero_vels();
-
-    // but also zero the panel-center vels
+    // zero the local, panel-center vels
     for (size_t d=0; d<Dimensions; ++d) {
       pu[d].resize(get_npanels());
       std::fill(pu[d].begin(), pu[d].end(), 0.0);
     }
+    // then explicitly call the method in the base class to zero theirs
+    ElementBase<S>::zero_vels();
   }
 
   void finalize_vels(const std::array<double,Dimensions>& _fs) {
-    // must explicitly call the method in the base class, too
-    ElementBase<S>::finalize_vels(_fs);
-
-    // but also zero the panel-center vels
+    // finalize the panel-center vels first
     const S factor = 0.25/M_PI;
     for (size_t d=0; d<Dimensions; ++d) {
       for (size_t i=0; i<pu[d].size(); ++i) {
         pu[d][i] = _fs[d] + pu[d][i] * factor;
       }
     }
+    // must explicitly call the method in the base class, too
+    ElementBase<S>::finalize_vels(_fs);
   }
 
 /*

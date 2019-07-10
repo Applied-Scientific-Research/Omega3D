@@ -64,11 +64,16 @@ void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
                                   std::vector<Collection>&             _targets) {
 
   //if (_targets.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
-  if (_targets.size() > 0) std::cout << std::endl;
+  //if (_targets.size() > 0) std::cout << std::endl;
 
   // need this for dispatching velocity influence calls, template param is accumulator type
   // should the solution_t be an argument to the constructor?
   InfluenceVisitor<A> visitor;
+
+  // add vortex and source strengths to account for rotating bodies
+  //for (auto &src : _bdry) {
+    //std::visit([=](auto& elem) { elem.add_rot_strengths(0.0, 1.0); }, src);
+  //}
 
   // find the influence on every field point/tracer element
   for (auto &targ : _targets) {
@@ -92,6 +97,10 @@ void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
     std::visit([=](auto& elem) { elem.finalize_vels(_fs); }, targ);
   }
 
+  // remove vortex and source strengths due to rotation
+  //for (auto &src : _bdry) {
+    //std::visit([=](auto& elem) { elem.add_rot_strengths(0.0, -1.0); }, src);
+  //}
 }
 
 //
@@ -123,17 +132,14 @@ void Convection<S,A,I>::advect_1st(const double _time,
 
   // move every movable element
   for (auto &coll : _vort) {
-    std::visit([=](auto& elem) { elem.move(_dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
   }
   for (auto &coll : _bdry) {
-    std::visit([=](auto& elem) { elem.move(_dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
   }
   for (auto &coll : _fldpt) {
-    std::visit([=](auto& elem) { elem.move(_dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
   }
-
-  //std::cout << "After 1st order convection, particles are:" << std::endl;
-  //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
 }
 
 
@@ -163,7 +169,7 @@ void Convection<S,A,I>::advect_2nd(const double _time,
   // advect into an intermediate system
   std::vector<Collection> interim_vort = _vort;
   for (auto &coll : interim_vort) {
-    std::visit([=](auto& elem) { elem.move(_dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
   }
   // now _vort has its original positions and the velocities evaluated there
   // and interm_vort has the positions at t+dt
@@ -171,7 +177,7 @@ void Convection<S,A,I>::advect_2nd(const double _time,
   // do the same for fldpt
   std::vector<Collection> interim_fldpt = _fldpt;
   for (auto &coll : interim_fldpt) {
-    std::visit([=](auto& elem) { elem.move(_dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
   }
 
   // begin the 2nd step ---------
@@ -198,7 +204,7 @@ void Convection<S,A,I>::advect_2nd(const double _time,
     if (std::holds_alternative<Points<float>>(c1) and std::holds_alternative<Points<float>>(c2)) {
       Points<float>& p1 = std::get<Points<float>>(c1);
       Points<float>& p2 = std::get<Points<float>>(c2);
-      p1.move(_dt, 0.5, p1, 0.5, p2);
+      p1.move(_time, _dt, 0.5, p1, 0.5, p2);
     }
     ++v1p;
     ++v2p;
@@ -213,18 +219,10 @@ void Convection<S,A,I>::advect_2nd(const double _time,
     if (std::holds_alternative<Points<float>>(c1) and std::holds_alternative<Points<float>>(c2)) {
       Points<float>& p1 = std::get<Points<float>>(c1);
       Points<float>& p2 = std::get<Points<float>>(c2);
-      p1.move(_dt, 0.5, p1, 0.5, p2);
+      p1.move(_time, _dt, 0.5, p1, 0.5, p2);
     }
     ++v1p;
     ++v2p;
   }
-
-  //std::cout << "After 1st order convection, particles are:" << std::endl;
-  //for (size_t i=0; i<4*n; i+=4) {
-  //  std::cout << "  " << i/4 << "   " << u[i] << " " << u[i+1] << "   " << x[i] << " " << x[i+1] << std::endl;
-  //}
-  //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
-
-  //if (n>0) std::cout << "  part 0 with str " << x[2] << " is at " << x[0] << " " << x[1] << std::endl;
 }
 

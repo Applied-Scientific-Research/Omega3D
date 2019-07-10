@@ -101,11 +101,11 @@ void solve_bem(const double                         _time,
         const std::array<S,3> this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(_time); }, src);
         for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
       }
-      // add up the circulation in bodies other than this one
+      // then add up the circulation in bodies other than this one
       for (auto &src : _bdry) {
         // only if this is not the same collection!
         if (&src != &targ) {
-          const std::array<S,3> this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(_time); }, src);
+          const std::array<S,3> this_circ = std::visit([=](auto& elem) { return elem.get_body_circ(_time); }, src);
           for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
         }
       }

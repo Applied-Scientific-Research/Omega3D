@@ -466,6 +466,8 @@ void Simulation::dump_stats_to_status() {
     for (auto &src : bdry) {
       auto this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(time); }, src);
       for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
+      this_circ = std::visit([=](auto& elem) { return elem.get_body_circ(time); }, src);
+      for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
     }
     for (size_t i=0; i<3; ++i) sf.append_value(tot_circ[i]);
 

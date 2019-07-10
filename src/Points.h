@@ -236,12 +236,18 @@ public:
     }
   }
 
+  void transform(const double _time) {
+    // must explicitly call the method in the base class
+    ElementBase<S>::transform(_time);
+    // no other specialization required here
+  }
+
   //
   // 1st order Euler advection and stretch
   //
-  void move(const double _dt) {
+  void move(const double _time, const double _dt) {
     // must explicitly call the method in the base class
-    ElementBase<S>::move(_dt);
+    ElementBase<S>::move(_time, _dt);
 
     // and specialize
     if (this->M == lagrangian and ug and this->E != inert) {
@@ -309,11 +315,11 @@ public:
   //
   // 2nd order RK advection and stretch
   //
-  void move(const double _dt,
+  void move(const double _time, const double _dt,
             const double _wt1, Points<S> const & _u1,
             const double _wt2, Points<S> const & _u2) {
     // must explicitly call the method in the base class
-    ElementBase<S>::move(_dt, _wt1, _u1, _wt2, _u2);
+    ElementBase<S>::move(_time, _dt, _wt1, _u1, _wt2, _u2);
 
     // must confirm that incoming time derivates include velocity
 
@@ -430,6 +436,25 @@ public:
     }
 
     return imp;
+  }
+
+  void add_body_motion(const S _factor, const double _time) {
+    // no need to call base class now
+    //ElementBase<S>::add_body_motion(_factor);
+    // apply a factor times the body motion
+    //for (size_t i=0; i<this->get_n(); ++i) {
+    //  std::array<S,Dimensions> thisvel = B->get_vel(_time);
+    //  // apply the velocity
+    //  for (size_t d=0; d<Dimensions; ++d) {
+    //    this->u[d][i] += _factor * thisvel[d];
+    //  }
+    //}
+  }
+
+  // augment the strengths with a value equal to that which accounts for
+  //   the solid-body rotation of the object
+  void add_rot_strengths(const S _constfac, const S _rotfactor) {
+    // do nothing here, but when we get Kutta points, we may need to
   }
 
 #ifdef USE_GL
