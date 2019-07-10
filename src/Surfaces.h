@@ -23,9 +23,8 @@
 #include <iostream>
 #include <vector>
 #include <array>
-//#include <memory>
-//#include <optional>
-//#include <random>
+#include <algorithm> // for max_element
+#include <optional>
 #include <cassert>
 
 
@@ -127,6 +126,11 @@ public:
       this->u[d].resize(nnodes);
     }
 
+    // but panel velocity is per panel
+    for (size_t d=0; d<Dimensions; ++d) {
+      pu[d].resize(nsurfs);
+    }
+
     // debug print
     if (false) {
       std::cout << "Nodes" << std::endl;
@@ -141,6 +145,7 @@ public:
 
     // need to reset the base class n
     this->n = nnodes;
+    np = nsurfs;
 
     // find geometric center
     if (this->M == bodybound) {
@@ -353,6 +358,11 @@ public:
       this->u[d].resize(nnold+nnodes);
     }
 
+    // panel velocity is here
+    for (size_t d=0; d<Dimensions; ++d) {
+      pu[d].resize(neold+nsurfs);
+    }
+
     // debug print
     if (false) {
       std::cout << "Nodes" << std::endl;
@@ -367,6 +377,7 @@ public:
 
     // need to reset the base class n
     this->n += nnodes;
+    np += nsurfs;
 
     // re-find geometric center
     if (this->M == bodybound) {
@@ -613,7 +624,6 @@ public:
   void zero_vels() {
     // zero the local, panel-center vels
     for (size_t d=0; d<Dimensions; ++d) {
-      pu[d].resize(get_npanels());
       std::fill(pu[d].begin(), pu[d].end(), 0.0);
     }
     // then explicitly call the method in the base class to zero theirs
@@ -624,7 +634,7 @@ public:
     // finalize the panel-center vels first
     const S factor = 0.25/M_PI;
     for (size_t d=0; d<Dimensions; ++d) {
-      for (size_t i=0; i<pu[d].size(); ++i) {
+      for (size_t i=0; i<get_npanels(); ++i) {
         pu[d][i] = _fs[d] + pu[d][i] * factor;
       }
     }
@@ -907,9 +917,8 @@ public:
         glBufferData(GL_ARRAY_BUFFER, vlen, this->x[i].data(), GL_DYNAMIC_DRAW);
       }
 
-      const size_t ilen = idx.size()*sizeof(Int);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mgl->vbo[Dimensions]);
-      glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilen, idx.data(), GL_DYNAMIC_DRAW);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Int)*idx.size(), idx.data(), GL_DYNAMIC_DRAW);
 
       // here is where we split on element type: active/reactive vs. inert
       if (this->E == inert) {
@@ -993,23 +1002,22 @@ public:
 protected:
   // ElementBase.h has x, s, u, ux on the *nodes*
 
+  size_t np;				// number of panels
+
   // element-wise variables special to triangular panels
-  std::vector<Int>		   idx;	// indexes into the x array
-  std::array<Vector<S>,3>	pu;	// panel-center velocities (ElementBase stores *node* properties)
-
-  std::vector<Vector<S>>	bc;	// boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
-  std::array<Vector<S>,2>	vs;	// vortex sheet strengths of the elements (x1,x2)
-  std::optional<Vector<S>> 	ss;	// source strengths which represent the vel inf of the rotating volume
-
+  std::vector<Int>                 idx;	// indexes into the x array
+  std::array<Vector<S>,Dimensions>  pu; // panel-center velocities (ElementBase stores *node* properties)
+  std::array<Vector<S>,2>           vs; // vortex sheet strengths of the elements (x1,x2)
+  std::vector<Vector<S>>            bc; // boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
+  std::optional<Vector<S>>          ss; // source strengths which represent the vel inf of the rotating volume
+  Vector<S>                       area; // panel area
   std::array<std::array<Vector<S>,3>,3> b;  // transformed basis vectors: x1 is b[0], x2 is b[1], normal is b[2], normal x is b[2][0]
-  Vector<S>                     area;
 
   // parameters for the encompassing body
-  Int istart;	// index of first entry in RHS vector and A matrix
-
-  S vol;			// volume of the body - for augmented BEM solution
-  std::array<S,Dimensions> utc;		// untransformed geometric center
-  std::array<S,Dimensions>  tc;		// transformed geometric center
+  Int                           istart; // index of first entry in RHS vector and A matrix
+  S                                vol; // volume of the body - for augmented BEM solution
+  std::array<S,Dimensions>         utc; // untransformed geometric center
+  std::array<S,Dimensions>          tc; // transformed geometric center
 
 private:
 #ifdef USE_GL
