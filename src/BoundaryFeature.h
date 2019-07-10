@@ -23,10 +23,12 @@ class BoundaryFeature {
 public:
   explicit
   BoundaryFeature(std::shared_ptr<Body> _bp,
+                  bool _ext,
                   float _x,
                   float _y,
                   float _z)
     : m_bp(_bp),
+      m_external(_ext),
       m_x(_x),
       m_y(_y),
       m_z(_z)
@@ -43,6 +45,7 @@ public:
 
 protected:
   std::shared_ptr<Body> m_bp;
+  bool m_external;
   float m_x;
   float m_y;
   float m_z;
@@ -50,6 +53,12 @@ protected:
 
 std::ostream& operator<<(std::ostream& os, BoundaryFeature const& ff);
 
+//
+// Parser for converting json object to new feature
+//
+void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>&,
+                         std::shared_ptr<Body>,
+                         const nlohmann::json);
 
 //
 // Concrete class for geometry from a file (fluid is outside)
@@ -57,6 +66,7 @@ std::ostream& operator<<(std::ostream& os, BoundaryFeature const& ff);
 class ExteriorFromFile : public BoundaryFeature {
 public:
   ExteriorFromFile(std::shared_ptr<Body> _bp = nullptr,
+                   bool _ext = true,
                    float _x = 0.0,
                    float _y = 0.0,
                    float _z = 0.0,
@@ -64,7 +74,7 @@ public:
                    float _sy = 1.0,
                    float _sz = 1.0,
                    std::string _infile = "")
-    : BoundaryFeature(_bp, _x, _y, _z),
+    : BoundaryFeature(_bp, _ext, _x, _y, _z),
       m_sx(_sx),
       m_sy(_sy),
       m_sz(_sz),
@@ -85,10 +95,4 @@ protected:
 };
 
 
-//
-// Parser for converting json object to new feature
-//
-void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>&,
-                         std::shared_ptr<Body>,
-                         const nlohmann::json);
 

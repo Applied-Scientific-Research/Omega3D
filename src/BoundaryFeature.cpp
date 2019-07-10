@@ -140,6 +140,7 @@ ExteriorFromFile::from_json(const nlohmann::json j) {
     m_sy = sc;
     m_sz = sc;
   }
+  m_external = j.value("external", true);
 }
 
 nlohmann::json
@@ -149,6 +150,7 @@ ExteriorFromFile::to_json() const {
   mesh["geometry"] = m_infile;
   mesh["translation"] = {m_x, m_y, m_z};
   mesh["scale"] = {m_sx, m_sy, m_sz};
+  //mesh["external"] = m_external;
   return mesh;
 }
 

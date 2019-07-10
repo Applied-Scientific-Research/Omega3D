@@ -6,8 +6,6 @@
  *           Written by Mark J Stock <markjstock@gmail.com>
  */
 
-#define PROGNAME Omega3D
-
 #include "FlowFeature.h"
 #include "BoundaryFeature.h"
 #include "MeasureFeature.h"
@@ -189,7 +187,7 @@ static void ShowHelpMarker(const char* desc)
 // execution starts here
 
 int main(int argc, char const *argv[]) {
-  std::cout << std::endl << "PROGNAME GUI" << std::endl;
+  std::cout << std::endl << "Omega3D GUI" << std::endl;
 
   // Set up vortex particle simulation
   Simulation sim;
@@ -213,7 +211,7 @@ int main(int argc, char const *argv[]) {
 #if __APPLE__
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-  GLFWwindow* window = glfwCreateWindow(1280, 720, "PROGNAME GUI", nullptr, nullptr);
+  GLFWwindow* window = glfwCreateWindow(1280, 720, "Omega3D GUI", nullptr, nullptr);
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1); // Enable vsync
 
@@ -440,7 +438,7 @@ int main(int argc, char const *argv[]) {
 
     ImGui::SetNextWindowSize(ImVec2(140+fontSize*24,100+fontSize*12), ImGuiSetCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(20,20), ImGuiSetCond_FirstUseEver);
-    ImGui::Begin("PROGNAME");
+    ImGui::Begin("Omega3D");
     ImGui::Spacing();
 
     // Select pre-populated simulations
@@ -851,6 +849,8 @@ int main(int argc, char const *argv[]) {
         const char* items[] = { "sphere", "rectangle", "from file" };
         ImGui::Combo("type", &item, items, 3);
 
+        static bool external_flow = true;
+
         static float xc[3] = {0.0f, 0.0f, 0.0f};
         //static float rotdeg = 0.0f;
         static float scale = 1.0;
@@ -885,7 +885,7 @@ int main(int argc, char const *argv[]) {
                   sim.add_body(bp);
                   break;
               }
-              //bfeatures.emplace_back(std::make_unique<SolidCircle>(bp, xc[0], xc[1], xc[2], scale));
+              //bfeatures.emplace_back(std::make_unique<SolidCircle>(bp, external_flow, xc[0], xc[1], xc[2], scale));
               //std::cout << "Added " << (*bfeatures.back()) << std::endl;
               show_bdry_create_window = false;
             }
@@ -920,7 +920,7 @@ int main(int argc, char const *argv[]) {
                   sim.add_body(bp);
                   break;
               }
-              //bfeatures.emplace_back(std::make_unique<SolidSquare>(bp, xc[0], xc[1], sqside, rotdeg));
+              //bfeatures.emplace_back(std::make_unique<SolidSquare>(bp, external_flow, xc[0], xc[1], sqside, rotdeg));
               //std::cout << "Added " << (*bfeatures.back()) << std::endl;
               show_bdry_create_window = false;
             }
@@ -974,7 +974,7 @@ int main(int argc, char const *argv[]) {
                   sim.add_body(bp);
                   break;
               }
-              bfeatures.emplace_back(std::make_unique<ExteriorFromFile>(bp, xc[0], xc[1], xc[2], scale, scale, scale, infile));
+              bfeatures.emplace_back(std::make_unique<ExteriorFromFile>(bp, external_flow, xc[0], xc[1], xc[2], scale, scale, scale, infile));
               std::cout << "Added " << (*bfeatures.back()) << std::endl;
               show_bdry_create_window = false;
             }
