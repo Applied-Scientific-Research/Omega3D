@@ -470,6 +470,11 @@ int main(int argc, char const *argv[]) {
           ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 0.9,0.05,0.1, 0.5, 1.0));
           is_viscous = false;
           sim.set_diffuse(false);
+          rparams.vcx = -0.5;
+          rparams.vcy = 0.0;
+          rparams.vcz = 0.0;
+          rparams.vsize = 2.0;
+          rparams.circ_density = 0.35;
           // start it up
           sim_is_running = true;
           // and make sure we don't keep re-entering this
@@ -490,6 +495,11 @@ int main(int argc, char const *argv[]) {
           ffeatures.emplace_back(std::make_unique<SingularRing>(-0.18,-0.01,-0.02, 0.9,0.05,0.1, 0.5, 1.0));
           is_viscous = false;
           sim.set_diffuse(false);
+          rparams.vcx = -0.5;
+          rparams.vcy = 0.0;
+          rparams.vcz = 0.0;
+          rparams.vsize = 2.0;
+          rparams.circ_density = 0.15;
           // start it up
           sim_is_running = true;
           // and make sure we don't keep re-entering this
@@ -510,6 +520,11 @@ int main(int argc, char const *argv[]) {
           ffeatures.emplace_back(std::make_unique<SingularRing>(0.04,-0.02,-0.04, 0.9,0.05,0.1, 0.5, 1.0));
           is_viscous = false;
           sim.set_diffuse(false);
+          rparams.vcx = -0.5;
+          rparams.vcy = 0.0;
+          rparams.vcz = 0.0;
+          rparams.vsize = 2.0;
+          rparams.circ_density = 0.15;
           // start it up
           sim_is_running = true;
           // and make sure we don't keep re-entering this
@@ -530,6 +545,11 @@ int main(int argc, char const *argv[]) {
           ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 0.9,0.05,0.1, 0.5, 1.0));
           is_viscous = true;
           sim.set_diffuse(true);
+          rparams.vcx = -0.5;
+          rparams.vcy = 0.0;
+          rparams.vcz = 0.0;
+          rparams.vsize = 2.0;
+          rparams.circ_density = 0.15;
           // start it up
           sim_is_running = true;
           // and make sure we don't keep re-entering this

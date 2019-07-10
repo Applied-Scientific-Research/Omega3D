@@ -76,36 +76,32 @@ std::vector<S> vels_to_rhs_panels (Surfaces<S> const& targ) {
   if (nunkn == 1) {
     // normal-only
     for (size_t i=0; i<ntarg; ++i) {
-      rhs[i] = -(tu[0][i]*norm[0][i] + tu[1][i]*norm[1][i] + tu[2][i]*norm[2][i]);// / area[i];
+      rhs[i] = -(tu[0][i]*norm[0][i] + tu[1][i]*norm[1][i] + tu[2][i]*norm[2][i]);
     }
   } else if (nunkn == 2) {
     // dot product of x1 tangent with local velocity, applying normalization
     for (size_t i=0; i<ntarg; ++i) {
-      rhs[2*i+0] = -(tu[0][i]*x1[0][i] + tu[1][i]*x1[1][i] + tu[2][i]*x1[2][i]);// / area[i];
-      rhs[2*i+1] = -(tu[0][i]*x2[0][i] + tu[1][i]*x2[1][i] + tu[2][i]*x2[2][i]);// / area[i];
+      rhs[2*i+0] = -(tu[0][i]*x1[0][i] + tu[1][i]*x1[1][i] + tu[2][i]*x1[2][i]);
+      rhs[2*i+1] = -(tu[0][i]*x2[0][i] + tu[1][i]*x2[1][i] + tu[2][i]*x2[2][i]);
     }
   } else if (nunkn == 3) {
     // two tangentials then the normal
     for (size_t i=0; i<ntarg; ++i) {
-      rhs[3*i+0] = -(tu[0][i]*x1[0][i] + tu[1][i]*x1[1][i] + tu[2][i]*x1[2][i]);// / area[i];
-      rhs[3*i+1] = -(tu[0][i]*x2[0][i] + tu[1][i]*x2[1][i] + tu[2][i]*x2[2][i]);// / area[i];
-      rhs[3*i+2] = -(tu[0][i]*norm[0][i] + tu[1][i]*norm[1][i] + tu[2][i]*norm[2][i]);// / area[i];
+      rhs[3*i+0] = -(tu[0][i]*x1[0][i] + tu[1][i]*x1[1][i] + tu[2][i]*x1[2][i]);
+      rhs[3*i+1] = -(tu[0][i]*x2[0][i] + tu[1][i]*x2[1][i] + tu[2][i]*x2[2][i]);
+      rhs[3*i+2] = -(tu[0][i]*norm[0][i] + tu[1][i]*norm[1][i] + tu[2][i]*norm[2][i]);
     }
   }
 
-  // include the influence of the boundary condition (normally zero)
+  // DO NOT include the influence of (at least tangential) boundary condition here, do it before shedding
   //   nunkn=1 is normal-only
   //   nunkn=2 is tangential-only (x1, x2)
   //   nunkn=3 is tangential and normal (x1, x2, norm)
-  for (size_t i=0; i<ntarg; ++i) {
-    //std::cout << "  elem " << i << " vel is " << tu[0][i] << " " << tu[1][i] << " " << tu[2][i] << " and rhs";
-    for (size_t j=0; j<nunkn; ++j) {
-      rhs[nunkn*i+j] -= tb[j][i];
-      //std::cout << " " << rhs[nunkn*i+j];
-    }
-    //std::cout << " mag " << std::sqrt(std::pow(rhs[2*i],2)+std::pow(rhs[2*i+1],2));
-    //std::cout << std::endl;
-  }
+  //for (size_t i=0; i<ntarg; ++i) {
+    //for (size_t j=0; j<nunkn; ++j) {
+      //rhs[nunkn*i+j] -= tb[j][i];
+    //}
+  //}
 
   return rhs;
 }

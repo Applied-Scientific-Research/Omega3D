@@ -9,7 +9,6 @@
 
 #include "Omega3D.h"
 #include "Core.h"
-//#include "Body.h"
 #include "Merge.h"
 #include "Reflect.h"
 #include "VRM.h"
@@ -48,7 +47,7 @@ public:
             const double,
             const S,
             const S,
-            const std::array<double,3>&,
+            const std::array<double,Dimensions>&,
             std::vector<Collection>&,
             std::vector<Collection>&,
             BEM<S,I>& _bem);
@@ -83,7 +82,7 @@ void Diffusion<S,A,I>::step(const double                _time,
                             const double                _dt,
                             const S                     _re,
                             const S                     _vdelta,
-                            const std::array<double,3>& _fs,
+                            const std::array<double,Dimensions>& _fs,
                             std::vector<Collection>&    _vort,
                             std::vector<Collection>&    _bdry,
                             BEM<S,I>&                   _bem) {

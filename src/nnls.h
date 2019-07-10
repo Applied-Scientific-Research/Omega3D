@@ -257,8 +257,11 @@ void nnls_householder_qr_inplace_update(MatrixQR& mat, HCoeffs &hCoeffs,
   typedef typename MatrixQR::Scalar Scalar;
   typedef typename MatrixQR::RealScalar RealScalar;
   Index rows = mat.rows();
+  //std::cout << "Mat rows cols: " << rows << " " << mat.cols() << " and k: " << k << std::endl;
+  //if (k == rows) std::cout << "NNLS failed on mat" << std::endl << mat << std::endl;
+  //if (k == rows) std::cout << "           hCoeffs" << std::endl << hCoeffs << std::endl;
+  //if (k == rows) std::cout << "         newColumn" << std::endl << newColumn << std::endl;
 
-  //std::cout << "mat size is " << rows << " " << mat.cols() << " and k is " << k << std::endl;
   eigen_assert(k < mat.cols());
   eigen_assert(k < rows);
   eigen_assert(hCoeffs.size() == mat.cols());

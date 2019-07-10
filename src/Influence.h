@@ -80,7 +80,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 
     // velocity+grads kernel
     #pragma omp parallel for
-    for (size_t i=0; i<targ.get_n(); ++i) {
+    for (int32_t i=0; i<(int32_t)targ.get_n(); ++i) {
 #ifdef USE_VC
       const StoreVec txv(tx[0][i]);
       const StoreVec tyv(tx[1][i]);
@@ -218,7 +218,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 
     // velocity+grads kernel
     #pragma omp parallel for
-    for (size_t i=0; i<targ.get_n(); ++i) {
+    for (int32_t i=0; i<(int32_t)targ.get_n(); ++i) {
 #ifdef USE_VC
       const StoreVec txv(tx[0][i]);
       const StoreVec tyv(tx[1][i]);
@@ -306,7 +306,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
     // velocity-only kernel
     std::cout << "    0v_0v compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
     #pragma omp parallel for
-    for (size_t i=0; i<targ.get_n(); ++i) {
+    for (int32_t i=0; i<(int32_t)targ.get_n(); ++i) {
 #ifdef USE_VC
       const StoreVec txv = tx[0][i];
       const StoreVec tyv = tx[1][i];
@@ -363,16 +363,16 @@ template <class S, class A>
 void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   std::cout << "    1_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
-  float flops = (float)targ.get_n();
 
   // get references to use locally
   const std::array<Vector<S>,Dimensions>& sx = src.get_pos();
   const std::vector<Int>&                 si = src.get_idx();
   const std::array<Vector<S>,Dimensions>& ss = src.get_str();
-
   const std::array<Vector<S>,Dimensions>& tx = targ.get_pos();
   //const Vector<S>&                      tr = targ.get_rad();
   std::array<Vector<S>,Dimensions>&       tu = targ.get_vel();
+
+  float flops = (float)targ.get_n();
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
@@ -381,7 +381,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
 
   #pragma omp parallel for
-  for (size_t j=0; j<src.get_npanels(); ++j) {
+  for (int32_t j=0; j<(int32_t)src.get_npanels(); ++j) {
     // source triangular panel stays the same
     const Int sfirst  = si[3*j];
     const Int ssecond = si[3*j+1];
@@ -430,7 +430,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   }
 #else  // no Vc
   #pragma omp parallel for
-  for (size_t i=0; i<targ.get_n(); ++i) {
+  for (int32_t i=0; i<(int32_t)targ.get_n(); ++i) {
     A accumu = 0.0;
     A accumv = 0.0;
     A accumw = 0.0;
@@ -469,7 +469,6 @@ template <class S, class A>
 void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
   std::cout << "    0_1 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
-  float flops = (float)targ.get_npanels();
 
   // get references to use locally
   const std::array<Vector<S>,Dimensions>& sx = src.get_pos();
@@ -478,6 +477,8 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
   const std::array<Vector<S>,Dimensions>& tx = targ.get_pos();
   const std::vector<Int>&                 ti = targ.get_idx();
   std::array<Vector<S>,Dimensions>&       tu = targ.get_vel();
+
+  float flops = (float)targ.get_npanels();
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
@@ -495,7 +496,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
   const Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
 
   #pragma omp parallel for
-  for (size_t i=0; i<targ.get_npanels(); ++i) {
+  for (int32_t i=0; i<(int32_t)targ.get_npanels(); ++i) {
 
     // prepare vector registers for target accumulators
     const size_t ip0 = ti[3*i];
@@ -536,7 +537,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
 
 #else  // no Vc
   #pragma omp parallel for
-  for (size_t i=0; i<targ.get_npanels(); ++i) {
+  for (int32_t i=0; i<(int32_t)targ.get_npanels(); ++i) {
     A accumu = 0.0;
     A accumv = 0.0;
     A accumw = 0.0;

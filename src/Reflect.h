@@ -264,6 +264,7 @@ void reflect_panp2 (Surfaces<S> const& _src, Points<S>& _targ) {
       mcp[2] += hits[k].cpz;
     }
 
+    // finish computing the mean norm and mean cp
     normalizeVec(mnorm);
     for (size_t d=0; d<3; ++d) mcp[d] /= (S)hits.size();
 
@@ -371,7 +372,7 @@ std::vector<std::tuple<S,S,S>> init_cut_tables (const S _dx) {
     tmom += ((S)i*dx) * rwgt;
 
     // add an entry
-    ct.push_back(std::make_tuple(((S)i+0.5)*dx, twgt, -tmom/twgt));
+    ct.push_back(std::make_tuple((S)(i+0.5)*dx, twgt, -tmom/twgt));
   }
   //std::cout << "  total weight " << twgt << std::endl;
 
@@ -465,7 +466,7 @@ void clear_inner_panp2 (Surfaces<S> const & _src,
     S mindist = std::numeric_limits<S>::max();
     std::vector<ClosestReturn<S>> hits;
 
-    // iterate and search for closest panel
+    // iterate and search for closest panel/node
     for (size_t j=0; j<_src.get_npanels(); ++j) {
       const Int jp0 = si[3*j+0];
       const Int jp1 = si[3*j+1];
@@ -530,6 +531,7 @@ void clear_inner_panp2 (Surfaces<S> const & _src,
       mcp[2] += hits[k].cpz;
     }
 
+    // finish computing the mean norm and mean cp
     normalizeVec(mnorm);
     for (size_t d=0; d<3; ++d) mcp[d] /= (S)hits.size();
 
