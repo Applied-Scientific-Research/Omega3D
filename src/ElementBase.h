@@ -76,7 +76,7 @@ public:
     }
 
     // strength
-    if (s) {
+    if (s and nper==7) {
       // must dereference s to get the actual vector
       for (size_t d=0; d<Dimensions; ++d) {
         (*s)[d].resize(n+nnew);
@@ -188,7 +188,7 @@ public:
         // rotate and translate
         x[0][i] = (S)thispos[0] + (*ux)[0][i]*ct - (*ux)[1][i]*st;
         x[1][i] = (S)thispos[1] + (*ux)[0][i]*st + (*ux)[1][i]*ct;
-        x[2][i] = (S)thispos[2];
+        x[2][i] = (S)thispos[2] + (*ux)[2][i];
       }
     }
   }

@@ -416,6 +416,9 @@ void Simulation::step() {
   // operator splitting requires another half-step diffuse (must compute new coefficients)
   //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
 
+  // push field points out of objects every few steps
+  //if (nstep%5 == 0) clear_inner_layer<STORE>(bdry, fldpt, (STORE)0.0, (STORE)(0.5*get_ips()));
+
   // step complete, now split any elongated particles
   for (auto &coll: vort) {
   

@@ -78,7 +78,7 @@ public:
     assert(idx_are_all_good && "Some indicies are bad");
 
     // compute all basis vectors and panel areas
-    compute_bases();
+    compute_bases(nsurfs);
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
@@ -94,7 +94,7 @@ public:
 
       // we still need general strengths
       // NOTE that this means that a vector in ElementBase is NOT sized to n, but to nsurfs!
-      vortex_sheet_to_panel_strength();
+      vortex_sheet_to_panel_strength(nsurfs);
 
     } else if (this->E == reactive) {
       // value is a boundary condition
@@ -108,14 +108,14 @@ public:
         }
       }
 
-      // make space for panel-centric strengths
+      // make space for the unknown, panel-centric strengths
       for (size_t d=0; d<2; ++d) {
         vs[d].resize(nsurfs);
         std::fill(vs[d].begin(), vs[d].end(), 0.0);
       }
 
       // we still need general strengths
-      vortex_sheet_to_panel_strength();
+      vortex_sheet_to_panel_strength(nsurfs);
 
     } else if (this->E == inert) {
       // value is ignored (probably zero)
@@ -143,7 +143,7 @@ public:
       }
     }
 
-    // need to reset the base class n
+    // need to reset the base class n and the local np
     this->n = nnodes;
     np = nsurfs;
 
@@ -153,7 +153,7 @@ public:
     }
   }
 
-  size_t                         get_npanels()     const { return idx.size()/Dimensions; }
+  size_t                         get_npanels()     const { return np; }
   const S                        get_vol()         const { return vol; }
   const std::array<S,Dimensions> get_geom_center() const { return tc; }
 
@@ -199,11 +199,15 @@ public:
     }
 
     // now recompute the absolute panel strengths
-    vortex_sheet_to_panel_strength();
+    vortex_sheet_to_panel_strength(get_npanels());
   }
 
   // convert vortex sheet strength to absolute panel strength
-  void vortex_sheet_to_panel_strength() {
+  void vortex_sheet_to_panel_strength(const size_t num) {
+
+    assert(vs[0].size() == num && "Input array sizes do not match");
+    assert(vs[0].size() == b[0][0].size() && "Input array sizes do not match");
+
     // make sure (*s) even exists
     if (not this->s) {
       std::array<Vector<S>,3> new_s;
@@ -212,7 +216,7 @@ public:
 
     // make sure the arrays are sized properly
     for (size_t d=0; d<3; ++d) {
-      (*this->s)[d].resize(get_npanels());
+      (*this->s)[d].resize(num);
     }
 
     // convenience references
@@ -220,7 +224,7 @@ public:
     std::array<Vector<S>,3>& x2 = b[1];
 
     // now copy the values over (do them all)
-    for (size_t i=0; i<get_npanels(); ++i) {
+    for (size_t i=0; i<num; ++i) {
       for (size_t d=0; d<Dimensions; ++d) {
         (*this->s)[d][i] = (vs[0][i]*x1[d][i] + vs[1][i]*x2[d][i]) * area[i];
       }
@@ -313,7 +317,7 @@ public:
     assert(idx_are_all_good && "Some indicies are bad");
 
     // compute all basis vectors and panel areas
-    compute_bases();
+    compute_bases(neold+nsurfs);
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
@@ -328,7 +332,7 @@ public:
       }
 
       // and ensure that the raw strengths are resized and set
-      vortex_sheet_to_panel_strength();
+      vortex_sheet_to_panel_strength(neold+nsurfs);
 
     } else if (this->E == reactive) {
       // value is a boundary condition
@@ -348,6 +352,9 @@ public:
       for (size_t d=0; d<3; ++d) {
         (*this->s)[d].resize(neold+nsurfs);
       }
+
+      // and ensure that the raw strengths are resized and set
+      vortex_sheet_to_panel_strength(neold+nsurfs);
 
     } else if (this->E == inert) {
       // value is ignored (probably zero)
@@ -393,36 +400,44 @@ public:
     if (not this->B) return;
     if (std::string("ground").compare(this->B->get_name()) == 0) return;
 
-    // make sure we've calculated transformed center (we do this when we do vol)
-    assert(vol > 0.0 && "Have not calculated transformed center");
+    // make sure we've calculated transformed center (we do this when we do volume)
+    assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
     // and we trust that we've transformed utc to tc
 
-    // apply a factor times the body motion
-    for (size_t i=0; i<this->get_n(); ++i) {
+    // do this for all nodes - what about panels?
+    for (size_t i=0; i<get_npanels(); ++i) {
 
       // apply the translational velocity
       std::array<double,Dimensions> thisvel = this->B->get_vel(_time);
       for (size_t d=0; d<Dimensions; ++d) {
-        this->u[d][i] += _factor * (float)thisvel[d];
+        pu[d][i] += _factor * (float)thisvel[d];
       }
 
       // now compute the rotational velocity with respect to the geometric center - NEEDS WORK
       double thisrotvel = this->B->get_rotvel(_time);
       // center of this panel
-      Int id0 = idx[2*i];
-      Int id1 = idx[2*i+1];
+      Int id0 = idx[3*i];
+      Int id1 = idx[3*i+1];
+      Int id2 = idx[3*i+2];
       // panel center
-      const S xc = 0.5 * (this->x[0][id1] + this->x[0][id0]);
-      const S yc = 0.5 * (this->x[1][id1] + this->x[1][id0]);
+      const S xc = 0.5 * (this->x[0][id0] + this->x[0][id1] + this->x[0][id2]);
+      const S yc = 0.5 * (this->x[1][id0] + this->x[1][id1] + this->x[1][id2]);
+      const S zc = 0.5 * (this->x[2][id0] + this->x[2][id1] + this->x[2][id2]);
       // add rotational velocity
-      this->u[0][i] -= _factor * (float)thisrotvel * (yc - tc[1]);
-      this->u[1][i] += _factor * (float)thisrotvel * (xc - tc[0]);
+      pu[0][i] -= _factor * (float)thisrotvel * (yc - tc[1]);
+      pu[1][i] += _factor * (float)thisrotvel * (xc - tc[0]);
+      pu[2][i] += 0.0;
     }
   }
  
   void zero_strengths() {
     // call base class first
     ElementBase<S>::zero_strengths();
+
+    // and reset any panel strengths
+    for (size_t d=0; d<2; ++d) {
+      std::fill(vs[d].begin(), vs[d].end(), 0.0);
+    }
 
     // and reset the source strengths here
     if (ss) {
@@ -444,8 +459,8 @@ public:
     const S rotvel = (S)this->B->get_rotvel();
     //if (std::abs(rotvel) < std::numeric_limits<float>::epsilon()) return;
 
-    // make sure we've calculated transformed center (we do this when we do vol)
-    assert(vol > 0.0 && "Have not calculated transformed center");
+    // make sure we've calculated transformed center (we do this when we do volume)
+    assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
     // and we trust that we've transformed utc to tc
 
     // have we made ss yet? or is it the right size?
@@ -539,10 +554,9 @@ public:
 
   // need to maintain the 3x3 set of basis vectors for each panel
   // this also calculates the triangle areas
-  void compute_bases() {
+  void compute_bases(const Int nnew) {
 
-    // how many panels do we have now?
-    const Int nnew = get_npanels();
+    assert(3*nnew == idx.size() && "Array size mismatch");
 
     // how big is my set of basis vectors?
     const Int norig = b[0][0].size();
@@ -610,7 +624,7 @@ public:
       // transform the utc to tc here
       tc[0] = (S)thispos[0] + utc[0]*ct - utc[1]*st;
       tc[1] = (S)thispos[1] + utc[0]*st + utc[1]*ct;
-      tc[2] = (S)thispos[2];
+      tc[2] = (S)thispos[2] + utc[2];
 
     } else {
       // transform the utc to tc here
@@ -631,8 +645,8 @@ public:
   }
 
   void finalize_vels(const std::array<double,Dimensions>& _fs) {
-    // finalize the panel-center vels first
-    const S factor = 0.25/M_PI;
+    // finalize panel-center vels first
+    const double factor = 0.25/M_PI;
     for (size_t d=0; d<Dimensions; ++d) {
       for (size_t i=0; i<get_npanels(); ++i) {
         pu[d][i] = _fs[d] + pu[d][i] * factor;
