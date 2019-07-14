@@ -92,8 +92,7 @@ public:
         }
       }
 
-      // we still need general strengths
-      // NOTE that this means that a vector in ElementBase is NOT sized to n, but to nsurfs!
+      // we still need general strengths (ps)
       vortex_sheet_to_panel_strength(nsurfs);
 
     } else if (this->E == reactive) {
@@ -114,7 +113,7 @@ public:
         std::fill(vs[d].begin(), vs[d].end(), 0.0);
       }
 
-      // we still need general strengths
+      // we still need general strengths (ps)
       vortex_sheet_to_panel_strength(nsurfs);
 
     } else if (this->E == inert) {
@@ -161,9 +160,11 @@ public:
   const std::vector<Int>&        get_idx()         const { return idx; }
   const std::vector<Vector<S>>&  get_bcs()         const { return bc; }
 
-  // override the ElementBase versions and send the panel-center vels
+  // override the ElementBase versions and send the panel-center vels and strengths
   const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
   std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
+  const std::array<Vector<S>,Dimensions>& get_str() const { return ps; }
+  std::array<Vector<S>,Dimensions>&       get_str()       { return ps; }
 
   // panel properties
   const std::array<Vector<S>,3>&  get_x1()       const { return b[0]; }
@@ -198,7 +199,7 @@ public:
       //std::cout << "elem " << i << " with area " << area[i] << " has vs " << vs[0][i] << " " << vs[1][i] << std::endl;
     }
 
-    // now recompute the absolute panel strengths
+    // now recompute the absolute panel strengths (ps)
     vortex_sheet_to_panel_strength(get_npanels());
   }
 
@@ -208,15 +209,9 @@ public:
     assert(vs[0].size() == num && "Input array sizes do not match");
     assert(vs[0].size() == b[0][0].size() && "Input array sizes do not match");
 
-    // make sure (*s) even exists
-    if (not this->s) {
-      std::array<Vector<S>,3> new_s;
-      this->s = std::move(new_s);
-    }
-
     // make sure the arrays are sized properly
     for (size_t d=0; d<3; ++d) {
-      (*this->s)[d].resize(num);
+      ps[d].resize(num);
     }
 
     // convenience references
@@ -226,14 +221,14 @@ public:
     // now copy the values over (do them all)
     for (size_t i=0; i<num; ++i) {
       for (size_t d=0; d<Dimensions; ++d) {
-        (*this->s)[d][i] = (vs[0][i]*x1[d][i] + vs[1][i]*x2[d][i]) * area[i];
+        ps[d][i] = (vs[0][i]*x1[d][i] + vs[1][i]*x2[d][i]) * area[i];
       }
       //std::cout << "elem " << i << " has" << std::endl;
       //std::cout << "  x1 " << x1[0][i] << " " << x1[1][i] << " " << x1[2][i] << std::endl;
       //std::cout << "  x2 " << x2[0][i] << " " << x2[1][i] << " " << x2[2][i] << std::endl;
       //std::cout << "  vs " << vs[0][i] << " " << vs[1][i] << std::endl;
-      //std::cout << "   s " << (*this->s)[0][i] << " " << (*this->s)[1][i] << " " << (*this->s)[2][i] << std::endl;
-      //std::cout << "elem " << i << " has s " << (*this->s)[0][i] << " " << (*this->s)[1][i] << " " << (*this->s)[2][i] << std::endl;
+      //std::cout << "  ps " << ps[0][i] << " " << ps[1][i] << " " << ps[2][i] << std::endl;
+      //std::cout << "elem " << i << " has s " << ps[0][i] << " " << ps[1][i] << " " << ps[2][i] << std::endl;
     }
   }
 
@@ -350,7 +345,7 @@ public:
         vs[d].resize(neold+nsurfs);
       }
       for (size_t d=0; d<3; ++d) {
-        (*this->s)[d].resize(neold+nsurfs);
+        ps[d].resize(neold+nsurfs);
       }
 
       // and ensure that the raw strengths are resized and set
@@ -451,9 +446,8 @@ public:
   // AND we don't have the time - assume bodies have been transformed
   void add_rot_strengths(const S _constfac, const S _rotfactor) {
 
-    // if no rotation, strengths, or no parent Body, or attached to ground, then no problem!
+    // if no rotation, or no parent Body, or attached to ground, then no problem!
     if (not this->B) return;
-    if (not this->s) return;
     if (std::string("ground").compare(this->B->get_name()) == 0) return;
 
     const S rotvel = (S)this->B->get_rotvel();
@@ -465,15 +459,17 @@ public:
 
     // have we made ss yet? or is it the right size?
     if (ss) {
-      ss->resize(this->s->size());
+      ss->resize(get_npanels());
     } else {
       // value is a fixed strength for the segment
-      Vector<S> new_ss(this->s->size());
+      Vector<S> new_ss(get_npanels());
       ss = std::move(new_ss);
     }
 
-    //std::cout << "Inside add_rot_strengths, sizes are: " << get_npanels() << " " << this->s->size() << " " << ss->size() << std::endl;
-    assert(this->s->size() == get_npanels() && "Strength array is not the same as panel count");
+    //std::cout << "Inside add_rot_strengths, sizes are: " << get_npanels() << " " << ss->size() << std::endl;
+    assert(ps[0].size() == get_npanels() && "Strength array is not the same as panel count");
+
+    // NEEDS WORK - THIS IS FROM THE 2D CODE
 
     // what is the actual factor that we will add?
     const S factor = _constfac + rotvel*_rotfactor;
@@ -497,7 +493,7 @@ public:
       panely *= panell;
 
       // the vortex strength - we ADD to the existing
-      (*this->s)[i] += -1.0 * (ui*panelx + vi*panely);
+      vs[i] += -1.0 * (ui*panelx + vi*panely);
 
       // the source strength
       (*ss)[i] += -1.0 * (ui*panely - vi*panelx);
@@ -725,6 +721,9 @@ public:
     // how many panels?
     const size_t num_pts = get_npanels();
 
+    // recompute the general strengths (ps)
+    vortex_sheet_to_panel_strength(num_pts);
+
     // init the output vector (x, y, z, sx, sy, sz, r)
     std::vector<S> px(num_pts*7);
 
@@ -745,7 +744,7 @@ public:
       // this assumes properly resolved, vdelta and dt
       for (size_t j=0; j<3; ++j) px[idx+j] += dn * norm[j][i];
       // complete the element with a strength
-      for (size_t j=0; j<3; ++j) px[idx+3+j] = (*this->s)[j][i];
+      for (size_t j=0; j<3; ++j) px[idx+3+j] = ps[j][i];
       // and the core size
       px[idx+6] = _vdelta;
       //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2];
@@ -774,7 +773,7 @@ public:
     std::array<S,3> circ;
     circ.fill(0.0);
 
-    if (this->s) {
+    if (this->E != inert) {
       // make this easy - represent as particles
       std::vector<S> pts = represent_as_particles(0.0, 1.0);
 
@@ -814,7 +813,7 @@ public:
     std::array<S,Dimensions> imp;
     imp.fill(0.0);
 
-    if (this->s) {
+    if (this->E != inert) {
       // make this easy - represent as particles
       std::vector<S> pts = represent_as_particles(0.0, 1.0);
 
@@ -867,10 +866,10 @@ public:
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mgl->vbo[Dimensions]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, idx.data(), GL_STATIC_DRAW);
 
-    if (this->s) {
+    if (this->E != inert) {
       for (size_t i=0; i<Dimensions; ++i) {
         glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+4]);
-        glBufferData(GL_ARRAY_BUFFER, 0, (*this->s)[i].data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, 0, ps[i].data(), GL_STATIC_DRAW);
       }
     }
 
@@ -940,12 +939,10 @@ public:
 
       } else { // this->E is active or reactive
         // the strengths
-        if (this->s) {
-          const size_t slen = (*this->s)[0].size()*sizeof(S);
-          for (size_t i=0; i<Dimensions; ++i) {
-            glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+4]);
-            glBufferData(GL_ARRAY_BUFFER, slen, (*this->s)[i].data(), GL_DYNAMIC_DRAW);
-          }
+        const size_t slen = (*this->s)[0].size()*sizeof(S);
+        for (size_t i=0; i<Dimensions; ++i) {
+          glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+4]);
+          glBufferData(GL_ARRAY_BUFFER, slen, ps[i].data(), GL_DYNAMIC_DRAW);
         }
       }
 
@@ -1021,10 +1018,11 @@ protected:
   // element-wise variables special to triangular panels
   std::vector<Int>                 idx;	// indexes into the x array
   std::array<Vector<S>,Dimensions>  pu; // panel-center velocities (ElementBase stores *node* properties)
-  std::array<Vector<S>,2>           vs; // vortex sheet strengths of the elements (x1,x2)
   std::vector<Vector<S>>            bc; // boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
+  std::array<Vector<S>,2>           vs; // vortex sheet strengths of the elements (x1,x2)
   std::optional<Vector<S>>          ss; // source strengths which represent the vel inf of the rotating volume
-  Vector<S>                       area; // panel area
+  std::array<Vector<S>,Dimensions>  ps; // panel-center strengths (do not use s in ElementBase)
+  Vector<S>                       area; // panel areas
   std::array<std::array<Vector<S>,3>,3> b;  // transformed basis vectors: x1 is b[0], x2 is b[1], normal is b[2], normal x is b[2][0]
 
   // parameters for the encompassing body
