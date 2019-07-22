@@ -277,6 +277,7 @@ public:
     assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
     const size_t nnodes = _x.size() / Dimensions;
     const size_t nsurfs = _idx.size() / Dimensions;
+    assert(_val.size() % nsurfs == 0 && "Value array is not an even multiple of panel count");
 
     std::cout << "  adding " << nsurfs << " new surface panels and " << nnodes << " new points to collection..." << std::endl;
 
@@ -1018,8 +1019,8 @@ protected:
   // element-wise variables special to triangular panels
   std::vector<Int>                 idx;	// indexes into the x array
   std::array<Vector<S>,Dimensions>  pu; // panel-center velocities (ElementBase stores *node* properties)
-  std::vector<Vector<S>>            bc; // boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
   std::array<Vector<S>,2>           vs; // vortex sheet strengths of the elements (x1,x2)
+  std::vector<Vector<S>>            bc; // boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
   std::optional<Vector<S>>          ss; // source strengths which represent the vel inf of the rotating volume
   std::array<Vector<S>,Dimensions>  ps; // panel-center strengths (do not use s in ElementBase)
   Vector<S>                       area; // panel areas
