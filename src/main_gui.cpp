@@ -629,25 +629,59 @@ int main(int argc, char const *argv[]) {
     //if (ImGui::CollapsingHeader("Simulation globals", ImGuiTreeNodeFlags_DefaultOpen)) {
     if (ImGui::CollapsingHeader("Simulation globals")) {
 
-      ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 0.1f, "%.4f", 2.0f);
+      // save current versions, so we know which changed
+      const float current_re = sim.get_re();
+      const float current_dt = sim.get_dt();
+
       ImGui::Checkbox("Fluid is viscous (diffuses)", &is_viscous);
+      ImGui::SameLine();
+      ShowHelpMarker("If checked, simulation will add particles to solve diffusion equation; if unchecked, simulation will run fast, but quickly lose accuracy.");
+
+      if (sim.is_initialized() and is_viscous) {
+        ImGui::Text("** While running, Time step and Reynolds number move together **");
+      }
+
+      ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 0.1f, "%.4f", 2.0f);
+      ImGui::SameLine();
+      ShowHelpMarker("Adjust how far into the future each step must simulate. Smaller means better accuracy, larger is faster.");
+
       if (is_viscous) {
         // show the toggle for AMR
         //static bool use_amr = false;
         //ImGui::Checkbox("Allow adaptive resolution", &use_amr);
         //sim.set_amr(use_amr);
         sim.set_diffuse(true);
+
         // and let user choose Reynolds number
         ImGui::SliderFloat("Reynolds number", sim.addr_re(), 10.0f, 2000.0f, "%.1f", 2.0f);
+        ImGui::SameLine();
+        ShowHelpMarker("Reynolds number is the inverse of viscosity; so larger means less viscosity, smaller particles, and longer run time, but more detail.");
+
+        // if Reynolds number or time step change during a run, adjust the other to keep particle spacing constant
+        if (sim.is_initialized()) {
+          if (current_re != sim.get_re()) {
+            // change dt
+            *(sim.addr_dt()) = current_dt * sim.get_re() / current_re;
+          } else if (current_dt != sim.get_dt()) {
+            // change Re
+            *(sim.addr_re()) = current_re * sim.get_dt() / current_dt;
+          }
+        }
+
         ImGui::Text("Particle spacing %g", sim.get_ips());
+
       } else {
         static float my_ips = 0.03141;
         ImGui::SliderFloat("Particle spacing", &my_ips, 0.001f, 0.1f, "%.3f", 2.0f);
+        ImGui::SameLine();
+        ShowHelpMarker("Sets the average size and distance between particles.");
         // change underlying Re when this changes
         sim.set_re_for_ips(my_ips);
         my_ips = sim.get_ips();
       }
       ImGui::InputFloat3("Freestream speed", sim.addr_fs());
+      ImGui::SameLine();
+      ShowHelpMarker("Freestream is a uniform wind blowing everything along this vector.");
 
       // set stop/pause conditions
       bool use_step_pause = sim.using_max_steps();
@@ -1127,31 +1161,11 @@ int main(int argc, char const *argv[]) {
       ImGui::Spacing();
       if (ImGui::Button("Save setup to JSON", ImVec2(20+12*fontSize,0))) show_file_output_window = true;
       ImGui::SameLine();
-      if (ImGui::Button("Save parts to VTU", ImVec2(20+12*fontSize,0))) export_vtk_this_frame = true;
-
-      if (show_file_output_window) {
-        bool try_it = false;
-        static std::string outfile = "output.json";
-
-        if (fileIOWindow( try_it, outfile, recent_json_files, "Save", {"*.json", "*.*"}, false, ImVec2(200+26*fontSize,300))) {
-          show_file_output_window = false;
-
-          if (try_it) {
-            // remember
-            recent_json_files.push_back( outfile );
-
-            // retrieve window sizes
-            glfwGetWindowSize(window, &rparams.width, &rparams.height);
-
-            // write and echo
-            write_json(sim, ffeatures, bfeatures, mfeatures, rparams, outfile);
-            std::cout << std::endl << "Wrote simulation to " << outfile << std::endl;
-          }
-        }
-      }
-
       // PNG output of the render frame
       if (ImGui::Button("Save screenshot to PNG", ImVec2(20+12*fontSize,0))) draw_this_frame = true;
+
+      // next line: VTK output and record
+      if (ImGui::Button("Save parts to VTU", ImVec2(20+12*fontSize,0))) export_vtk_this_frame = true;
       ImGui::SameLine();
       if (record_all_frames) {
         if (ImGui::Button("STOP RECORDING", ImVec2(20+12*fontSize,0))) {
@@ -1165,6 +1179,28 @@ int main(int argc, char const *argv[]) {
         }
       }
     }
+
+    if (show_file_output_window) {
+      bool try_it = false;
+      static std::string outfile = "output.json";
+
+      if (fileIOWindow( try_it, outfile, recent_json_files, "Save", {"*.json", "*.*"}, false, ImVec2(200+26*fontSize,300))) {
+        show_file_output_window = false;
+
+        if (try_it) {
+          // remember
+          recent_json_files.push_back( outfile );
+
+          // retrieve window sizes
+          glfwGetWindowSize(window, &rparams.width, &rparams.height);
+
+          // write and echo
+          write_json(sim, ffeatures, bfeatures, mfeatures, rparams, outfile);
+          std::cout << std::endl << "Wrote simulation to " << outfile << std::endl;
+        }
+      }
+    }
+
 
 
     nframes++;
