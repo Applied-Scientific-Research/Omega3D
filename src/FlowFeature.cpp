@@ -55,7 +55,8 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 //
 std::vector<float>
 SingleParticle::init_particles(float _ips) const {
-  return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
+  if (this->is_enabled()) return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
+  else return std::vector<float>();
 }
 
 std::vector<float>
@@ -105,6 +106,8 @@ std::vector<float>
 VortexBlob::init_particles(float _ips) const {
   // create a new vector to pass on
   std::vector<float> x;
+
+  if (not this->is_enabled()) return x;
 
   // what size 2D integer array will we loop over
   int irad = 1 + (m_rad + 0.5*m_softness) / _ips;
@@ -208,6 +211,8 @@ VortexBlob::to_json() const {
 std::vector<float>
 BlockOfRandom::init_particles(float _ips) const {
 
+  if (not this->is_enabled()) return std::vector<float>();
+
   // set up the random number generator
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
@@ -288,7 +293,8 @@ ParticleEmitter::init_particles(float _ips) const {
 
 std::vector<float>
 ParticleEmitter::step_particles(float _ips) const {
-  return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
+  if (this->is_enabled()) return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
+  else return std::vector<float>();
 }
 
 void
@@ -333,6 +339,8 @@ std::vector<float>
 SingularRing::init_particles(float _ips) const {
   // create a new vector to pass on
   std::vector<float> x;
+
+  if (not this->is_enabled()) return x;
 
   // what size 2D integer array will we loop over
   const int ndiam = 1 + (2.0 * M_PI * m_majrad) / _ips;
@@ -415,6 +423,8 @@ SingularRing::to_json() const {
 //
 std::vector<float>
 ThickRing::init_particles(float _ips) const {
+
+  if (not this->is_enabled()) return std::vector<float>();
 
   // make a temporary array of the particles at one station around the ring (a disk)
   //   for each particle in the disk, this is the local x,y, and a length scale

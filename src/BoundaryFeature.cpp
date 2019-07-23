@@ -52,6 +52,8 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
 ElementPacket<float>
 ExteriorFromFile::init_elements(const float _ips) const {
 
+  if (not this->is_enabled()) return ElementPacket<float>();
+
   ElementPacket<float> epack = read_geometry_file(m_infile);
 
   // assume standard behavior: reactive, no-tangential-flow panels

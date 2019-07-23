@@ -303,17 +303,17 @@ int main(int argc, char const *argv[]) {
 
       // initialize particle distributions
       for (auto const& ff: ffeatures) {
-        sim.add_particles( ff->init_particles(sim.get_ips()) );
+        if (ff->is_enabled()) sim.add_particles( ff->init_particles(sim.get_ips()) );
       }
 
       // initialize solid objects
       for (auto const& bf : bfeatures) {
-        sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
+        if (bf->is_enabled()) sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
       }
 
       // initialize measurement features
       for (auto const& mf: mfeatures) {
-        sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
+        if (mf->is_enabled()) sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
       }
 
       sim.set_initialized();
@@ -382,10 +382,10 @@ int main(int argc, char const *argv[]) {
 
         // generate new particles from emitters
         for (auto const& ff : ffeatures) {
-          sim.add_particles( ff->step_particles(sim.get_ips()) );
+          if (ff->is_enabled()) sim.add_particles( ff->step_particles(sim.get_ips()) );
         }
         for (auto const& mf : mfeatures) {
-          sim.add_fldpts( mf->step_particles(rparams.tracer_scale*sim.get_ips()), true );
+          if (mf->is_enabled()) sim.add_fldpts( mf->step_particles(rparams.tracer_scale*sim.get_ips()), true );
         }
 
         // begin a new dynamic step: convection and diffusion
@@ -716,7 +716,23 @@ int main(int argc, char const *argv[]) {
       // list existing flow features here
       int del_this_item = -1;
       for (int i=0; i<(int)ffeatures.size(); ++i) {
-        // add a "remove" button here somehow
+
+        if (ffeatures[i]->is_enabled()) {
+          ImGui::PushID(++buttonIDs);
+          if (ImGui::SmallButton("deactivate")) ffeatures[i]->disable();
+          ImGui::PopID();
+          ImGui::SameLine();
+          ImGui::Text("%s", ffeatures[i]->to_string().c_str());
+        } else {
+          ImGui::PushID(++buttonIDs);
+          if (ImGui::SmallButton("activate")) ffeatures[i]->enable();
+          ImGui::PopID();
+          ImGui::SameLine();
+          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", ffeatures[i]->to_string().c_str());
+        }
+
+        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+        ImGui::SameLine();
         ImGui::PushID(++buttonIDs);
         if (ImGui::SmallButton("remove")) del_this_item = i;
         ImGui::PopID();
@@ -725,9 +741,6 @@ int main(int argc, char const *argv[]) {
         //ImGui::PushID(++buttonIDs);
         //if (ImGui::SmallButton("edit", ImVec2(60,0))) del_this_item = 0;
         //ImGui::PopID();
-
-        ImGui::SameLine();
-        ImGui::Text("%s", ffeatures[i]->to_string().c_str());
       }
       if (del_this_item > -1) {
         std::cout << "Asked to delete flow feature " << del_this_item << std::endl;
@@ -737,13 +750,26 @@ int main(int argc, char const *argv[]) {
       // list existing boundary features here
       int del_this_bdry = -1;
       for (int i=0; i<(int)bfeatures.size(); ++i) {
-        // add a "remove" button here somehow
+
+        if (bfeatures[i]->is_enabled()) {
+          ImGui::PushID(++buttonIDs);
+          if (ImGui::SmallButton("deactivate")) bfeatures[i]->disable();
+          ImGui::PopID();
+          ImGui::SameLine();
+          ImGui::Text("%s", bfeatures[i]->to_string().c_str());
+        } else {
+          ImGui::PushID(++buttonIDs);
+          if (ImGui::SmallButton("activate")) bfeatures[i]->enable();
+          ImGui::PopID();
+          ImGui::SameLine();
+          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", bfeatures[i]->to_string().c_str());
+        }
+
+        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+        ImGui::SameLine();
         ImGui::PushID(++buttonIDs);
         if (ImGui::SmallButton("remove")) del_this_bdry = i;
         ImGui::PopID();
-
-        ImGui::SameLine();
-        ImGui::Text("%s", bfeatures[i]->to_string().c_str());
       }
       if (del_this_bdry > -1) {
         std::cout << "Asked to delete boundary feature " << del_this_bdry << std::endl;
@@ -753,13 +779,26 @@ int main(int argc, char const *argv[]) {
       // list existing measurement features here
       int del_this_measure = -1;
       for (int i=0; i<(int)mfeatures.size(); ++i) {
-        // add a "remove" button here somehow
+
+        if (mfeatures[i]->is_enabled()) {
+          ImGui::PushID(++buttonIDs);
+          if (ImGui::SmallButton("deactivate")) mfeatures[i]->disable();
+          ImGui::PopID();
+          ImGui::SameLine();
+          ImGui::Text("%s", mfeatures[i]->to_string().c_str());
+        } else {
+          ImGui::PushID(++buttonIDs);
+          if (ImGui::SmallButton("activate")) mfeatures[i]->enable();
+          ImGui::PopID();
+          ImGui::SameLine();
+          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", mfeatures[i]->to_string().c_str());
+        }
+
+        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+        ImGui::SameLine();
         ImGui::PushID(++buttonIDs);
         if (ImGui::SmallButton("remove")) del_this_measure = i;
         ImGui::PopID();
-
-        ImGui::SameLine();
-        ImGui::Text("%s", mfeatures[i]->to_string().c_str());
       }
       if (del_this_measure > -1) {
         std::cout << "Asked to delete measurement feature " << del_this_measure << std::endl;
