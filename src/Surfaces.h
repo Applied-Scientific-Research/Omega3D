@@ -91,7 +91,7 @@ public:
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
       // value is a fixed strength for the segment
-      assert(_val.size() == 2*nsurfs);
+      assert(_val.size() == 2*nsurfs && "Value array is not an even multiple of panel count");
       // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths
       for (size_t d=0; d<2; ++d) {
         vs[d].resize(nsurfs);
@@ -106,7 +106,7 @@ public:
     } else if (this->E == reactive) {
       // value is a boundary condition
       const size_t nper = _val.size()/nsurfs;
-      assert(nper>0 and nper<4);
+      assert(nper>0 and nper<4 && "Number of boundary conditions is not 1..3");
       bc.resize(nper);
       for (size_t d=0; d<nper; ++d) {
         bc[d].resize(nsurfs);
@@ -315,11 +315,11 @@ public:
 
     // copy over the node indices, taking care to offset into the new array
     bool idx_are_all_good = true;
-    idx.resize(2*neold + _idx.size());
-    for (size_t i=0; i<2*nsurfs; ++i) {
+    idx.resize(3*neold + _idx.size());
+    for (size_t i=0; i<3*nsurfs; ++i) {
       // make sure it exists in the nodes array
       if (_idx[i] >= nnold+nnodes) idx_are_all_good = false;
-      idx[2*neold+i] = nnold + _idx[i];
+      idx[3*neold+i] = nnold + _idx[i];
     }
     assert(idx_are_all_good && "Some indicies are bad");
 
@@ -329,8 +329,8 @@ public:
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
       // value is a fixed strength for the element
-      assert(_val.size() == 2*nsurfs);
-      // value is a fixed strength for the element
+      assert(_val.size() == 2*nsurfs && "Value array is not an even multiple of panel count");
+      // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths
       for (size_t d=0; d<2; ++d) {
         vs[d].resize(neold+nsurfs);
         for (size_t i=0; i<nsurfs; ++i) {
@@ -343,18 +343,21 @@ public:
 
     } else if (this->E == reactive) {
       // value is a boundary condition
+      const size_t nper = _val.size()/nsurfs;
+      assert(nper>0 and nper<4 && "Number of boundary conditions is not 1..3");
       // make sure we have the same number of components in the new array as in the old
-      assert(bc.size() == _val.size()/nsurfs);
+      assert(bc.size() == nper && "Boundary condition array is not the correct size");
       // copy them into place
-      for (size_t d=0; d<3; ++d) {
+      for (size_t d=0; d<nper; ++d) {
         bc[d].resize(neold+nsurfs);
         for (size_t i=0; i<nsurfs; ++i) {
-          bc[d][neold+i] = _val[3*i+d];
+          bc[d][neold+i] = _val[nper*i+d];
         }
       }
       // upsize vortex sheet and raw strength arrays, too
       for (size_t d=0; d<2; ++d) {
         vs[d].resize(neold+nsurfs);
+        //std::fill(vs[d].begin(), vs[d].end(), 0.0);
       }
       for (size_t d=0; d<3; ++d) {
         ps[d].resize(neold+nsurfs);
@@ -433,7 +436,7 @@ public:
       // add rotational velocity
       pu[0][i] -= _factor * (float)thisrotvel * (yc - tc[1]);
       pu[1][i] += _factor * (float)thisrotvel * (xc - tc[0]);
-      pu[2][i] += 0.0;
+      pu[2][i] += 0.0 * zc;
     }
   }
  

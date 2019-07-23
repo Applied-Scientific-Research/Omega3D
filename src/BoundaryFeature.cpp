@@ -61,6 +61,18 @@ ExteriorFromFile::init_elements(const float _ips) const {
   epack.val.resize(2*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
 
+  // scale and translate here
+  for (size_t i=0; i<epack.x.size()/3; ++i) {
+    const float in_x = epack.x[3*i];
+    const float in_y = epack.x[3*i+1];
+    const float in_z = epack.x[3*i+2];
+
+    // first scale, then translate
+    epack.x[3*i]   = in_x * m_sx + m_x;
+    epack.x[3*i+1] = in_y * m_sy + m_y;
+    epack.x[3*i+2] = in_z * m_sz + m_z;
+  }
+
   return epack;
 
 /*

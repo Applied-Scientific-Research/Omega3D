@@ -68,7 +68,7 @@ void solve_bem(const double                         _time,
     std::cout << "  Solving for velocities on" << to_string(targ) << std::endl;
 
     // transform the collection according to prescribed motion
-    //std::visit([=](auto& elem) { elem.transform(_time); }, targ);
+    std::visit([=](auto& elem) { elem.transform(_time); }, targ);
 
     // zero velocities
     std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
@@ -78,11 +78,11 @@ void solve_bem(const double                         _time,
       std::visit(ivisitor, src, targ);
     }
 
-    // divide by 4pi and add freestream
+    // divide by factor and add freestream
     std::visit([=](auto& elem) { elem.finalize_vels(_fs); }, targ);
 
     // include the effects of the motion of the parent body
-    //std::visit([=](auto& elem) { elem.add_body_motion(-1.0, _time); }, targ);
+    std::visit([=](auto& elem) { elem.add_body_motion(-1.0, _time); }, targ);
 
     // find portion of RHS vector
     const size_t tstart = std::visit([=](auto& elem) { return elem.get_first_row(); }, targ);
