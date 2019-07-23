@@ -935,7 +935,7 @@ int main(int argc, char const *argv[]) {
             ImGui::InputText("y position", stry, 512);
             ImGui::SameLine();
             ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
-            ImGui::InputText("z position", stry, 512);
+            ImGui::InputText("z position", strz, 512);
             ImGui::SameLine();
             ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
             break;
@@ -978,6 +978,7 @@ int main(int argc, char const *argv[]) {
                   bp->set_pos(0, std::string(strx));
                   bp->set_pos(1, std::string(stry));
                   bp->set_pos(2, std::string(strz));
+                  //bp->set_rot(std::string(strrad));
                   bp->set_name("sphere");
                   sim.add_body(bp);
                   break;
@@ -1013,6 +1014,7 @@ int main(int argc, char const *argv[]) {
                   bp->set_pos(0, std::string(strx));
                   bp->set_pos(1, std::string(stry));
                   bp->set_pos(2, std::string(strz));
+                  //bp->set_rot(std::string(strrad));
                   bp->set_name("rectangle");
                   sim.add_body(bp);
                   break;
@@ -1067,6 +1069,7 @@ int main(int argc, char const *argv[]) {
                   bp->set_pos(0, std::string(strx));
                   bp->set_pos(1, std::string(stry));
                   bp->set_pos(2, std::string(strz));
+                  //bp->set_rot(std::string(strrad));
                   bp->set_name("geom from file");
                   sim.add_body(bp);
                   break;
