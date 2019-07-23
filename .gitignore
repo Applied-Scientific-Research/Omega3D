@@ -1,6 +1,3 @@
-build
-notes
-
 # Prerequisites
 *.d
 
@@ -34,3 +31,14 @@ notes
 *.out
 *.app
 *.bin
+
+*.ini
+*.tmp
+*.swp
+
+build
+Release
+Debug
+RelDbg
+notes
+
