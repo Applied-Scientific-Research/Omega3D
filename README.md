@@ -59,42 +59,16 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
-* Augment BEM to make it work for rotating bodies
+* Just get BEM to resize and relocate bodies
 * Get BEM working for moving bodies
+* Augment BEM to make it work for rotating bodies
 * Allow general spheres - use the ips to scale refinement of an icosahedron
+* Allow general rectangles - use the ips to scale panel sizes
 * Add some pics, maybe aGIF, to this readme
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
 * Add arcball rotation to the viewport - see [here](https://www.3dgep.com/understanding-the-view-matrix/) for some glm code
-* Use [libigl](https://github.com/libigl/libigl/) or [OpenMesh](http://openmesh.org/intro/) to load geometry files for boundaries
 * Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
-* ~~Get basic BEM working for non-moving bodies~~
-* ~~Port over variable-core-size drawing techniques from O2D~~
-* ~~Use the actual core function to draw the blobs - but what is the real core function?~~ NO
-* ~~Allow reading obj/stl/off/ply file using `igl/read_triangle_mesh.h`~~
-* ~~Draw the triangular elements, even if very basically~~
-* ~~Keep updated with Omega2D development and features: vtk, png, json, etc.~~
-* ~~Move radius from ElementBase into Points~~
-* ~~Add merging operation to avoid over-resolution~~
-* ~~Add particle splitting to avoid under-resolution~~
-* ~~Add a check on stretch and pause simulation if it goes too far in one step~~
-* ~~Make a thick-cored vortex ring~~
-* ~~Pull in NNLS VRM algorithm from o2d, put in our Diffusion class - no amr yet~~
-* ~~Add second order convection - in a class?~~
-* ~~Rework the particle shader to read from all the various arrays - goal is to draw an inviscid sim~~
-* ~~Rework the updateGL code to move all the appropriate arrays to the GPU~~
-* ~~Make the reset button actally reset~~
-* ~~Get new features to just add particles to the current Points object~~
-* ~~Have the GUI set up a vortex ring object~~
-* ~~Get it to run a vortex ring without drawing anything~~
-* ~~Copy the simulation time step logic from Omega2D (using std::async)~~
-* ~~Move time step code into Simulation/Convection files, like Omega2D~~
-* ~~Make separate batch and GUI main files and binaries~~
-* ~~Support CMake with optional OpenMP and optional Vc~~
-* ~~Wrap solver in a GUI - use existing code from [Omega2D](https://github.com/Applied-Scientific-Research/Omega2D). This means supporting only, say, vortex rings and stretch, but no diffusion.~~
-* ~~Rework into struct of arrays to allow Vc to work properly (this requires more work for compute and draw shaders :one buffer per array), but should be nice and flexible - and easier than all the `4*idx+3` crap~~
-* ~~Test speed and accuracy with Vc as the float type~~
-* ~~move rand() to std::random (see Omega2D)~~
 
 ## Thanks
 This project is funded by the [National Institutes of Health (NIH)](https://www.nih.gov/) under grant number 1 R01 EB022180-01A1 ("A Fast High-Order CFD for Turbulent Flow Simulation in Cardio-Devices").
