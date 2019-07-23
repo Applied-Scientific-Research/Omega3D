@@ -766,6 +766,10 @@ int main(int argc, char const *argv[]) {
         mfeatures.erase(mfeatures.begin()+del_this_measure);
       }
 
+      if (ffeatures.size() + bfeatures.size() + mfeatures.size() == 0) {
+        ImGui::Text("none");
+      }
+
       // button and modal window for adding new flow structures
       if (ImGui::Button("Add flow")) ImGui::OpenPopup("New flow structure");
       ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
@@ -1258,7 +1262,11 @@ int main(int argc, char const *argv[]) {
       if (ImGui::Button("Show terminal output")) show_terminal_window ^= 1;
       ImGui::SameLine();
       */
+
       //if (ImGui::Button("ImGui Samples")) show_test_window ^= 1;
+      // use ASCII table for number: http://www.asciitable.com/
+      // but use CAPITAL letter for a letter, jesus, really?!?
+      if (ImGui::IsKeyPressed(84)) show_test_window ^= 1;
 
       //ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)",
       //            1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
