@@ -1337,7 +1337,7 @@ int main(int argc, char const *argv[]) {
       ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
       if (ImGui::BeginPopupModal("Welcome!", NULL, window_flags)) {
         //ImGui::Begin("Welcome", &show_welcome_window);
-        ImGui::TextWrapped("Welcome to Omega2D! Select a simulation from the drop-down, load from a file, or manually set your simulation global properites and add one or more flow, boundary, or measurement structures. Space bar starts and stops the run, Reset clears and loads new simulation properties. Left mouse button drags the frame around, mouse scroll wheel zooms. Save your flow set-up to json or your flow image to png or vtu. Have fun!");
+        ImGui::TextWrapped("Welcome to Omega3D! Select a simulation from the drop-down, load from a file, or manually set your simulation global properites and add one or more flow, boundary, or measurement structures. Space bar starts and stops the run, Reset clears and loads new simulation properties. Left mouse button drags the frame around, mouse scroll wheel zooms. Save your flow set-up to json or your flow image to png or vtu. Have fun!");
         ImGui::Spacing();
         //if (ImGui::Button("Got it.", ImVec2(120,0))) { show_welcome_window = false; }
         //ImGui::End();
