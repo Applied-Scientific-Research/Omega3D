@@ -556,9 +556,9 @@ public:
       zsum += 0.25 * thisvol * ((*this->ux)[2][jp0] + (*this->ux)[2][jp1] + (*this->ux)[2][jp2]);
     }
     vol = (S)vsum;
-    utc[0] = (S)xsum;
-    utc[1] = (S)ysum;
-    utc[2] = (S)zsum;
+    utc[0] = (S)xsum / vol;
+    utc[1] = (S)ysum / vol;
+    utc[2] = (S)zsum / vol;
 
     std::cout << "    geom center is " << utc[0] << " " << utc[1] << " " << utc[2] << " and vol is " << vol << std::endl;
   }
