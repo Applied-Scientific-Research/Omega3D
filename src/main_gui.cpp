@@ -565,7 +565,7 @@ int main(int argc, char const *argv[]) {
           *dt = 0.05;
           fs[0] = 1.0; fs[1] = 0.0; fs[2] = 0.0;
           *re = 50.0;
-          // generate the features
+          // generate the boundary
           bp = sim.get_pointer_to_body("ground");
           bfeatures.emplace_back(std::make_unique<Ovoid>(bp, true, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
           is_viscous = true;
@@ -668,6 +668,7 @@ int main(int argc, char const *argv[]) {
 
       // set input widget width for this and the next few
       ImGui::PushItemWidth(-240);
+
       ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 0.1f, "%.4f", 2.0f);
       ImGui::SameLine();
       ShowHelpMarker("Adjust how far into the future each step must simulate. Smaller means better accuracy, larger is faster.");
