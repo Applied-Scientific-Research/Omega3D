@@ -11,6 +11,8 @@
 #include "Omega3D.h"
 #include "Body.h"
 
+#include <Eigen/Geometry>
+
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -167,28 +169,26 @@ public:
     // do nothing here
   }
 
-  // THIS IS 2D - FIX FOR 3D
+  // this should work in 3D now
   void transform(const double _time) {
     // reset positions according to prescribed motion
     if (B and M == bodybound) {
+
       // tell the Body to compute and save its position, vel, angular pos and angular vel
       B->transform(_time);
 
-      // for the no-rotation case, we can just transform here
-      std::array<double,Dimensions> thispos = B->get_pos();
-      const double theta = B->get_orient();
-      const S st = std::sin(theta);
-      const S ct = std::cos(theta);
+      // ask the body to send us the transformation matrix for the current time
+      Eigen::Transform<double,3,Eigen::Affine> xform = B->get_transform_mat();
 
-      std::cout << "    transforming body at time " << (S)_time << " to " << (S)thispos[0] << " " << (S)thispos[1]
-                << " and theta " << theta << " omega " << B->get_rotvel() << std::endl;
+      std::cout << "    transforming body at time " << (S)_time << std::endl;
 
-      // and do the transform
+      // and do the transform (rotation and translation)
       for (size_t i=0; i<get_n(); ++i) {
-        // rotate and translate
-        x[0][i] = (S)thispos[0] + (*ux)[0][i]*ct - (*ux)[1][i]*st;
-        x[1][i] = (S)thispos[1] + (*ux)[0][i]*st + (*ux)[1][i]*ct;
-        x[2][i] = (S)thispos[2] + (*ux)[2][i];
+        const Eigen::Vector3d _pre = {(*ux)[0][i], (*ux)[1][i], (*ux)[2][i]};
+        const Eigen::Vector3d _post = xform * _pre;
+        x[0][i] = (S)_post(0);
+        x[1][i] = (S)_post(1);
+        x[2][i] = (S)_post(2);
       }
     }
   }

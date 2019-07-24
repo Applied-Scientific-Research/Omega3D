@@ -21,6 +21,7 @@
 #include <array>
 
 using Vec = std::array<double,Dimensions>;
+using Trans = Eigen::Transform<double,Dimensions,Eigen::Affine>;
 
 //------------------------------------------------------------------------
 //
@@ -63,6 +64,7 @@ public:
   double get_orient(const double);
   double get_rotvel();
   double get_rotvel(const double);
+  Trans get_transform_mat();
 
   // compare motion vs another Body
   bool relative_motion_vs(std::shared_ptr<Body>, const double, const double);

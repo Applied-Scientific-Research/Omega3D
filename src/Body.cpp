@@ -27,6 +27,8 @@ Body::Body(const double _x, const double _y, const double _z) :
   apos_func(nullptr),
   pos(Vec({{_x, _y, _z}})),
   vel(Vec({{0.0, 0.0, 0.0}})),
+  qpos(0.0,0.0,0.0,0.0),
+  qvel(0.0,0.0,0.0,0.0),
   apos(0.0),
   avel(0.0)
 {
@@ -237,6 +239,16 @@ double Body::get_rotvel(const double _time) {
 
   return avel;
 }
+
+// get an Eigen-like Transform
+Trans Body::get_transform_mat() {
+  Trans t;
+  t.setIdentity();
+  t *= Eigen::Translation<double,3>(pos[0], pos[1], pos[2]);
+  t *= Eigen::AngleAxisd(qpos);
+  return t;
+}
+
 
 // compare motion vs another Body
 bool Body::relative_motion_vs(std::shared_ptr<Body> _other, const double _last, const double _current) {

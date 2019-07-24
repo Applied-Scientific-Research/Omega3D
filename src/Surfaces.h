@@ -625,20 +625,19 @@ public:
     // must explicitly call the method in the base class
     ElementBase<S>::transform(_time);
 
-    if (this->B) {
-      // prepare for the transform
-      std::array<double,Dimensions> thispos = this->B->get_pos();
-      const double theta = this->B->get_orient();
-      const S st = std::sin(theta);
-      const S ct = std::cos(theta);
+    if (this->B and this->M == bodybound) {
+      // do the transform with an affine matrix
+      Eigen::Transform<double,3,Eigen::Affine> xform = this->B->get_transform_mat();
+      const Eigen::Vector3d _pre = {utc[0], utc[1], utc[2]};
+      const Eigen::Vector3d _post = xform * _pre;
+      tc[0] = _post(0);
+      tc[1] = _post(1);
+      tc[2] = _post(2);
 
-      // transform the utc to tc here
-      tc[0] = (S)thispos[0] + utc[0]*ct - utc[1]*st;
-      tc[1] = (S)thispos[1] + utc[0]*st + utc[1]*ct;
-      tc[2] = (S)thispos[2] + utc[2];
+      // HACK - might need to compute_bases() from here - but only if rotation happened
 
     } else {
-      // transform the utc to tc here
+      // copy utc to tc
       tc[0] = utc[0];
       tc[1] = utc[1];
       tc[2] = utc[2];
