@@ -60,12 +60,12 @@ and the batch program with
 Tasks to consider or implement:
 
 * Get BEM working for moving bodies
-* Augment BEM to make it work for rotating bodies
 * Allow general rectangles - use the ips to scale panel sizes
+* Use Eigen's Quaternion to represent rotations internally, but load them in as axis-angle
+* Augment BEM to make it work for rotating bodies
 * Add some pics, maybe aGIF, to this readme
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
 * Add arcball rotation to the viewport - see [here](https://www.3dgep.com/understanding-the-view-matrix/) for some glm code
-* Start fresh GUI main file, look for first run and splash a help window
 * Add other repos as submodules, like [Vc](https://github.com/VcDevel/Vc) and [nlohmann/json](https://github.com/nlohmann/json) and [libigl](https://github.com/libigl/libigl/), or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
 
 ## Thanks
