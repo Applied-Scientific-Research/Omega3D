@@ -666,6 +666,8 @@ int main(int argc, char const *argv[]) {
         ImGui::Text("** While running, Time step and Reynolds number move together **");
       }
 
+      // set input widget width for this and the next few
+      ImGui::PushItemWidth(-240);
       ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 0.1f, "%.4f", 2.0f);
       ImGui::SameLine();
       ShowHelpMarker("Adjust how far into the future each step must simulate. Smaller means better accuracy, larger is faster.");
@@ -708,6 +710,8 @@ int main(int argc, char const *argv[]) {
       ImGui::SameLine();
       ShowHelpMarker("Freestream is a uniform wind blowing everything along this vector.");
 
+      ImGui::PopItemWidth();
+
       // set stop/pause conditions
       bool use_step_pause = sim.using_max_steps();
       ImGui::Checkbox("Pause at step", &use_step_pause);
@@ -736,6 +740,7 @@ int main(int argc, char const *argv[]) {
     //if (ImGui::CollapsingHeader("Flow structures", ImGuiTreeNodeFlags_DefaultOpen)) {
     if (ImGui::CollapsingHeader("Flow structures")) {
 
+      ImGui::Spacing();
       int buttonIDs = 10;
 
       // list existing flow features here
@@ -834,6 +839,8 @@ int main(int argc, char const *argv[]) {
         ImGui::Text("none");
       }
 
+      ImGui::Spacing();
+
       // button and modal window for adding new flow structures
       if (ImGui::Button("Add flow")) ImGui::OpenPopup("New flow structure");
       ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiSetCond_FirstUseEver);
@@ -865,7 +872,9 @@ int main(int argc, char const *argv[]) {
             ImGui::SliderFloat("radius", &rad, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
             ImGui::SliderFloat("softness", &soft, sim.get_ips(), rad, "%.4f");
             guess_n = 4.1888f * std::pow((2.0f*rad+soft)/sim.get_ips(), 3);
+            ImGui::Spacing();
             ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            ImGui::Spacing();
             if (ImGui::Button("Add vortex blob")) {
               ffeatures.emplace_back(std::make_unique<VortexBlob>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft));
               std::cout << "Added " << (*ffeatures.back()) << std::endl;
@@ -881,7 +890,9 @@ int main(int argc, char const *argv[]) {
             ImGui::SliderInt("number", &npart, 10, 100000);
             ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
             ImGui::SliderFloat("strength magnitude", &strmag, 0.01f, 10.0f, "%.3f", 2.0f);
+            ImGui::Spacing();
             ImGui::TextWrapped("This feature will add %d particles", npart);
+            ImGui::Spacing();
             if (ImGui::Button("Add random vorticies")) {
               ffeatures.emplace_back(std::make_unique<BlockOfRandom>(xc[0],xc[1],xc[2], xs[0],xs[1],xs[2], strmag, npart));
               std::cout << "Added " << (*ffeatures.back()) << std::endl;
@@ -896,7 +907,9 @@ int main(int argc, char const *argv[]) {
             ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
             ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
             guess_n = 1 + (2.0f * 3.1416f * rad / sim.get_ips());
+            ImGui::Spacing();
             ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            ImGui::Spacing();
             if (ImGui::Button("Add singular vortex ring")) {
               ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
               std::cout << "Added " << (*ffeatures.back()) << std::endl;
@@ -912,7 +925,9 @@ int main(int argc, char const *argv[]) {
             ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
             ImGui::SliderFloat("thickness", &soft, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
             guess_n = (1 + (2.0f * 3.1416f * rad / sim.get_ips())) * std::pow(soft / sim.get_ips(), 2);
+            ImGui::Spacing();
             ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            ImGui::Spacing();
             if (ImGui::Button("Add thick vortex ring")) {
               ffeatures.emplace_back(std::make_unique<ThickRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft, circ));
               std::cout << "Added " << (*ffeatures.back()) << std::endl;
@@ -969,7 +984,8 @@ int main(int argc, char const *argv[]) {
         // define geometry second
         static int item = 0;
         const char* items[] = { "sphere", "rectangle", "from file" };
-        ImGui::Combo("type", &item, items, 3);
+        ImGui::Spacing();
+        ImGui::Combo("geometry type", &item, items, 3);
 
         static bool external_flow = true;
 
@@ -977,15 +993,15 @@ int main(int argc, char const *argv[]) {
         //static float rotdeg = 0.0f;
         static float scale = 1.0;
 
-        // always ask for center
-        ImGui::InputFloat3("center", xc);
-
         // show different inputs based on what is selected
         switch(item) {
           case 0: {
             // create a solid sphere
+            ImGui::InputFloat3("center", xc);
             ImGui::SliderFloat("diameter", &scale, 0.01f, 10.0f, "%.4f", 2.0);
+            ImGui::Spacing();
             ImGui::TextWrapped("This feature will add a solid spherical body centered at the given coordinates");
+            ImGui::Spacing();
             if (ImGui::Button("Add spherical body")) {
               std::shared_ptr<Body> bp;
               switch(mitem) {
@@ -1017,11 +1033,14 @@ int main(int argc, char const *argv[]) {
 
           case 1: {
             // create a solid rectangle
+            ImGui::InputFloat3("center", xc);
             static float xs[3] = {1.0f, 1.0f, 1.0f};
             ImGui::InputFloat3("side lengths", xs);
             //ImGui::SliderFloat("orientation", &rotdeg, 0.0f, 89.0f, "%.0f");
             //ImGui::SliderAngle("orientation", &rotdeg);
+            ImGui::Spacing();
             ImGui::TextWrapped("This feature will add a solid rectangular body centered at the given coordinates");
+            ImGui::Spacing();
             if (ImGui::Button("Add rectangular body")) {
               std::shared_ptr<Body> bp;
               switch(mitem) {
@@ -1075,8 +1094,11 @@ int main(int argc, char const *argv[]) {
             }
             ImGui::SameLine();
             ImGui::Text(shortname.c_str());
-            ImGui::SliderFloat("diameter", &scale, 0.01f, 10.0f, "%.4f", 2.0);
+            ImGui::InputFloat3("center", xc);
+            ImGui::SliderFloat("scale", &scale, 0.01f, 10.0f, "%.4f", 2.0);
+            ImGui::Spacing();
             ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
+            ImGui::Spacing();
             if (ImGui::Button("Add geometry from file")) {
               std::shared_ptr<Body> bp;
               switch(mitem) {
