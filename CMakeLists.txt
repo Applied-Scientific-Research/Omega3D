@@ -177,7 +177,7 @@ SET(SOURCES ${HEADERS}
             "src/MeasureFeature.cpp"
             "src/Body.cpp"
             "src/JsonHelper.cpp"
-            "src/ReadGeom.cpp"
+            "src/IglReadGeom.cpp"
             "src/StatusFile.cpp"
             "src/tinyxml2/tinyxml2.cpp"
             "src/tinyexpr/tinyexpr.c" )
