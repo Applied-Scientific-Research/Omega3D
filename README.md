@@ -59,10 +59,8 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
-* Just get BEM to resize and relocate bodies
 * Get BEM working for moving bodies
 * Augment BEM to make it work for rotating bodies
-* Allow general spheres - use the ips to scale refinement of an icosahedron
 * Allow general rectangles - use the ips to scale panel sizes
 * Add some pics, maybe aGIF, to this readme
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices

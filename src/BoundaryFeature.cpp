@@ -60,7 +60,29 @@ Ovoid::init_elements(const float _ips) const {
   ElementPacket<float> epack {x, idx, val};
 
   // then, iteratively refine it
-  //refine_geometry(epack);
+  float meansize = 0.38;
+  std::cout << "  sphere is icosahedron with 20";
+  while (meansize > 1.2*_ips) {
+
+    // refine once
+    refine_geometry(epack);
+
+    // re-sphericalize (r=0.5)
+    for (size_t i=0; i<epack.x.size()/3; ++i) {
+      const float rad = std::sqrt( std::pow(epack.x[3*i], 2) +
+                                   std::pow(epack.x[3*i+1], 2) +
+                                   std::pow(epack.x[3*i+2], 2));
+      const float scale = 0.5 / rad;
+      epack.x[3*i]   *= scale;
+      epack.x[3*i+1] *= scale;
+      epack.x[3*i+2] *= scale;
+    }
+
+    meansize *= 0.5;
+  }
+  std::cout << " panels" << std::endl;
+
+  // finally, assume standard behavior: reactive, no-tangential-flow panels
 
   // scale and translate here
   for (size_t i=0; i<epack.x.size()/3; ++i) {
