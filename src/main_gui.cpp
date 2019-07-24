@@ -983,8 +983,8 @@ int main(int argc, char const *argv[]) {
                   sim.add_body(bp);
                   break;
               }
-              //bfeatures.emplace_back(std::make_unique<SolidCircle>(bp, external_flow, xc[0], xc[1], xc[2], scale));
-              //std::cout << "Added " << (*bfeatures.back()) << std::endl;
+              bfeatures.emplace_back(std::make_unique<Ovoid>(bp, external_flow, xc[0], xc[1], xc[2], scale, scale, scale));
+              std::cout << "Added " << (*bfeatures.back()) << std::endl;
               show_bdry_create_window = false;
             }
             ImGui::SameLine();

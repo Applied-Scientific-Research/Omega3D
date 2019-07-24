@@ -6,7 +6,9 @@
  */
 
 #include "BoundaryFeature.h"
-#include "ReadGeom.h"
+#include "IglReadGeom.h"
+#include "IglRefine.h"
+#include "Icosahedron.h"
 
 #include <cmath>
 #include <iostream>
@@ -33,16 +35,100 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
   std::cout << "  found " << ftype << std::endl;
 
   // if it's a recognized keyword, generate the geometry
-  //if      (ftype == "sphere") { _flist.emplace_back(std::make_unique<SolidSphere>(_bp)); }
+  if      (ftype == "sphere") { _flist.emplace_back(std::make_unique<Ovoid>(_bp)); }
   //else if (ftype == "cube")   { _flist.emplace_back(std::make_unique<SolidCube>(_bp)); }
   // otherwise it's a file to read
-  //else                        { _flist.emplace_back(std::make_unique<ExteriorFromFile>(_bp)); }
-
-  // but until those are supported, always call the reader
-  _flist.emplace_back(std::make_unique<ExteriorFromFile>(_bp));
+  else                        { _flist.emplace_back(std::make_unique<ExteriorFromFile>(_bp)); }
 
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
+}
+
+
+//
+// Create a closed spherical/ovoid object from a icosahedron
+//
+ElementPacket<float>
+Ovoid::init_elements(const float _ips) const {
+
+  if (not this->is_enabled()) return ElementPacket<float>();
+
+  // first, make an icosahedron
+  std::vector<float>   x = ico0;
+  std::vector<Int>   idx = ico0idx;
+  std::vector<float> val;
+  ElementPacket<float> epack {x, idx, val};
+
+  // then, iteratively refine it
+  //refine_geometry(epack);
+
+  // scale and translate here
+  for (size_t i=0; i<epack.x.size()/3; ++i) {
+    const float in_x = epack.x[3*i];
+    const float in_y = epack.x[3*i+1];
+    const float in_z = epack.x[3*i+2];
+
+    // first scale, then translate
+    epack.x[3*i]   = in_x * m_sx + m_x;
+    epack.x[3*i+1] = in_y * m_sy + m_y;
+    epack.x[3*i+2] = in_z * m_sz + m_z;
+  }
+
+  // finally, assume standard behavior: reactive, no-tangential-flow panels
+  const size_t nsurfs = epack.idx.size() / 3;
+  epack.val.resize(2*nsurfs);
+  std::fill(epack.val.begin(), epack.val.end(), 0.0);
+
+  return epack;
+}
+
+void
+Ovoid::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+Ovoid::to_string() const {
+  std::stringstream ss;
+
+  if (m_sx == m_sy and m_sy == m_sz) {
+    ss << "sphere at " << m_x << " " << m_y << " " << m_z << " scaled by " << m_sx;
+  } else {
+    ss << "ovoid at " << m_x << " " << m_y << " " << m_z << " scaled by " << m_sx << " " << m_sy << " " << m_sz;
+  }
+
+  return ss.str();
+}
+
+void
+Ovoid::from_json(const nlohmann::json j) {
+  const std::vector<float> tr = j["translation"];
+  m_x = tr[0];
+  m_y = tr[1];
+  m_z = tr[2];
+  if (j["scale"].is_array()) {
+    const std::vector<float> sc = j["scale"].get<std::vector<float>>();
+    m_sx = sc[0];
+    m_sy = sc[1];
+    m_sz = sc[2];
+  } else if (j["scale"].is_number()) {
+    const float sc = j["scale"].get<float>();
+    m_sx = sc;
+    m_sy = sc;
+    m_sz = sc;
+  }
+  m_external = j.value("external", true);
+}
+
+nlohmann::json
+Ovoid::to_json() const {
+  // make an object for the mesh
+  nlohmann::json mesh = nlohmann::json::object();
+  mesh["geometry"] = "sphere";
+  mesh["translation"] = {m_x, m_y, m_z};
+  mesh["scale"] = {m_sx, m_sy, m_sz};
+  //mesh["external"] = m_external;
+  return mesh;
 }
 
 
@@ -74,50 +160,6 @@ ExteriorFromFile::init_elements(const float _ips) const {
   }
 
   return epack;
-
-/*
-  // how many panels?
-  const size_t num_nodes = 4;
-  const size_t num_panels = 4;
-
-  std::cout << "Reading file with " << num_nodes << " and " << num_panels << " panels" << std::endl;
-
-  // created once
-  std::vector<float>   x(num_nodes*3);
-  std::vector<Int>   idx(num_panels*3);
-  std::vector<float> val(num_panels);
-
-  x[0] = 0.0;
-  x[1] = 0.0;
-  x[2] = 0.0;
-  x[3] = 1.0;
-  x[4] = 0.0;
-  x[5] = 0.0;
-  x[6] = 1.0;
-  x[7] = 1.0;
-  x[8] = 0.0;
-  x[9] = 0.6;
-  x[10] = 0.6;
-  x[11] = 1.0;
-  idx[0] = 0;
-  idx[1] = 2;
-  idx[2] = 1;
-  idx[3] = 0;
-  idx[4] = 1;
-  idx[5] = 3;
-  idx[6] = 1;
-  idx[7] = 2;
-  idx[8] = 3;
-  idx[9] = 0;
-  idx[10] = 3;
-  idx[11] = 2;
-  val[0] = 0.0;
-  val[1] = 0.0;
-  val[2] = 0.0;
-  val[3] = 0.0;
-
-  return ElementPacket<float>({x, idx, val});
-*/
 }
 
 void

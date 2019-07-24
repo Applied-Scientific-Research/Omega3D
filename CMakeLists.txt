@@ -178,6 +178,7 @@ SET(SOURCES ${HEADERS}
             "src/Body.cpp"
             "src/JsonHelper.cpp"
             "src/IglReadGeom.cpp"
+            "src/IglRefine.cpp"
             "src/StatusFile.cpp"
             "src/tinyxml2/tinyxml2.cpp"
             "src/tinyexpr/tinyexpr.c" )

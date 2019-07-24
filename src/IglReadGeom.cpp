@@ -1,11 +1,11 @@
 /*
- * ReadGeom.cpp - Call into igl to read a triangle mesh
+ * IglReadGeom.cpp - Call into igl to read a triangle mesh
  *
  * (c)2019 Applied Scientific Research, Inc.
  *         Written by Mark J Stock <markjstock@gmail.com>
  */
 
-#include "ReadGeom.h"
+#include "IglReadGeom.h"
 
 #include "igl/read_triangle_mesh.h"
 

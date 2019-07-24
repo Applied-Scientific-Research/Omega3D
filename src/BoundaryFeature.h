@@ -63,6 +63,38 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>&,
                          const nlohmann::json);
 
 //
+// Concrete class for a sphere or ovoid
+//
+class Ovoid : public BoundaryFeature {
+public:
+  Ovoid(std::shared_ptr<Body> _bp = nullptr,
+                   bool _ext = true,
+                   float _x = 0.0,
+                   float _y = 0.0,
+                   float _z = 0.0,
+                   float _sx = 1.0,
+                   float _sy = 1.0,
+                   float _sz = 1.0)
+    : BoundaryFeature(_bp, _ext, _x, _y, _z),
+      m_sx(_sx),
+      m_sy(_sy),
+      m_sz(_sz)
+    {}
+
+  void debug(std::ostream& os) const override;
+  std::string to_string() const override;
+  void from_json(nlohmann::json) override;
+  nlohmann::json to_json() const override;
+  ElementPacket<float> init_elements(const float) const override;
+
+protected:
+  float m_sx;
+  float m_sy;
+  float m_sz;
+};
+
+
+//
 // Concrete class for geometry from a file (fluid is outside)
 //
 class ExteriorFromFile : public BoundaryFeature {

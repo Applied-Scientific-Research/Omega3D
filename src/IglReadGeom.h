@@ -1,5 +1,5 @@
 /*
- * ReadGeom.h - Call into igl to read a triangle mesh
+ * IglReadGeom.h - Call into igl to read a triangle mesh
  *
  * (c)2019 Applied Scientific Research, Inc.
  *         Written by Mark J Stock <markjstock@gmail.com>
