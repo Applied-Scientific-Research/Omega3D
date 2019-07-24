@@ -444,8 +444,8 @@ int main(int argc, char const *argv[]) {
     // Select pre-populated simulations
     {
       static int sim_item = 0;
-      const char* sim_items[] = { "Select a simulation...", "single vortex ring - no viscosity", "leapfrogging vortex rings - no viscosity", "colliding vortex rings - no viscosity", "single viscous vortex ring" };
-      ImGui::Combo("", &sim_item, sim_items, 5);
+      const char* sim_items[] = { "Select a simulation...", "single vortex ring - no viscosity", "leapfrogging vortex rings - no viscosity", "colliding vortex rings - no viscosity", "single viscous vortex ring", "flow over sphere" };
+      ImGui::Combo("", &sim_item, sim_items, 6);
 
       float* dt = sim.addr_dt();
       float* fs = sim.addr_fs();
@@ -464,7 +464,7 @@ int main(int argc, char const *argv[]) {
           ffeatures.clear();
           mfeatures.clear();
           *dt = 0.002;
-          fs[0] = 0.0; fs[1] = 0.0;
+          fs[0] = 0.0; fs[1] = 0.0; fs[2] = 0.0;
           sim.set_re_for_ips(0.015);
           // generate the features
           ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 0.9,0.05,0.1, 0.5, 1.0));
@@ -488,7 +488,7 @@ int main(int argc, char const *argv[]) {
           ffeatures.clear();
           mfeatures.clear();
           *dt = 0.002;
-          fs[0] = 0.0; fs[1] = 0.0;
+          fs[0] = 0.0; fs[1] = 0.0; fs[2] = 0.0;
           sim.set_re_for_ips(0.02);
           // generate the features
           ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 0.9,0.05,0.1, 0.5, 1.0));
@@ -513,7 +513,7 @@ int main(int argc, char const *argv[]) {
           ffeatures.clear();
           mfeatures.clear();
           *dt = 0.002;
-          fs[0] = 0.0; fs[1] = 0.0;
+          fs[0] = 0.0; fs[1] = 0.0; fs[2] = 0.0;
           sim.set_re_for_ips(0.02);
           // generate the features
           ffeatures.emplace_back(std::make_unique<SingularRing>(0.4,0.0,0.0, -0.9,-0.05,-0.1, 0.5, 1.0));
@@ -538,7 +538,7 @@ int main(int argc, char const *argv[]) {
           ffeatures.clear();
           mfeatures.clear();
           *dt = 0.01;
-          fs[0] = 0.0; fs[1] = 0.0;
+          fs[0] = 0.0; fs[1] = 0.0; fs[2] = 0.0;
           *re = 100.0;
           // generate the features
           //ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 1.0,0.0,0.0, 0.5, 1.0));
@@ -550,6 +550,31 @@ int main(int argc, char const *argv[]) {
           rparams.vcz = 0.0;
           rparams.vsize = 2.0;
           rparams.circ_density = 0.15;
+          // start it up
+          sim_is_running = true;
+          // and make sure we don't keep re-entering this
+          sim_item = 0;
+          break;
+        case 5:
+          // Re=50 sphere
+          sim.reset();
+          sim.clear_bodies();
+          bfeatures.clear();
+          ffeatures.clear();
+          mfeatures.clear();
+          *dt = 0.05;
+          fs[0] = 1.0; fs[1] = 0.0; fs[2] = 0.0;
+          *re = 50.0;
+          // generate the features
+          bp = sim.get_pointer_to_body("ground");
+          bfeatures.emplace_back(std::make_unique<Ovoid>(bp, true, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
+          is_viscous = true;
+          sim.set_diffuse(true);
+          rparams.vcx = -1.0;
+          rparams.vcy = 0.0;
+          rparams.vcz = 0.0;
+          rparams.vsize = 4.0;
+          rparams.circ_density = 0.05;
           // start it up
           sim_is_running = true;
           // and make sure we don't keep re-entering this
