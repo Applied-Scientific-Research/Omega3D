@@ -30,12 +30,13 @@ Body::Body(const double _x, const double _y, const double _z) :
   pos(Vec({{_x, _y, _z}})),
   vel(Vec({{0.0, 0.0, 0.0}})),
   apos(Vec({{0.0, 0.0, 0.0}})),
-  qpos(0.0,0.0,0.0,0.0),
   avel(Vec({{0.0, 0.0, 0.0}})),
   vol(0.0)
 {
   // time (t) is the only variable allowed in the equations
   func_vars.push_back({"t", &this_time});
+  // quaternion needs special initialization
+  qpos.setIdentity();
   // ane make space for the compiled functions
   pos_func.resize(Dimensions);
   apos_func.resize(Dimensions);
@@ -214,11 +215,19 @@ Eigen::AngleAxis<double> Body::get_orient_aa(const double _time) {
   const Vec orient = get_orient_vec(_time);
   Eigen::Vector3d axis(orient[0], orient[1], orient[2]);
   const double angle_in_radians = axis.norm();
-  axis *= 1.0/angle_in_radians;
+  if (std::abs(angle_in_radians) < std::numeric_limits<double>::epsilon()) {
+    // no rotation, but force a dummy axis
+    axis(0) = 1.0;
+  } else {
+    // scale by non-zero angle
+    axis *= 1.0/angle_in_radians;
+  }
   return Eigen::AngleAxis<double>(angle_in_radians, axis);
 }
 Eigen::Quaternion<double> Body::get_orient_quat(const double _time) {
   const Eigen::AngleAxis<double> aa = get_orient_aa(_time);
+  //std::cout << "AngleAxis is now" << std::endl;
+  //std::cout << aa.toRotationMatrix() << std::endl;
   return Eigen::Quaternion<double>(aa);
 }
 
@@ -273,6 +282,9 @@ void Body::transform(const double _time) {
   apos = get_orient_vec(_time);
   qpos = get_orient_quat(_time);
   avel = get_rotvel_vec(_time);
+
+  //std::cout << "Quaternion is now" << std::endl;
+  //std::cout << qpos.toRotationMatrix() << std::endl;
 }
 
 // get an Eigen-like Transform
