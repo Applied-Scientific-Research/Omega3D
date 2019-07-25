@@ -181,14 +181,17 @@ public:
       Eigen::Transform<double,3,Eigen::Affine> xform = B->get_transform_mat();
 
       std::cout << "    transforming body at time " << (S)_time << std::endl;
+      //std::cout << xform.matrix() << std::endl;
 
       // and do the transform (rotation and translation)
       for (size_t i=0; i<get_n(); ++i) {
         const Eigen::Vector3d _pre = {(*ux)[0][i], (*ux)[1][i], (*ux)[2][i]};
+        //std::cout << "      node " << i << " starts at " << _pre(0) << " " << _pre(1) << " " << _pre(2) << std::endl;
         const Eigen::Vector3d _post = xform * _pre;
         x[0][i] = (S)_post(0);
         x[1][i] = (S)_post(1);
         x[2][i] = (S)_post(2);
+        //std::cout << "      node " << i << " is now at " << _post(0) << " " << _post(1) << " " << _post(2) << std::endl;
       }
     }
   }
