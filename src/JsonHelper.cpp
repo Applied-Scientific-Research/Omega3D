@@ -241,13 +241,22 @@ void read_json (Simulation& sim,
         }
       }
       if (bdy.find("rotation") != bdy.end()) {
-        // look for a float or a string
-        if (bdy["rotation"].is_number()) {
-          const double val = bdy["rotation"].get<double>();
-          bp->set_rot(val);
-        } else if (bdy["rotation"].is_string()) {
-          const std::string expr = bdy["rotation"].get<std::string>();
-          bp->set_rot(expr);
+        // look for an array of possibly dissimilar terms
+        const std::vector<json> rot_json = bdy["rotation"];
+        // note that we should check for type first: "euler" (212 angles), "vector", or "quat"
+        size_t idx = 0;
+        for (auto const& term : rot_json) {
+          // each entry can be a float or a string
+          if (term.is_number()) {
+            const double val = term.get<double>();
+            //std::cout << "    component " << idx << " of rotation is constant (" << val << ")" << std::endl;
+            bp->set_rot(idx, val);
+          } else if (term.is_string()) {
+            const std::string expr = term.get<std::string>();
+            //std::cout << "    component " << idx << " of rotation is expression (" << expr << ")" << std::endl;
+            bp->set_rot(idx, expr);
+          }
+          ++idx;
         }
       }
 

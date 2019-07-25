@@ -10,6 +10,9 @@
 #include <cassert>
 #include <iostream>
 
+// use this differential to evaluate velocities (in the absence of a differentiator function)
+const double DT = 1.e-6;
+
 //
 // A single rigid body
 //
@@ -24,23 +27,24 @@ Body::Body() :
 // primary constructor
 Body::Body(const double _x, const double _y, const double _z) :
   this_time(0.0),
-  apos_func(nullptr),
   pos(Vec({{_x, _y, _z}})),
   vel(Vec({{0.0, 0.0, 0.0}})),
+  apos(Vec({{0.0, 0.0, 0.0}})),
   qpos(0.0,0.0,0.0,0.0),
-  qvel(0.0,0.0,0.0,0.0),
-  apos(0.0),
-  avel(0.0)
+  avel(Vec({{0.0, 0.0, 0.0}})),
+  vol(0.0)
 {
   // time (t) is the only variable allowed in the equations
   func_vars.push_back({"t", &this_time});
   // ane make space for the compiled functions
   pos_func.resize(Dimensions);
+  apos_func.resize(Dimensions);
 }
 
 Body::~Body() {
   // free the internal memory used by tinyexpr
   for (size_t i=0; i<pos_func.size(); ++i) te_free(pos_func[i]);
+  for (size_t i=0; i<apos_func.size(); ++i) te_free(apos_func[i]);
 }
 
 
@@ -63,11 +67,17 @@ Body::to_json() const {
   }
   j["translation"] = jpos;
 
-  if (apos_func) {
-    j["rotation"] = apos_expr;
-  } else {
-    j["rotation"] = apos;
+  // HACK - remember to tell if the rotation is "euler", "vector" (scaled axis-angle), or "quat" !
+  // here we assume "vector"
+  nlohmann::json jrot = nlohmann::json::array();
+  for (size_t i=0; i<Dimensions; ++i) {
+    if (apos_func[i]) {
+      jrot.push_back(apos_expr[i]);
+    } else {
+      jrot.push_back(apos[i]);
+    }
   }
+  j["rotation"] = jrot;
 
   return j;
 }
@@ -104,22 +114,24 @@ void Body::set_pos(const size_t _i, const std::string _val) {
   }
 }
 
-void Body::set_rot(const double _val) {
-  apos = _val;
+void Body::set_rot(const size_t _i, const double _val) {
+  assert(_i>=0 and _i<Dimensions && "Invalid index into array");
+  apos[_i] = _val;
 }
 
-void Body::set_rot(const std::string _val) {
+void Body::set_rot(const size_t _i, const std::string _val) {
+  assert(_i>=0 and _i<Dimensions && "Invalid index into array");
   // store the expression locally
-  apos_expr = _val;
+  apos_expr[_i] = _val;
   // compile it
   int ierr = 0;
-  apos_func = te_compile(_val.c_str(), func_vars.data(), 1, &ierr);
-  if (apos_func) {
-    std::cout << "  read expression (" << apos_expr << ")" << std::endl;
+  apos_func[_i] = te_compile(_val.c_str(), func_vars.data(), 1, &ierr);
+  if (apos_func[_i]) {
+    std::cout << "  read expression (" << apos_expr[_i] << ")" << std::endl;
     this_time = 0.0;
-    std::cout << "  testing parsed expression, with t=0, value is " << te_eval(apos_func) << std::endl;
+    std::cout << "  testing parsed expression, with t=0, value is " << te_eval(apos_func[_i]) << std::endl;
     this_time = 1.0;
-    std::cout << "                                  t=1, value is " << te_eval(apos_func) << std::endl;
+    std::cout << "                                  t=1, value is " << te_eval(apos_func[_i]) << std::endl;
     //this_time = 2.0;
     //std::cout << "                                  t=2, value is " << te_eval(apos_func) << std::endl;
   } else {
@@ -127,121 +139,145 @@ void Body::set_rot(const std::string _val) {
   }
 }
 
-void Body::transform(const double _time) {
-
-  // evaluate all expressions at this time
-  const double dt = 1.e-5;
-
-  for (size_t i=0; i<Dimensions; ++i) {
-    if (pos_func[i]) {
-      this_time = _time;
-      pos[i] = te_eval(pos_func[i]);
-
-      this_time = _time + dt;
-      const double pplus = te_eval(pos_func[i]);
-      this_time = _time - dt;
-      const double pminus = te_eval(pos_func[i]);
-      vel[i] = (pplus - pminus) / (2.0*dt);
-    }
-  }
-
-  if (apos_func) {
-    this_time = _time;
-    apos = te_eval(apos_func);
-    apos = std::remainder(apos, 2.0*M_PI);
-
-    this_time = _time + dt;
-    const double pplus = te_eval(apos_func);
-    this_time = _time - dt;
-    const double pminus = te_eval(apos_func);
-    // 2-point first derivative estimate
-    avel = (pplus - pminus) / (2.0*dt);
-  }
-}
-
 Vec Body::get_pos() {
   return pos;
 }
 Vec Body::get_pos(const double _time) {
-  // for testing, return a loop
-  //pos[0] = 0.5 * sin(2.0*_time);
-  //pos[1] = 0.5 * (1.0-cos(2.0*_time));
+  Vec newpos;
 
-  // for realsies, get the value or evaluate the expression
+  // get the value or evaluate the expression
   this_time = _time;
   //std::cout << "  MOVING BODY (" << get_name() << ") at time " << _time << std::endl;
   for (size_t i=0; i<Dimensions; ++i) {
     if (pos_func[i]) {
-      pos[i] = te_eval(pos_func[i]);
+      newpos[i] = te_eval(pos_func[i]);
       //std::cout << "IDEAL POS " << (0.5 * (1.0-cos(2.0*_time))) << "  AND ACTUAL " << pos[i] << std::endl;
       //std::cout << "  MOVED BODY pos[" << i << "] to " << pos[i] << std::endl;
+    } else {
+      newpos[i] = pos[i];
     }
   }
 
-  return pos;
+  return newpos;
 }
 
 Vec Body::get_vel() {
   return vel;
 }
 Vec Body::get_vel(const double _time) {
-  // for testing, return a loop
-  //vel[0] = cos(2.0*_time);
-  //vel[1] = 0.5 * 2.0*sin(2.0*_time);
+  Vec newvel;
 
-  // 2-point first derivative estimate
-  const double dt = 1.e-5;
+  // use 2-point first derivative estimate
   for (size_t i=0; i<Dimensions; ++i) {
     if (pos_func[i]) {
-      this_time = _time + dt;
+      this_time = _time + DT;
       const double pplus = te_eval(pos_func[i]);
-      this_time = _time - dt;
+      this_time = _time - DT;
       const double pminus = te_eval(pos_func[i]);
-      vel[i] = (pplus - pminus) / (2.0*dt);
+      newvel[i] = (pplus - pminus) / (2.0*DT);
       //std::cout << "      VEL " << (0.5 * 2.0*sin(2.0*_time)) << "  AND ACTUAL " << vel[i] << std::endl;
       //std::cout << "        used " << pplus << " and " << pminus << std::endl;
+    } else {
+      newvel[i] = vel[i];
     }
   }
 
-  return vel;
+  return newvel;
 }
+  
 
-double Body::get_orient() {
+// three ways to get the current orientation - assume it's already set
+Vec Body::get_orient_vec() {
   return apos;
 }
-double Body::get_orient(const double _time) {
-  // for realsies, get the value or evaluate the expression
-  this_time = _time;
-  //std::cout << "  ROTATING BODY (" << get_name() << ") at time " << _time << std::endl;
-  if (apos_func) {
-    apos = te_eval(apos_func);
-    apos = std::remainder(apos, 2.0*M_PI);
-    //std::cout << "  ROTATED BODY apos to " << apos << std::endl;
-  }
-
-  return apos;
+Eigen::AngleAxis<double> Body::get_orient_aa() {
+  return Eigen::AngleAxis<double>(qpos);
+}
+Eigen::Quaternion<double> Body::get_orient_quat() {
+  return qpos;
 }
 
-double Body::get_rotvel() {
+// get the orientation at a given time
+Vec Body::get_orient_vec(const double _time) {
+  Vec orient;
+  for (size_t i=0; i<Dimensions; ++i) {
+    if (apos_func[i]) {
+      this_time = _time;
+      orient[i] = te_eval(apos_func[i]);
+    } else {
+      orient[i] = apos[i];
+    }
+  }
+  return orient;
+}
+Eigen::AngleAxis<double> Body::get_orient_aa(const double _time) {
+  const Vec orient = get_orient_vec(_time);
+  Eigen::Vector3d axis(orient[0], orient[1], orient[2]);
+  const double angle_in_radians = axis.norm();
+  axis *= 1.0/angle_in_radians;
+  return Eigen::AngleAxis<double>(angle_in_radians, axis);
+}
+Eigen::Quaternion<double> Body::get_orient_quat(const double _time) {
+  const Eigen::AngleAxis<double> aa = get_orient_aa(_time);
+  return Eigen::Quaternion<double>(aa);
+}
+
+
+// two ways to get current rotational velocity
+Vec Body::get_rotvel_vec() {
   return avel;
 }
-double Body::get_rotvel(const double _time) {
+Eigen::AngleAxis<double> Body::get_rotvel_aa() {
+  // must convert from the stored Vec representation
+  Eigen::Vector3d axis(avel[0], avel[1], avel[2]);
+  const double angle_in_radians = axis.norm();
+  axis *= 1.0/angle_in_radians;
+  return Eigen::AngleAxis<double>(angle_in_radians, axis);
+}
+Vec Body::get_rotvel_vec(const double _time) {
+  Vec newavel;
 
-  // 2-point first derivative estimate
-  const double dt = 1.e-5;
-  if (apos_func) {
-    this_time = _time + dt;
-    const double pplus = te_eval(apos_func);
-    this_time = _time - dt;
-    const double pminus = te_eval(apos_func);
-    avel = (pplus - pminus) / (2.0*dt);
+  // use 2-point first derivative estimate
+  for (size_t i=0; i<Dimensions; ++i) {
+    if (apos_func[i]) {
+      this_time = _time + DT;
+      const double pplus = te_eval(pos_func[i]);
+      this_time = _time - DT;
+      const double pminus = te_eval(pos_func[i]);
+      newavel[i] = (pplus - pminus) / (2.0*DT);
+      //std::cout << "      VEL " << (0.5 * 2.0*sin(2.0*_time)) << "  AND ACTUAL " << vel[i] << std::endl;
+      //std::cout << "        used " << pplus << " and " << pminus << std::endl;
+    } else {
+      newavel[i] = avel[i];
+    }
   }
 
-  return avel;
+  return newavel;
+}
+Eigen::AngleAxis<double> Body::get_rotvel_aa(const double _time) {
+  const Vec rotvel = get_rotvel_vec(_time);
+  Eigen::Vector3d axis(rotvel[0], rotvel[1], rotvel[2]);
+  const double angle_in_radians = axis.norm();
+  axis *= 1.0/angle_in_radians;
+  return Eigen::AngleAxis<double>(angle_in_radians, axis);
+}
+
+
+// using the above getters, set this object's transform to the given time
+void Body::transform(const double _time) {
+  // first do positions and velocities
+  pos = get_pos(_time);
+  vel = get_vel(_time);
+
+  // rotation has to work differently, as we need to construct quaternions
+  apos = get_orient_vec(_time);
+  qpos = get_orient_quat(_time);
+  avel = get_rotvel_vec(_time);
 }
 
 // get an Eigen-like Transform
 Trans Body::get_transform_mat() {
+  // this is a rotation followed by a movement (rotation is farthest to the right in the equation)
   Trans t;
   t.setIdentity();
   t *= Eigen::Translation<double,3>(pos[0], pos[1], pos[2]);
@@ -249,35 +285,27 @@ Trans Body::get_transform_mat() {
   return t;
 }
 
+Trans Body::get_transform_mat(const double _time) {
+  Trans t;
+  t.setIdentity();
+  const Vec thispos = get_pos(_time);
+  t *= Eigen::Translation<double,3>(thispos[0], thispos[1], thispos[2]);
+  const Eigen::AngleAxisd thisorient = get_orient_aa(_time);
+  t *= thisorient;
+  return t;
+}
+
 
 // compare motion vs another Body
 bool Body::relative_motion_vs(std::shared_ptr<Body> _other, const double _last, const double _current) {
-  bool motion = false;
 
-  const Vec this_old_pos = get_pos(_last);
-  const Vec other_old_pos = _other->get_pos(_last);
-  const Vec this_new_pos = get_pos(_current);
-  const Vec other_new_pos = _other->get_pos(_current);
+  // transformation from one body to the other at time _last
+  const Trans oldtrans = get_transform_mat(_last) * _other->get_transform_mat(_last).inverse();
 
-  for (size_t i=0; i<Dimensions; ++i) {
-    const double relative = this_new_pos[i] - this_old_pos[i] - other_new_pos[i] + other_old_pos[i];
-    if (std::abs(relative) > 4.0*std::numeric_limits<double>::epsilon()) motion = true;
-  }
+  // transformation from one body to the other at time _current
+  const Trans newtrans = get_transform_mat(_current) * _other->get_transform_mat(_current).inverse();
 
-  // how do we account for rotation?
-
-  // the correct way - compute the true relative motion between the two objects
-  // the hack-y way - just compare positions and orientations separately <- do this one for now
-
-  const double this_old_theta = get_orient(_last);
-  const double other_old_theta = _other->get_orient(_last);
-  const double this_new_theta = get_orient(_current);
-  const double other_new_theta = _other->get_orient(_current);
-  const double relative = this_new_theta - this_old_theta - other_new_theta + other_old_theta;
-  if (std::abs(relative) > 4.0*std::numeric_limits<double>::epsilon()) motion = true;
-
-  //std::cout << "  relative_motion_vs " << this << " " << _other << " returns " << motion << std::endl;
-
-  return motion;
+  // are these similar?
+  return not oldtrans.isApprox(newtrans);
 }
 

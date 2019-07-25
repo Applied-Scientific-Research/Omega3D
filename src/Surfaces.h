@@ -423,20 +423,20 @@ public:
         pu[d][i] += _factor * (float)thisvel[d];
       }
 
-      // now compute the rotational velocity with respect to the geometric center - NEEDS WORK
-      double thisrotvel = this->B->get_rotvel(_time);
-      // center of this panel
-      Int id0 = idx[3*i];
-      Int id1 = idx[3*i+1];
-      Int id2 = idx[3*i+2];
-      // panel center
-      const S xc = 0.5 * (this->x[0][id0] + this->x[0][id1] + this->x[0][id2]);
-      const S yc = 0.5 * (this->x[1][id0] + this->x[1][id1] + this->x[1][id2]);
-      const S zc = 0.5 * (this->x[2][id0] + this->x[2][id1] + this->x[2][id2]);
+      // now compute the rotational velocity with respect to the geometric center
+      const Vec rotvel = this->B->get_rotvel_vec(_time);
+      // indices for this panel
+      const Int id0 = idx[3*i];
+      const Int id1 = idx[3*i+1];
+      const Int id2 = idx[3*i+2];
+      // panel center minus body center
+      const S xc = (this->x[0][id0] + this->x[0][id1] + this->x[0][id2])/3.0 - tc[0];
+      const S yc = (this->x[1][id0] + this->x[1][id1] + this->x[1][id2])/3.0 - tc[1];
+      const S zc = (this->x[2][id0] + this->x[2][id1] + this->x[2][id2])/3.0 - tc[2];
       // add rotational velocity
-      pu[0][i] -= _factor * (float)thisrotvel * (yc - tc[1]);
-      pu[1][i] += _factor * (float)thisrotvel * (xc - tc[0]);
-      pu[2][i] += 0.0 * zc;
+      pu[0][i] += _factor * (rotvel[1]*zc - rotvel[2]*yc);
+      pu[1][i] += _factor * (rotvel[2]*xc - rotvel[0]*zc);
+      pu[2][i] += _factor * (rotvel[0]*yc - rotvel[1]*xc);
     }
   }
  
@@ -465,8 +465,10 @@ public:
     if (not this->B) return;
     if (std::string("ground").compare(this->B->get_name()) == 0) return;
 
-    const S rotvel = (S)this->B->get_rotvel();
-    //if (std::abs(rotvel) < std::numeric_limits<float>::epsilon()) return;
+    // if no rotation, then we don't need to add anything
+    const auto rotvel = this->B->get_rotvel_vec();
+    if (std::abs(rotvel[0]) + std::abs(rotvel[1]) + std::abs(rotvel[2])
+        > std::numeric_limits<double>::epsilon()) return;
 
     // make sure we've calculated transformed center (we do this when we do volume)
     assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
@@ -484,22 +486,30 @@ public:
     //std::cout << "Inside add_rot_strengths, sizes are: " << get_npanels() << " " << ss->size() << std::endl;
     assert(ps[0].size() == get_npanels() && "Strength array is not the same as panel count");
 
-    // NEEDS WORK - THIS IS FROM THE 2D CODE
+    // NEEDS WORK - THIS IS FROM THE 2D CODE - FIX
 
     // what is the actual factor that we will add?
-    const S factor = _constfac + rotvel*_rotfactor;
+    //const S factor = _constfac + rotvel*_rotfactor;
+    const S factor = 0.0;
 
     // still here? let's do it. use the untransformed coordinates
     for (size_t i=0; i<get_npanels(); i++) {
-      const size_t j   = idx[2*i];
-      const size_t jp1 = idx[2*i+1];
+      // indices for this panel
+      const Int id0 = idx[3*i];
+      const Int id1 = idx[3*i+1];
+      const Int id2 = idx[3*i+2];
       // vector from object geometric center to panel center
-      const S dx = 0.5 * ((*this->ux)[0][j] + (*this->ux)[0][jp1]) - utc[0];
-      const S dy = 0.5 * ((*this->ux)[1][j] + (*this->ux)[1][jp1]) - utc[1];
+      const S dx = ((*this->ux)[0][id0] + (*this->ux)[0][id1] + (*this->ux)[0][id2])/3.0 - utc[0];
+      const S dy = ((*this->ux)[1][id0] + (*this->ux)[1][id1] + (*this->ux)[1][id2])/3.0 - utc[1];
+      const S dz = ((*this->ux)[2][id0] + (*this->ux)[2][id1] + (*this->ux)[2][id2])/3.0 - utc[2];
       // velocity of the panel center
-      const S ui = -factor * dy;
-      const S vi =  factor * dx;
+      const S ui = factor * (rotvel[1]*dz - rotvel[2]*dy);
+      const S vi = factor * (rotvel[2]*dx - rotvel[0]*dz);
+      const S wi = factor * (rotvel[0]*dy - rotvel[1]*dx);
 
+      // FIX this stuff below...
+
+/*
       // panel tangential vector, fluid to the left, body to the right
       S panelx = (*this->ux)[0][jp1] - (*this->ux)[0][j];
       S panely = (*this->ux)[1][jp1] - (*this->ux)[1][j];
@@ -519,6 +529,7 @@ public:
                   << " adds to vortex str " << (-1.0 * (ui*panelx + vi*panely))
                   << " and source str " << (-1.0 * (ui*panely - vi*panelx)) << std::endl;
       }
+*/
     }
   }
 
@@ -811,8 +822,10 @@ public:
     // do not call the parent
     if (this->B) {
       // we're attached to a body - great! what's the rotation rate?
-      // HACK - this assumes z-axis rotation only
-      circ[2] = 2.0 * vol * (S)this->B->get_rotvel(_time);
+      const Vec rotvel = this->B->get_rotvel_vec(_time);
+      circ[0] = 2.0 * vol * rotvel[0];
+      circ[1] = 2.0 * vol * rotvel[1];
+      circ[2] = 2.0 * vol * rotvel[2];
     } else {
       // we are fixed, thus not rotating
     }

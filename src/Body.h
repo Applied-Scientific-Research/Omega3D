@@ -50,21 +50,34 @@ public:
   void set_parent_name(const std::string);
   void set_pos(const size_t, const double);
   void set_pos(const size_t, const std::string);
-  void set_rot(const double);
-  void set_rot(const std::string);
+  void set_rot(const size_t, const double);
+  void set_rot(const size_t, const std::string);
 
-  // return positional, orientation, or other data
+  // getters
   std::string get_name();
-  void transform(const double);
+
   Vec get_pos();
   Vec get_pos(const double);
   Vec get_vel();
   Vec get_vel(const double);
-  double get_orient();
-  double get_orient(const double);
-  double get_rotvel();
-  double get_rotvel(const double);
+
+  // six ways to get the orientation (3 formats, 2 times)
+  Vec get_orient_vec();
+  Eigen::AngleAxis<double> get_orient_aa();
+  Eigen::Quaternion<double> get_orient_quat();
+  Vec get_orient_vec(const double);
+  Eigen::AngleAxis<double> get_orient_aa(const double);
+  Eigen::Quaternion<double> get_orient_quat(const double);
+
+  Vec get_rotvel_vec();
+  Eigen::AngleAxis<double> get_rotvel_aa();
+  Vec get_rotvel_vec(const double);
+  Eigen::AngleAxis<double> get_rotvel_aa(const double);
+
+  // set and get the transform for a given time
+  void transform(const double);
   Trans get_transform_mat();
+  Trans get_transform_mat(const double);
 
   // compare motion vs another Body
   bool relative_motion_vs(std::shared_ptr<Body>, const double, const double);
@@ -75,24 +88,24 @@ private:
 
   // string containing expression to be parsed when needed
   std::array<std::string,Dimensions> pos_expr;
-  std::string apos_expr;
+  std::array<std::string,Dimensions> apos_expr;
   // why not std::variant<double, std::string> for these?
 
   // needed by tinyexpr
   double this_time;
   std::vector<te_variable> func_vars;
   std::vector<te_expr*> pos_func;
-  te_expr* apos_func;
+  std::vector<te_expr*> apos_func;
 
   // 3D position and velocity (initial, or constant)
   Vec pos;
   Vec vel;
 
   // angular position and velocity (initial, or constant)
+  // first as scaled axis-angle, then as quaternion
+  Vec apos;
   Eigen::Quaternion<double> qpos;
-  Eigen::Quaternion<double> qvel;
-  double apos;
-  double avel;
+  Vec avel;
 
   // enclosed volume (needed for total circulation of rotating body)
   double vol;

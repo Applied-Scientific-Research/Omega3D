@@ -286,6 +286,12 @@ int main(int argc, char const *argv[]) {
   std::vector<float> gl_projection;
   compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
 
+  // adjust some UI settings
+  ImGuiStyle& style = ImGui::GetStyle();
+  style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+  style.Colors[ImGuiCol_TitleBg]               = ImVec4(0.27f, 0.27f, 0.54f, 1.00f);
+  style.Colors[ImGuiCol_TitleBgActive]         = ImVec4(0.32f, 0.32f, 0.63f, 1.00f);
+
 
   // Main loop
   while (!glfwWindowShouldClose(window))
@@ -959,6 +965,9 @@ int main(int argc, char const *argv[]) {
         static char strx[512] = "0.0*t";
         static char stry[512] = "0.0*t";
         static char strz[512] = "0.0*t";
+        static char strrx[512] = "0.0*t";
+        static char strry[512] = "0.0*t";
+        static char strrz[512] = "0.0*t";
 
         // show different inputs based on what is selected
         switch(mitem) {
@@ -972,13 +981,14 @@ int main(int argc, char const *argv[]) {
             // this geometry is attached to a new moving body
             ImGui::InputText("x position", strx, 512);
             ImGui::SameLine();
-            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
+            ShowHelpMarker("Position as constant or function of time t. Use C-style expressions: + - / * % ^ ( ) pi e abs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
             ImGui::InputText("y position", stry, 512);
-            ImGui::SameLine();
-            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
             ImGui::InputText("z position", strz, 512);
+            ImGui::InputText("x rotation", strrx, 512);
             ImGui::SameLine();
-            ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
+            ShowHelpMarker("Rotation as axis times angle (in radians) as constant or function of time t. Use C-style expressions: + - / * % ^ ( ) pi e abs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
+            ImGui::InputText("y rotation", strry, 512);
+            ImGui::InputText("z rotation", strrz, 512);
             break;
         }
 
@@ -1020,7 +1030,9 @@ int main(int argc, char const *argv[]) {
                   bp->set_pos(0, std::string(strx));
                   bp->set_pos(1, std::string(stry));
                   bp->set_pos(2, std::string(strz));
-                  //bp->set_rot(std::string(strrad));
+                  bp->set_rot(0, std::string(strrx));
+                  bp->set_rot(1, std::string(strry));
+                  bp->set_rot(2, std::string(strrz));
                   bp->set_name("sphere");
                   sim.add_body(bp);
                   break;
@@ -1059,7 +1071,9 @@ int main(int argc, char const *argv[]) {
                   bp->set_pos(0, std::string(strx));
                   bp->set_pos(1, std::string(stry));
                   bp->set_pos(2, std::string(strz));
-                  //bp->set_rot(std::string(strrad));
+                  bp->set_rot(0, std::string(strrx));
+                  bp->set_rot(1, std::string(strry));
+                  bp->set_rot(2, std::string(strrz));
                   bp->set_name("rectangle");
                   sim.add_body(bp);
                   break;
@@ -1117,7 +1131,9 @@ int main(int argc, char const *argv[]) {
                   bp->set_pos(0, std::string(strx));
                   bp->set_pos(1, std::string(stry));
                   bp->set_pos(2, std::string(strz));
-                  //bp->set_rot(std::string(strrad));
+                  bp->set_rot(0, std::string(strrx));
+                  bp->set_rot(1, std::string(strry));
+                  bp->set_rot(2, std::string(strrz));
                   bp->set_name("geom from file");
                   sim.add_body(bp);
                   break;

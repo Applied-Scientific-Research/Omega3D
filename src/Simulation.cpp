@@ -309,10 +309,12 @@ bool Simulation::do_any_bodies_move() {
   for (size_t i=0; i<bodies.size(); ++i) {
     auto thisvel = bodies[i]->get_vel(time);
     auto nextvel = bodies[i]->get_vel(time+dt);
-    auto thisrot = bodies[i]->get_rotvel(time);
-    auto nextrot = bodies[i]->get_rotvel(time+dt);
-    if (std::abs(thisvel[0]) + std::abs(thisvel[1]) + std::abs(thisrot) +
-        std::abs(nextvel[0]) + std::abs(nextvel[1]) + std::abs(nextrot) >
+    auto thisrot = bodies[i]->get_rotvel_vec(time);
+    auto nextrot = bodies[i]->get_rotvel_vec(time+dt);
+    if (std::abs(thisvel[0]) + std::abs(thisvel[1]) + std::abs(thisvel[2]) +
+        std::abs(thisrot[0]) + std::abs(thisrot[1]) + std::abs(thisrot[2]) +
+        std::abs(nextvel[0]) + std::abs(nextvel[1]) + std::abs(nextvel[2]) +
+        std::abs(nextrot[0]) + std::abs(nextrot[1]) + std::abs(nextrot[2]) >
         std::numeric_limits<float>::epsilon()) {
       some_move = true;
     }
