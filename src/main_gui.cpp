@@ -450,8 +450,8 @@ int main(int argc, char const *argv[]) {
     // Select pre-populated simulations
     {
       static int sim_item = 0;
-      const char* sim_items[] = { "Select a simulation...", "single vortex ring - no viscosity", "leapfrogging vortex rings - no viscosity", "colliding vortex rings - no viscosity", "single viscous vortex ring", "flow over sphere" };
-      ImGui::Combo("", &sim_item, sim_items, 6);
+      const char* sim_items[] = { "Select a simulation...", "single vortex ring - no viscosity", "leapfrogging vortex rings - no viscosity", "colliding vortex rings - no viscosity", "single viscous vortex ring", "interlocking vortex rings", "flow over sphere" };
+      ImGui::Combo("", &sim_item, sim_items, 7);
 
       float* dt = sim.addr_dt();
       float* fs = sim.addr_fs();
@@ -555,13 +555,39 @@ int main(int argc, char const *argv[]) {
           rparams.vcy = 0.0;
           rparams.vcz = 0.0;
           rparams.vsize = 2.0;
-          rparams.circ_density = 0.15;
+          rparams.circ_density = 0.05;
           // start it up
           sim_is_running = true;
           // and make sure we don't keep re-entering this
           sim_item = 0;
           break;
         case 5:
+          // Interlocking Re=100 vortex rings
+          sim.reset();
+          sim.clear_bodies();
+          bfeatures.clear();
+          ffeatures.clear();
+          mfeatures.clear();
+          *dt = 0.025;
+          fs[0] = 0.0; fs[1] = 0.0; fs[2] = 0.0;
+          *re = 100.0;
+          // generate the features
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.125,0.0,0.0, 0.0,0.0,1.0, 0.5, 1.0));
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.125,0.0, 1.0,0.0,0.0, 0.5, 1.0));
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.125, 0.0,1.0,0.0, 0.5, 1.0));
+          is_viscous = true;
+          sim.set_diffuse(true);
+          rparams.vcx = -0.5;
+          rparams.vcy = 0.0;
+          rparams.vcz = 0.0;
+          rparams.vsize = 2.0;
+          rparams.circ_density = 0.05;
+          // start it up
+          sim_is_running = true;
+          // and make sure we don't keep re-entering this
+          sim_item = 0;
+          break;
+        case 6:
           // Re=50 sphere
           sim.reset();
           sim.clear_bodies();
