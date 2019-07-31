@@ -377,15 +377,11 @@ std::string write_vtu_panels(Surfaces<S> const& surf, const size_t file_idx, con
   printer.PushAttribute( "Name", "connectivity" );
   if (surf.get_n() <= std::numeric_limits<uint16_t>::max()) {
     printer.PushAttribute( "type", "UInt16" );
-    //Vector<uint16_t> v(3*surf.get_npanels());
-    //std::iota(v.begin(), v.end(), 0);
     std::vector<Int> const & idx = surf.get_idx();
     Vector<uint16_t> v(std::begin(idx), std::end(idx));
     write_DataArray (printer, v, compress, asbase64);
   } else {
     printer.PushAttribute( "type", "UInt32" );
-    //Vector<uint32_t> v(3*surf.get_npanels());
-    //std::iota(v.begin(), v.end(), 0);
     std::vector<Int> const & idx = surf.get_idx();
     Vector<uint32_t> v(std::begin(idx), std::end(idx));
     write_DataArray (printer, v, compress, asbase64);
