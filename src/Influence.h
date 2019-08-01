@@ -837,7 +837,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
   }
 #endif // no Vc
 
-  flops *= 3.0 + 168.0*(float)src.get_n();
+  flops *= 3.0 + 160.0*(float)src.get_n();
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
