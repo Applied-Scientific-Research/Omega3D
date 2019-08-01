@@ -68,7 +68,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   //   Vc or no Vc
 
   //
-  // targets are field points, with no core radius
+  // targets are field points, with no core radius ===============================================
   //
   if (targ.is_inert()) {
 
@@ -204,7 +204,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   }
 
   //
-  // targets are particles, with a core radius
+  // targets are particles, with a core radius ===================================================
   //
   } else {
 
@@ -379,7 +379,45 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   typedef Vc::Vector<S> StoreVec;
   typedef Vc::Vector<A> AccumVec;
   assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
-  const size_t ntargvec = 1 + (ntarg-1) / StoreVec::size();
+
+  // prepare the source panels for vectorization - first the strengths
+  const Vc::Memory<StoreVec> ssxv = stdvec_to_vcvec<S>(ss[0], 0.0);
+  const Vc::Memory<StoreVec> ssyv = stdvec_to_vcvec<S>(ss[1], 0.0);
+  const Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
+  // then the triangle nodes
+  //Vector<S> sx0, sy0, sz0, sx1, sy1, sz1, sx2, sy2, sz2;
+  Vector<S> sx0(src.get_npanels());
+  Vector<S> sy0(src.get_npanels());
+  Vector<S> sz0(src.get_npanels());
+  Vector<S> sx1(src.get_npanels());
+  Vector<S> sy1(src.get_npanels());
+  Vector<S> sz1(src.get_npanels());
+  Vector<S> sx2(src.get_npanels());
+  Vector<S> sy2(src.get_npanels());
+  Vector<S> sz2(src.get_npanels());
+  for (size_t j=0; j<src.get_npanels(); ++j) {
+    const size_t jp0 = si[3*j];
+    const size_t jp1 = si[3*j+1];
+    const size_t jp2 = si[3*j+2];
+    sx0[j] = sx[0][jp0];
+    sy0[j] = sx[1][jp0];
+    sz0[j] = sx[2][jp0];
+    sx1[j] = sx[0][jp1];
+    sy1[j] = sx[1][jp1];
+    sz1[j] = sx[2][jp1];
+    sx2[j] = sx[0][jp2];
+    sy2[j] = sx[1][jp2];
+    sz2[j] = sx[2][jp2];
+  }
+  const Vc::Memory<StoreVec> sx0v = stdvec_to_vcvec<S>(sx0, -1.0);
+  const Vc::Memory<StoreVec> sy0v = stdvec_to_vcvec<S>(sy0, -1.0);
+  const Vc::Memory<StoreVec> sz0v = stdvec_to_vcvec<S>(sz0, 9.0);
+  const Vc::Memory<StoreVec> sx1v = stdvec_to_vcvec<S>(sx1, 0.0);
+  const Vc::Memory<StoreVec> sy1v = stdvec_to_vcvec<S>(sy1, 1.0);
+  const Vc::Memory<StoreVec> sz1v = stdvec_to_vcvec<S>(sz1, 9.0);
+  const Vc::Memory<StoreVec> sx2v = stdvec_to_vcvec<S>(sx2, 1.0);
+  const Vc::Memory<StoreVec> sy2v = stdvec_to_vcvec<S>(sy2, -1.0);
+  const Vc::Memory<StoreVec> sz2v = stdvec_to_vcvec<S>(sz2, 9.0);
 #endif
 
   // We need 8 different loops here, for the options:
@@ -492,7 +530,52 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
       std::array<Vector<S>,9>& tug = *opttug;
 
       #ifdef USE_VC
-        assert(false && "Velocity gradient influence on vortons with Vc is unsupported!");
+        #pragma omp parallel for
+        for (int32_t i=0; i<ntarg; ++i) {
+          const StoreVec txv(tx[0][i]);
+          const StoreVec tyv(tx[1][i]);
+          const StoreVec tzv(tx[2][i]);
+          const StoreVec trv(tr[i]);
+          AccumVec accumu(0.0);
+          AccumVec accumv(0.0);
+          AccumVec accumw(0.0);
+          AccumVec accumux(0.0);
+          AccumVec accumvx(0.0);
+          AccumVec accumwx(0.0);
+          AccumVec accumuy(0.0);
+          AccumVec accumvy(0.0);
+          AccumVec accumwy(0.0);
+          AccumVec accumuz(0.0);
+          AccumVec accumvz(0.0);
+          AccumVec accumwz(0.0);
+
+          for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
+            // NOTE: .vectorAt(i) gets the vector at scalar position i
+            //       .vector(i) gets the i'th vector!!!
+            kernel_2_0vg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                            sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                            sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                            ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                            txv, tyv, tzv, trv,
+                                            &accumu, &accumv, &accumw,
+                                            &accumux, &accumvx, &accumwx,
+                                            &accumuy, &accumvy, &accumwy,
+                                            &accumuz, &accumvz, &accumwz);
+          }
+
+          tu[0][i] += accumu.sum();
+          tu[1][i] += accumv.sum();
+          tu[2][i] += accumw.sum();
+          tug[0][i] += accumux.sum();
+          tug[1][i] += accumvx.sum();
+          tug[2][i] += accumwx.sum();
+          tug[3][i] += accumuy.sum();
+          tug[4][i] += accumvy.sum();
+          tug[5][i] += accumwy.sum();
+          tug[6][i] += accumuz.sum();
+          tug[7][i] += accumvz.sum();
+          tug[8][i] += accumwz.sum();
+        }
 
       #else  // no Vc
         #pragma omp parallel for
