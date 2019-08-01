@@ -241,7 +241,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
         // NOTE: .vectorAt(i) gets the vector at scalar position i
         //       .vector(i) gets the i'th vector!!!
-        kernel_0_0sg<StoreVec,AccumVec>(
+        kernel_0v_0vg<StoreVec,AccumVec>(
                           sxv.vector(j), syv.vector(j), szv.vector(j), srv.vector(j),
                           ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                           txv, tyv, tzv, trv,
@@ -277,7 +277,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       A accumwz = 0.0;
       // loop over source particles
       for (size_t j=0; j<src.get_n(); ++j) {
-        kernel_0_0sg<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],
+        kernel_0v_0vg<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],
                           ss[0][j], ss[1][j], ss[2][j],
                           tx[0][i], tx[1][i], tx[2][i], tr[i],
                           &accumu,  &accumv,  &accumw,
@@ -317,7 +317,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       AccumVec accumv = 0.0;
       AccumVec accumw = 0.0;
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
-        kernel_0_0s<StoreVec,AccumVec>(
+        kernel_0v_0v<StoreVec,AccumVec>(
                          sxv[j], syv[j], szv[j], srv[j],
                          ssxv[j], ssyv[j], sszv[j],
                          txv, tyv, tzv, trv,
@@ -331,7 +331,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       A accumv = 0.0;
       A accumw = 0.0;
       for (size_t j=0; j<src.get_n(); ++j) {
-        kernel_0_0s<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],
+        kernel_0v_0v<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],
                          ss[0][j], ss[1][j], ss[2][j],
                          tx[0][i], tx[1][i], tx[2][i], tr[i],
                          &accumu, &accumv, &accumw);
@@ -361,7 +361,6 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 //
 template <class S, class A>
 void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
-  std::cout << "    1_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
 
   // get references to use locally
@@ -369,9 +368,10 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   const std::vector<Int>&                 si = src.get_idx();
   const std::array<Vector<S>,Dimensions>& ss = src.get_str();
   const std::array<Vector<S>,Dimensions>& tx = targ.get_pos();
-  //const Vector<S>&                      tr = targ.get_rad();
   std::array<Vector<S>,Dimensions>&       tu = targ.get_vel();
+  std::optional<std::array<Vector<S>,9>>& opttug = targ.get_velgrad();
 
+  const int32_t ntarg = targ.get_n();
   float flops = (float)targ.get_n();
 
 #ifdef USE_VC
@@ -379,7 +379,203 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   typedef Vc::Vector<S> StoreVec;
   typedef Vc::Vector<A> AccumVec;
   assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
+  const size_t ntargvec = 1 + (ntarg-1) / StoreVec::size();
+#endif
 
+  // We need 8 different loops here, for the options:
+  //   target radii or no target radii
+  //   grads or no grads
+  //   Vc or no Vc
+
+  //
+  // targets are field points, with no core radius ===============================================
+  //
+  if (targ.is_inert()) {
+
+    if (opttug) { // velocity-and-grads kernel -------------------------------------------------
+      std::cout << "    2_0g compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      // get the pointer from the optional
+      std::array<Vector<S>,9>& tug = *opttug;
+
+      #ifdef USE_VC
+        assert(false && "Velocity gradient influence on points with Vc is unsupported!");
+
+      #else  // no Vc
+        #pragma omp parallel for
+        for (int32_t i=0; i<ntarg; ++i) {
+          A accumu = 0.0;
+          A accumv = 0.0;
+          A accumw = 0.0;
+          A accumux = 0.0;
+          A accumvx = 0.0;
+          A accumwx = 0.0;
+          A accumuy = 0.0;
+          A accumvy = 0.0;
+          A accumwy = 0.0;
+          A accumuz = 0.0;
+          A accumvz = 0.0;
+          A accumwz = 0.0;
+          for (size_t j=0; j<src.get_npanels(); ++j) {
+            const size_t jp0 = si[3*j];
+            const size_t jp1 = si[3*j+1];
+            const size_t jp2 = si[3*j+2];
+            kernel_2_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                              sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                              sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                              ss[0][j], ss[1][j], ss[2][j],
+                              tx[0][i], tx[1][i], tx[2][i],
+                              &accumu, &accumv, &accumw,
+                              &accumux, &accumvx, &accumwx,
+                              &accumuy, &accumvy, &accumwy,
+                              &accumuz, &accumvz, &accumwz);
+          }
+          tu[0][i] += accumu;
+          tu[1][i] += accumv;
+          tu[2][i] += accumw;
+          tug[0][i] += accumux;
+          tug[1][i] += accumvx;
+          tug[2][i] += accumwx;
+          tug[3][i] += accumuy;
+          tug[4][i] += accumvy;
+          tug[5][i] += accumwy;
+          tug[6][i] += accumuz;
+          tug[7][i] += accumvz;
+          tug[8][i] += accumwz;
+        }
+      #endif // no Vc
+
+      flops *= 12.0 + 300.0*(float)src.get_npanels();
+
+    } else { // velocity-only kernel -----------------------------------------------------------
+      std::cout << "    2_0  compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+
+      #ifdef USE_VC
+        assert(false && "Velocity influence on points with Vc is unsupported!");
+
+      #else  // no Vc
+        #pragma omp parallel for
+        for (int32_t i=0; i<ntarg; ++i) {
+          A accumu = 0.0;
+          A accumv = 0.0;
+          A accumw = 0.0;
+          for (size_t j=0; j<src.get_npanels(); ++j) {
+            const size_t jp0 = si[3*j];
+            const size_t jp1 = si[3*j+1];
+            const size_t jp2 = si[3*j+2];
+            kernel_2_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                             sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                             sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                             ss[0][j], ss[1][j], ss[2][j],
+                             tx[0][i], tx[1][i], tx[2][i],
+                             &accumu, &accumv, &accumw);
+          }
+          tu[0][i] += accumu;
+          tu[1][i] += accumv;
+          tu[2][i] += accumw;
+        }
+      #endif // no Vc
+
+      flops *= 3.0 + 160.0*(float)src.get_npanels();
+    }
+
+  //
+  // targets are particles, with a core radius ===================================================
+  //
+  } else {
+
+    // get the core radius
+    const Vector<S>&                            tr = targ.get_rad();
+
+    if (opttug) { // velocity-and-grads kernel -------------------------------------------------
+      std::cout << "    2_0g compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      // get the pointer from the optional
+      std::array<Vector<S>,9>& tug = *opttug;
+
+      #ifdef USE_VC
+        assert(false && "Velocity gradient influence on vortons with Vc is unsupported!");
+
+      #else  // no Vc
+        #pragma omp parallel for
+        for (int32_t i=0; i<ntarg; ++i) {
+          A accumu = 0.0;
+          A accumv = 0.0;
+          A accumw = 0.0;
+          A accumux = 0.0;
+          A accumvx = 0.0;
+          A accumwx = 0.0;
+          A accumuy = 0.0;
+          A accumvy = 0.0;
+          A accumwy = 0.0;
+          A accumuz = 0.0;
+          A accumvz = 0.0;
+          A accumwz = 0.0;
+          for (size_t j=0; j<src.get_npanels(); ++j) {
+            const size_t jp0 = si[3*j];
+            const size_t jp1 = si[3*j+1];
+            const size_t jp2 = si[3*j+2];
+            kernel_2_0vg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                              sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                              sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                              ss[0][j], ss[1][j], ss[2][j],
+                              tx[0][i], tx[1][i], tx[2][i], tr[i],
+                              &accumu, &accumv, &accumw,
+                              &accumux, &accumvx, &accumwx,
+                              &accumuy, &accumvy, &accumwy,
+                              &accumuz, &accumvz, &accumwz);
+          }
+          tu[0][i] += accumu;
+          tu[1][i] += accumv;
+          tu[2][i] += accumw;
+          tug[0][i] += accumux;
+          tug[1][i] += accumvx;
+          tug[2][i] += accumwx;
+          tug[3][i] += accumuy;
+          tug[4][i] += accumvy;
+          tug[5][i] += accumwy;
+          tug[6][i] += accumuz;
+          tug[7][i] += accumvz;
+          tug[8][i] += accumwz;
+        }
+      #endif // no Vc
+
+      flops *= 12.0 + 308.0*(float)src.get_npanels();
+
+    } else { // velocity-only kernel -----------------------------------------------------------
+      std::cout << "    2_0  compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+
+      #ifdef USE_VC
+        assert(false && "Velocity influence on vortons with Vc is unsupported!");
+
+      #else  // no Vc
+        #pragma omp parallel for
+        for (int32_t i=0; i<ntarg; ++i) {
+          A accumu = 0.0;
+          A accumv = 0.0;
+          A accumw = 0.0;
+          for (size_t j=0; j<src.get_npanels(); ++j) {
+            const size_t jp0 = si[3*j];
+            const size_t jp1 = si[3*j+1];
+            const size_t jp2 = si[3*j+2];
+            kernel_2_0v<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                             sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                             sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                             ss[0][j], ss[1][j], ss[2][j],
+                             tx[0][i], tx[1][i], tx[2][i], tr[i],
+                             &accumu, &accumv, &accumw);
+          }
+          tu[0][i] += accumu;
+          tu[1][i] += accumv;
+          tu[2][i] += accumw;
+        }
+      #endif // no Vc
+
+      flops *= 3.0 + 168.0*(float)src.get_npanels();
+    }
+
+  }
+
+/*
+#ifdef USE_VC
   #pragma omp parallel for
   for (int32_t j=0; j<(int32_t)src.get_npanels(); ++j) {
     // source triangular panel stays the same
@@ -397,10 +593,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
     const StoreVec sy2 = sx[1][sthird];
     const StoreVec sz2 = sx[2][sthird];
 
-    const size_t ntarg = targ.get_n();
-    const size_t ntargvec = 1 + (ntarg-1) / StoreVec::size();
-
-    for (size_t i=0; i<ntargvec; i++) {
+    for (size_t i=0; i<ntargvec; ++i) {
 
       // fill a 4- or 8-wide vector with the target coordinates
       StoreVec txx, txy, txz;
@@ -416,7 +609,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
       AccumVec accumv = 0.0;
       AccumVec accumw = 0.0;
 
-      kernel_1_0v<StoreVec,AccumVec>(sx0, sy0, sz0,
+      kernel_2_0p<StoreVec,AccumVec>(sx0, sy0, sz0,
                        sx1, sy1, sz1,
                        sx2, sy2, sz2,
                        StoreVec(ss[0][j]), StoreVec(ss[1][j]), StoreVec(ss[2][j]),
@@ -438,7 +631,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
       const size_t jp0 = si[3*j];
       const size_t jp1 = si[3*j+1];
       const size_t jp2 = si[3*j+2];
-      kernel_1_0v<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+      kernel_2_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                        sx[0][jp1], sx[1][jp1], sx[2][jp1],
                        sx[0][jp2], sx[1][jp2], sx[2][jp2],
                        ss[0][j], ss[1][j], ss[2][j],
@@ -452,6 +645,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
 #endif // no Vc
 
   flops *= 3.0 + 168.0*(float)src.get_npanels();
+*/
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
@@ -523,7 +717,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
     for (size_t j=0; j<sxv.vectorsCount(); ++j) {
       // NOTE: .vectorAt(i) gets the vector at scalar position i
       //       .vector(i) gets the i'th vector!!!
-      kernel_1_0v<StoreVec,AccumVec>(tx0, ty0, tz0,
+      kernel_2_0p<StoreVec,AccumVec>(tx0, ty0, tz0,
                                      tx1, ty1, tz1,
                                      tx2, ty2, tz2,
                                      ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
@@ -546,7 +740,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
     const size_t ip2 = ti[3*i+2];
     for (size_t j=0; j<src.get_n(); ++j) {
       // note that this is the same kernel as panels_affect_points!
-      kernel_1_0v<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
+      kernel_2_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
                        tx[0][ip1], tx[1][ip1], tx[2][ip1],
                        tx[0][ip2], tx[1][ip2], tx[2][ip2],
                        ss[0][j], ss[1][j], ss[2][j],

@@ -67,13 +67,10 @@ Vector<S> panels_on_points_coeff (Surfaces<S> const& src, Points<S>& targ) {
     for (size_t j=0; j<src.get_n(); ++j) {
       const size_t jp0 = si[2*j];
       const size_t jp1 = si[2*j+1];
-      //kernel_1_0v<S,A>(&sx[2*si[2*j]], &sx[2*si[2*j+1]], ss[j],
-      //                &tx[2*i], accum.data());
-      kernel_1_0s<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+      kernel_2_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                        sx[0][jp1], sx[1][jp1], sx[2][jp1],
                        ss[0][j], ss[1][j], ss[2][j],
                        tx[0][i], tx[1][i], tx[2][i],
-                       //accum.data());
                        &accumu, &accumv, &accumw);
     }
     //tu[0][i] += accum[0];
@@ -111,13 +108,10 @@ Vector<S> points_on_panels_coeff (Points<S> const& src, Surfaces<S>& targ) {
     const size_t ip1 = ti[2*i+1];
     for (size_t j=0; j<src.get_n(); ++j) {
       // note that this is the same kernel as panels_on_points_coeff!
-      //kernel_1_0v<S,A>(&tx[2*ti[2*i]], &tx[2*ti[2*i+1]], ss[j],
-      //                 &sx[2*j], accum.data());
-      kernel_1_0s<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
+      kernel_2_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
                        tx[0][ip1], tx[1][ip1], tx[2][ip1],
                        ss[0][j], ss[1][j], ss[2][j],
                        sx[0][j], sx[1][j], sx[2][j],
-                       //accum.data());
                        &accumu, &accumv, &accumw);
     }
     // we use it backwards, so the resulting velocities are negative
@@ -229,7 +223,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
       // first, strength along panel-centric x1 vector
-      kernel_1_0v<StoreVec,StoreVec>(sx0, sy0, sz0,
+      kernel_2_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
                                      sx1, sy1, sz1,
                                      sx2, sy2, sz2,
                                      StoreVec(sb1[0][j]), StoreVec(sb1[1][j]), StoreVec(sb1[2][j]),
@@ -248,7 +242,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
       // now, along x2 direction (another 168+20 flops)
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
-      kernel_1_0v<StoreVec,StoreVec>(sx0, sy0, sz0,
+      kernel_2_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
                                      sx1, sy1, sz1,
                                      sx2, sy2, sz2,
                                      StoreVec(sb2[0][j]), StoreVec(sb2[1][j]), StoreVec(sb2[2][j]),
@@ -292,7 +286,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
       // first, strength along panel-centric x1 vector
-      kernel_1_0v<S,S>(sx0, sy0, sz0,
+      kernel_2_0p<S,S>(sx0, sy0, sz0,
                        sx1, sy1, sz1,
                        sx2, sy2, sz2,
                        sb1[0][j], sb1[1][j], sb1[2][j],
@@ -307,7 +301,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
       // now, along x2 direction (another 168+20 flops)
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
-      kernel_1_0v<S,S>(sx0, sy0, sz0,
+      kernel_2_0p<S,S>(sx0, sy0, sz0,
                        sx1, sy1, sz1,
                        sx2, sy2, sz2,
                        sb2[0][j], sb2[1][j], sb2[2][j],
