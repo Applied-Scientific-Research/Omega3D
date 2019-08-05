@@ -13,6 +13,7 @@
 #include "Influence.h"
 #include "BEM.h"
 #include "BEMHelper.h"
+//#include "VtkXmlHelper.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -166,6 +167,11 @@ void Convection<S,A,I>::advect_2nd(const double _time,
   find_vels(_fs, _vort, _bdry, _vort);
   find_vels(_fs, _vort, _bdry, _fldpt);
 
+  // debug stuff
+  //static size_t idx = 1;
+  //std::vector<std::string> dummy;
+  //write_vtk_files<float>(_vort, 100*idx+7, dummy);
+
   // advect into an intermediate system
   std::vector<Collection> interim_vort = _vort;
   for (auto &coll : interim_vort) {
@@ -190,6 +196,7 @@ void Convection<S,A,I>::advect_2nd(const double _time,
   //find_vels(_fs, interim_vort, interim_bdry, interim_fldpt);
   find_vels(_fs, interim_vort, _bdry, interim_vort);
   find_vels(_fs, interim_vort, _bdry, interim_fldpt);
+  //write_vtk_files<float>(interim_vort, 100*idx+8, dummy);
 
   // _vort still has its original positions and the velocities evaluated there
   // but interm_vort now has the velocities at t+dt
@@ -209,6 +216,8 @@ void Convection<S,A,I>::advect_2nd(const double _time,
     ++v1p;
     ++v2p;
   }
+  //write_vtk_files<float>(_vort, 100*idx+9, dummy);
+  //idx++;
 
   v1p = _fldpt.begin();
   v2p = interim_fldpt.begin();

@@ -14,6 +14,7 @@
 #include "Coeffcients.h"
 #include "RHS.h"
 #include "BEM.h"
+//#include "VtkXmlHelper.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -237,6 +238,12 @@ void solve_bem(const double                         _time,
     // and send it to the elements
     std::visit([=](auto& elem) { elem.set_str(tstart, new_s.size(), new_s);  }, targ);
   }
+
+  // debug stuff
+  //static size_t idx = 1;
+  //std::vector<std::string> dummy;
+  //write_vtk_files<float>(_bdry, 100+idx, dummy);
+  //idx++;
 
   // save the simulation time to compare to the next call
   last_time = _time;
