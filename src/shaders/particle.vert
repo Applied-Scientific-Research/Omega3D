@@ -30,10 +30,12 @@ void main() {
   txcoord = quad_attr.xy;
 
   // magnitude of strength density scales fragment color
-  strength = sqrt(sx*sx + sy*sy + sz*sz) / (r*r*r);
+  //strength = sqrt(sx*sx + sy*sy + sz*sz) / (r*r*r);
+
   // or magnitude of strength normal to screen?
-  //strength = str.z;
-  //strength = sz;
+  // note: have to keep this next line or else glsl will compile out the sx and sy vars and crash!
+  strength = sx + sy + sz;
+  strength = abs(sz) / (r*r*r);
 
   // make 4 verts as a single primitive and set texture coords - see other shaders
   gl_Position = Projection * vec4(px + 2.5f*r*quad_attr.x, py + 2.5f*r*quad_attr.y, 0.f, 1.f);
