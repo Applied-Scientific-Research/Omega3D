@@ -61,7 +61,7 @@ Ovoid::init_elements(const float _ips) const {
 
   // estimate the triangle spacing for the scaled ovoid
   float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
-  float meansize = 0.38 * maxscale;
+  float meansize = 0.35 * maxscale;
 
   // then, iteratively refine it
   std::cout << "  sphere is icosahedron with 20";
