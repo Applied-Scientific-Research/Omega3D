@@ -961,12 +961,9 @@ public:
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Int)*idx.size(), idx.data(), GL_DYNAMIC_DRAW);
 
       // here is where we split on element type: active/reactive vs. inert
-      if (this->E == inert) {
-        // just don't upload strengths
-
-      } else { // this->E is active or reactive
-        // the strengths
-        const size_t slen = (*this->s)[0].size()*sizeof(S);
+      if (this->E != inert) {
+        // this->E is active or reactive
+        const size_t slen = ps[0].size()*sizeof(S);
         for (size_t i=0; i<Dimensions; ++i) {
           glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+4]);
           glBufferData(GL_ARRAY_BUFFER, slen, ps[i].data(), GL_DYNAMIC_DRAW);
@@ -1009,7 +1006,7 @@ public:
       //if (this->E == inert) {
       //} else { // this->E is active or reactive
 
-      // draw as lines
+      // draw as triangles
       glUseProgram(mgl->spo[0]);
 
       // upload the current projection matrix
