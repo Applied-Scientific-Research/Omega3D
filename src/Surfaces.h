@@ -414,17 +414,21 @@ public:
     assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
     // and we trust that we've transformed utc to tc
 
+    // get the body motion
+    const std::array<double,Dimensions> thisvel = this->B->get_vel(_time);
+    const Vec rotvel = this->B->get_rotvel_vec(_time);
+    //std::cout << "in add_body_motion, thisvel is " << thisvel[0] << " " << thisvel[1] << " " << thisvel[2] << std::endl;
+    //std::cout << "in add_body_motion,  rotvel is " << rotvel[0] << " " << rotvel[1] << " " << rotvel[2] << std::endl;
+
     // do this for all nodes - what about panels?
     for (size_t i=0; i<get_npanels(); ++i) {
 
       // apply the translational velocity
-      std::array<double,Dimensions> thisvel = this->B->get_vel(_time);
       for (size_t d=0; d<Dimensions; ++d) {
         pu[d][i] += _factor * (float)thisvel[d];
       }
 
       // now compute the rotational velocity with respect to the geometric center
-      const Vec rotvel = this->B->get_rotvel_vec(_time);
       // indices for this panel
       const Int id0 = idx[3*i];
       const Int id1 = idx[3*i+1];
@@ -438,6 +442,11 @@ public:
       pu[1][i] += _factor * (rotvel[2]*xc - rotvel[0]*zc);
       pu[2][i] += _factor * (rotvel[0]*yc - rotvel[1]*xc);
     }
+
+    //std::cout << "in add_body_motion, pu is" << std::endl;
+    //for (size_t i=0; i<100; ++i) {
+    //  std::cout << i << " " << pu[0][i] << " " << pu[1][i] << " " << pu[2][i] << " " << std::endl;
+    //}
   }
  
   void zero_strengths() {
@@ -673,6 +682,12 @@ public:
         pu[d][i] = _fs[d] + pu[d][i] * factor;
       }
     }
+
+    //std::cout << "in finalize_vels, pu is" << std::endl;
+    //for (size_t i=0; i<100; ++i) {
+    //  std::cout << i << " " << pu[0][i] << " " << pu[1][i] << " " << pu[2][i] << " " << std::endl;
+    //}
+
     // must explicitly call the method in the base class, too
     ElementBase<S>::finalize_vels(_fs);
   }
