@@ -250,9 +250,9 @@ Vec Body::get_rotvel_vec(const double _time) {
   for (size_t i=0; i<Dimensions; ++i) {
     if (apos_func[i]) {
       this_time = _time + DT;
-      const double pplus = te_eval(pos_func[i]);
+      const double pplus = te_eval(apos_func[i]);
       this_time = _time - DT;
-      const double pminus = te_eval(pos_func[i]);
+      const double pminus = te_eval(apos_func[i]);
       newavel[i] = (pplus - pminus) / (2.0*DT);
       //std::cout << "      VEL " << (0.5 * 2.0*sin(2.0*_time)) << "  AND ACTUAL " << vel[i] << std::endl;
       //std::cout << "        used " << pplus << " and " << pminus << std::endl;
