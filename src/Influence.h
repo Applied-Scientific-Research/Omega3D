@@ -432,13 +432,14 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
 
     if (opttug) { // velocity-and-grads kernel -------------------------------------------------
       std::cout << "    2_0g compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
-      // get the pointer from the optional
-      std::array<Vector<S>,9>& tug = *opttug;
 
       #ifdef USE_VC
         assert(false && "Velocity gradient influence on points with Vc is unsupported!");
 
       #else  // no Vc
+        // get the pointer from the optional
+        std::array<Vector<S>,9>& tug = *opttug;
+
         #pragma omp parallel for
         for (int32_t i=0; i<ntarg; ++i) {
           A accumu = 0.0;
