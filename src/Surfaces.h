@@ -600,15 +600,15 @@ public:
     const Int norig = b[0][0].size();
 
     // resize any vectors
-    for (size_t i=0; i<3; ++i) {
-      for (size_t j=0; j<3; ++j) {
+    for (size_t i=0; i<Dimensions; ++i) {
+      for (size_t j=0; j<Dimensions; ++j) {
         b[i][j].resize(nnew);
       }
     }
     area.resize(nnew);
 
     // we'll reuse these vectors
-    std::array<S,3> x1, x2, norm;
+    std::array<S,Dimensions> x1, x2, norm;
 
     // update what we need
     for (size_t i=norig; i<nnew; ++i) {
@@ -639,9 +639,9 @@ public:
       //std::cout << "  norm " << norm[0] << " " << norm[1] << " " << norm[2] << std::endl;
 
       // and assign
-      for (size_t j=0; j<3; ++j) b[0][j][i] = x1[j];
-      for (size_t j=0; j<3; ++j) b[1][j][i] = x2[j];
-      for (size_t j=0; j<3; ++j) b[2][j][i] = norm[j];
+      for (size_t j=0; j<Dimensions; ++j) b[0][j][i] = x1[j];
+      for (size_t j=0; j<Dimensions; ++j) b[1][j][i] = x2[j];
+      for (size_t j=0; j<Dimensions; ++j) b[2][j][i] = norm[j];
 
       //std::cout << "elem near " << this->x[0][id0] << " " << this->x[1][id0] << " " << this->x[2][id0] << " has norm " << b[2][0][i] << " " << b[2][1][i] << " " << b[2][2][i] << std::endl;
     }
