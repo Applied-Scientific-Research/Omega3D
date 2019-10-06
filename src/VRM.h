@@ -91,7 +91,7 @@ private:
 
   // do not perform VRM if source particle strength is less than
   //   this fraction of max particle strength
-  const ST ignore_thresh = 1.e-5;
+  const ST ignore_thresh = 1.e-4;
   // are thresholds absolute or relative to strongest particle?
   const bool thresholds_are_relative = true;
 
@@ -537,8 +537,8 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
 
   // for non-adaptive method and floats, 1e-6 fails immediately, 1e-5 fails quickly, 3e-5 seems to work
   // for doubles, can use 1e-6, will increase accuracy for slight performance hit (see vrm3d)
-  static const CT nnls_eps = 3.e-5;
-  // default to 1e-6, but drop to 1e-4 for adaptive with high overlap
+  static const CT nnls_eps = 1.e-5;
+  // default to 1e-6, but drop to 1e-4 for adaptive with high overlap?
   static const CT nnls_thresh = 1.e-6;
 
   // reset the arrays

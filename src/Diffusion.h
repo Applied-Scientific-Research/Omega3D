@@ -54,9 +54,8 @@ public:
             BEM<S,I>& _bem);
 
 private:
-  // the VRM algorithm, template params are storage, compute, max moments
-  // note that NNLS needs doubles for its compute type or else it will fail
-  VRM<S,A,2> vrm;
+  // the VRM algorithm, template params are storage, solver, max moments
+  VRM<S,double,2> vrm;
 
   // other necessary variables
   CoreType core_func;
