@@ -11,7 +11,11 @@
 #include "Core.h"
 #include "Merge.h"
 #include "Reflect.h"
-#include "VRM.h"
+#ifdef ADAPTIVE
+  #include "VRMadaptive.h"
+#else
+  #include "VRM.h"
+#endif
 #include "BEM.h"
 //#include "VtkXmlHelper.h"
 
@@ -91,7 +95,9 @@ void Diffusion<S,A,I>::step(const double                _time,
 
   std::cout << "Inside Diffusion::step with dt=" << _dt << std::endl;
 
+  //
   // always re-run the BEM calculation before shedding
+  //
   solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
   //

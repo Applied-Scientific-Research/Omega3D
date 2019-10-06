@@ -349,7 +349,7 @@ int main(int argc, char const *argv[]) {
     bool is_ready = sim.test_for_new_results();
 
     // before we start again, write the vtu output
-    if (export_vtk_this_frame) {
+    if (is_ready and export_vtk_this_frame) {
       vtk_out_files = sim.write_vtk();
       export_vtk_this_frame = false;
     }
@@ -707,9 +707,11 @@ int main(int argc, char const *argv[]) {
 
       if (is_viscous) {
         // show the toggle for AMR
-        //static bool use_amr = false;
-        //ImGui::Checkbox("Allow adaptive resolution", &use_amr);
-        //sim.set_amr(use_amr);
+#ifdef ADAPTIVE
+        static bool use_amr = false;
+        ImGui::Checkbox("Allow adaptive resolution", &use_amr);
+        sim.set_amr(use_amr);
+#endif
         sim.set_diffuse(true);
 
         // and let user choose Reynolds number
@@ -1398,7 +1400,7 @@ int main(int argc, char const *argv[]) {
       //if (ImGui::Button("ImGui Samples")) show_test_window ^= 1;
       // use ASCII table for number: http://www.asciitable.com/
       // but use CAPITAL letter for a letter, jesus, really?!?
-      if (ImGui::IsKeyPressed(84)) show_test_window ^= 1;
+      if (ImGui::IsKeyPressed(84) and not show_file_output_window) show_test_window ^= 1;
 
       //ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)",
       //            1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
