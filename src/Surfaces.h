@@ -49,6 +49,7 @@ public:
     // make sure input arrays are correctly-sized
     assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
     const size_t nsurfs = _idx.size() / Dimensions;
+
     // if no surfs, quit out now
     if (nsurfs == 0) {
       // but still initialize ux before we go (in case first bfeature is not enabled)
@@ -175,10 +176,10 @@ public:
   std::array<Vector<S>,Dimensions>&       get_str()       { return ps; }
 
   // panel properties
-  const std::array<Vector<S>,3>&  get_x1()       const { return b[0]; }
-  const std::array<Vector<S>,3>&  get_x2()       const { return b[1]; }
-  const std::array<Vector<S>,3>&  get_norm()     const { return b[2]; }
-  const Vector<S>&                get_area()     const { return area; }
+  const std::array<Vector<S>,Dimensions>& get_x1()   const { return b[0]; }
+  const std::array<Vector<S>,Dimensions>& get_x2()   const { return b[1]; }
+  const std::array<Vector<S>,Dimensions>& get_norm() const { return b[2]; }
+  const Vector<S>&                        get_area() const { return area; }
 
   // vortex strengths
   const std::array<Vector<S>,2>&  get_vort_str() const { return vs; }
@@ -243,6 +244,8 @@ public:
   // a little logic to see if we should augment the BEM equations for this object
   const bool is_augmented() const {
     bool augment = true;
+
+    // don't augment the ground body, or the boundary to an internal flow
     if (this->B) {
       // is the body pointer ground?
       if (std::string("ground").compare(this->B->get_name()) == 0) {
@@ -253,8 +256,12 @@ public:
       // nullptr for Body? no augment (old way of turning it off)
       augment = false;
     }
-    //if (FORCE_NO_AUGMENTATION) augment = false;
+    // and only need to augment reactive surfaces (ones participating in BEM)
+    if (this->E != reactive) augment = false;
+
+    // force no augmentation at all
     augment = false;
+
     return augment;
   }
 
@@ -976,8 +983,10 @@ public:
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Int)*idx.size(), idx.data(), GL_DYNAMIC_DRAW);
 
       // here is where we split on element type: active/reactive vs. inert
-      if (this->E != inert) {
-        // this->E is active or reactive
+      if (this->E == inert) {
+        // just don't upload strengths
+
+      } else { // this->E is active or reactive
         const size_t slen = ps[0].size()*sizeof(S);
         for (size_t i=0; i<Dimensions; ++i) {
           glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[i+4]);
