@@ -28,7 +28,20 @@
 #include <cassert>
 
 
-// 1-D elements
+// useful structure for panel strengths and BCs
+// Strength<S> ps;
+//   ps[0] means that the tangential (vortex) strength is present
+//   ps[1] means that the normal (source) strength is present
+//template <class S> using Strength = std::array<std::optional<Vector<S>>,3>;
+
+// useful structure for basis vectors
+// Basis<S> b;
+//   b[0] is the pair of arrays of the normalized tangential-1 vectors, b[0][0] for x, b[0][1] for y
+//   b[2] is the same for the normal vectors (+ is into fluid), b[2][0] for x, b[2][1] for y, ...
+template <class S> using Basis = std::array<std::array<Vector<S>,Dimensions>,Dimensions>;
+
+
+// 2-D elements
 template <class S>
 class Surfaces: public ElementBase<S> {
 public:
@@ -652,6 +665,9 @@ public:
     // must explicitly call the method in the base class
     ElementBase<S>::transform(_time);
 
+    // and recalculate the basis vectors
+    compute_bases(np);
+
     if (this->B and this->M == bodybound) {
       // do the transform with an affine matrix
       Eigen::Transform<double,3,Eigen::Affine> xform = this->B->get_transform_mat();
@@ -1065,13 +1081,15 @@ protected:
 
   // element-wise variables special to triangular panels
   std::vector<Int>                 idx;	// indexes into the x array
+  Vector<S>                       area; // panel areas
+  Basis<S>                           b; // transformed basis vectors: x1 is b[0], x2 is b[1], normal is b[2], normal x is b[2][0]
   std::array<Vector<S>,Dimensions>  pu; // panel-center velocities (ElementBase stores *node* properties)
+
+  // strengths and BCs
   std::array<Vector<S>,2>           vs; // vortex sheet strengths of the elements (x1,x2)
   std::vector<Vector<S>>            bc; // boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
   std::optional<Vector<S>>          ss; // source strengths which represent the vel inf of the rotating volume
   std::array<Vector<S>,Dimensions>  ps; // panel-center strengths (do not use s in ElementBase)
-  Vector<S>                       area; // panel areas
-  std::array<std::array<Vector<S>,3>,3> b;  // transformed basis vectors: x1 is b[0], x2 is b[1], normal is b[2], normal x is b[2][0]
 
   // parameters for the encompassing body
   Int                           istart; // index of first entry in RHS vector and A matrix
