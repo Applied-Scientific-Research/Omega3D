@@ -11,13 +11,12 @@
 #include "Core.h"
 #include "Merge.h"
 #include "Reflect.h"
-#ifdef ADAPTIVE
+#ifdef PLUGIN_AVRM
   #include "VRMadaptive.h"
 #else
   #include "VRM.h"
 #endif
 #include "BEM.h"
-//#include "VtkXmlHelper.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -103,7 +102,6 @@ void Diffusion<S,A,I>::step(const double                _time,
   //
   // generate particles at boundary surfaces
   //
-
   for (auto &coll : _bdry) {
 
     // run this step if the collection is Surfaces
@@ -171,36 +169,30 @@ void Diffusion<S,A,I>::step(const double                _time,
       pts.resize(pts.get_rad().size());
     }
   }
-  //write_vtk_files<float>(_vort, 100*idx+2, dummy);
 
 
   //
   // reflect interior particles to exterior because VRM only works in free space
   //
   (void) reflect_interior<S>(_bdry, _vort);
-  //write_vtk_files<float>(_vort, 100*idx+3, dummy);
 
 
   //
   // merge any close particles to clean up potentially-dense areas
   //
   (void) merge_operation<S>(_vort, particle_overlap, 0.4, adaptive_radii);
-  //write_vtk_files<float>(_vort, 100*idx+4, dummy);
 
 
   //
   // clean up by removing the innermost layer - the one that will be represented by boundary strengths
   //
   (void) clear_inner_layer<S>(_bdry, _vort, 0.0, _vdelta/particle_overlap);
-  //write_vtk_files<float>(_vort, 100*idx+5, dummy);
 
 
   //
   // merge again if clear did any work
   //
   if (_bdry.size() > 0) merge_operation<S>(_vort, particle_overlap, 0.4, adaptive_radii);
-  //write_vtk_files<float>(_vort, 100*idx+6, dummy);
-  //idx++;
 
 
   // now is a fine time to reset the max active/particle strength
