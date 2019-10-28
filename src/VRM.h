@@ -11,6 +11,9 @@
 #include "Icosahedron.h"
 #include "VectorHelper.h"
 #include "nanoflann.hpp"
+#ifdef PLUGIN_SIMPLEX
+#include "simplex.h"
+#endif
 #include "nnls.h"
 
 #include <Eigen/Dense>
@@ -25,6 +28,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
+
+enum SolverType { nnls, simplex };
 
 //
 // Class to hold VRM parameters and temporaries
@@ -46,6 +51,10 @@ public:
                    Vector<ST>&,
                    const CoreType,
                    const ST);
+
+  // other functions to eventually support:
+  // two-to-one merge (when particles are close to each other)
+  // one-to-many elongate (re-sphericalize a stretched particle)
 
 protected:
   // search for new target location
@@ -84,7 +93,7 @@ private:
 
   // for adaptive particle size VRM
   bool adapt_radii = false;
-  //const ST radius_lapse = 0.3;
+  //const ST radius_lapse = 0.2;
   // only adapt particles if their strength is less than this
   //   fraction of max particle strength
   //const ST adapt_thresh = 1.e-2;
@@ -97,6 +106,9 @@ private:
 
   // use nanoflann for nearest-neighbor searching? false uses direct search
   const bool use_tree = true;
+
+  SolverType use_solver = nnls;
+  //SolverType use_solver = simplex;
 };
 
 // delegating ctor
@@ -329,6 +341,7 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::array<Vector<ST>,3>& pos,
   //size_t ntooclose = 0;
   size_t minneibs = 999999;
   size_t maxneibs = 0;
+  // note that an OpenMP loop here will need to use int32_t as the counter variable type
   for (size_t i=0; i<initial_n; ++i) {
 
     // find the nearest neighbor particles
@@ -540,6 +553,10 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
   static const CT nnls_eps = 1.e-5;
   // default to 1e-6, but drop to 1e-4 for adaptive with high overlap?
   static const CT nnls_thresh = 1.e-6;
+#ifdef PLUGIN_SIMPLEX
+  // default to 1e-6, but drop to 1e-4 for adaptive with high overlap?
+  static const CT simplex_thresh = 1.e-6;
+#endif
 
   // reset the arrays
   //std::cout << "\nSetting up Ax=b least-squares problem" << std::endl;
@@ -621,31 +638,67 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
   //std::cout << "  Here is the right hand side b:\n\t" << b.transpose() << std::endl;
   //std::cout << "  Here is the solution vector:\n\t" << fractions.transpose() << std::endl;
 
-  // solve with non-negative least-squares
-  Eigen::NNLS<Eigen::Matrix<CT,Eigen::Dynamic,Eigen::Dynamic> > nnls_solver(A, 100, nnls_eps);
 
-  //std::cout << "A is" << std::endl << A << std::endl;
-  //std::cout << "b is" << std::endl << b.transpose() << std::endl;
-  if (nnls_solver.solve(b)) {
-    fractions = nnls_solver.x();
-    //std::cout << "  success! required " << nnls_solver.numLS() << " LS problems" << std::endl;
-    //std::cout << "  check says " << nnls_solver.check(b) << std::endl;
+  if (use_solver == nnls) {
+    //std::cout << "    using NNLS solver\n" << std::endl;
+
+    // solve with non-negative least-squares
+    Eigen::NNLS<Eigen::Matrix<CT,Eigen::Dynamic,Eigen::Dynamic> > nnls_solver(A, 100, nnls_eps);
+
+    //std::cout << "A is" << std::endl << A << std::endl;
+    //std::cout << "b is" << std::endl << b.transpose() << std::endl;
+    if (nnls_solver.solve(b)) {
+      fractions = nnls_solver.x();
+      //std::cout << "  success! required " << nnls_solver.numLS() << " LS problems" << std::endl;
+      //std::cout << "  check says " << nnls_solver.check(b) << std::endl;
+    } else {
+      for (size_t j=0; j<inear.size(); ++j) fractions(j) = 0.f;
+      //std::cout << "  fail!" << std::endl;
+    }
+
+    //std::cout << "  fractions are:\n\t" << fractions.transpose() << std::endl;
+
+    // measure the results
+    Eigen::Matrix<CT,Eigen::Dynamic,1> err = A*fractions - b;
+    //std::cout << "  error is:\n" << err.transpose() << std::endl;
+    //std::cout << "  error magnitude is " << std::sqrt(err.dot(err)) << std::endl;
+
+    // was this solution successful?
+    if (err.dot(err) < nnls_thresh) {
+      // this is good enough!
+      haveSolution = true;
+    }
+
   } else {
-    for (size_t j=0; j<inear.size(); ++j) fractions(j) = 0.f;
-    //std::cout << "  fail!" << std::endl;
-  }
+    //std::cout << "    using Simplex solver\n" << std::endl;
 
-  //std::cout << "  fractions are:\n\t" << fractions.transpose() << std::endl;
+#ifdef PLUGIN_SIMPLEX
+    // solve with simplex solver
 
-  // measure the results
-  Eigen::Matrix<CT,Eigen::Dynamic,1> err = A*fractions - b;
-  //std::cout << "  error is:\n" << err.transpose() << std::endl;
-  //std::cout << "  error magnitude is " << std::sqrt(err.dot(err)) << std::endl;
+    // first, adjust the RHS
+    for (size_t j=0; j<num_rows; ++j) {
+      b(j) -= 0.5 * A.row(j).sum();
+    }
+    //std::cout << "  New right hand side b:\n\t" << b.transpose() << std::endl;
 
-  // was this solution successful?
-  if (err.dot(err) < nnls_thresh) {
-    // this is good enough!
-    haveSolution = true;
+    // finally call the solver
+    CT LInfNorm = 1.0;
+    int retval = undr_dtrmn_solvr<CT,num_rows,max_near>(A, b, fractions, LInfNorm);
+    //std::cout << "  undr_dtrmn_solvr returned " << retval << " " << LInfNorm << std::endl;
+
+    // if we used the simplex solver, adjust the fractions here
+    fractions.array() += 0.5;
+    //std::cout << "  final fractions are:\n\t" << fractions.transpose() << std::endl;
+
+    // was this solution successful?
+    if (retval == 0 and LInfNorm < 0.5 + simplex_thresh) {
+      // this is good enough!
+      haveSolution = true;
+    }
+#else
+    // we should never get here
+    throw "Simplex solver is not available.";
+#endif
   }
 
   // set output fractions and result

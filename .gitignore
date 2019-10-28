@@ -36,9 +36,12 @@
 *.tmp
 *.swp
 
-build
-Release
-Debug
-RelDbg
+build*
+Release*
+Debug*
+RelDbg*
+
 notes
 
+# plugins
+plugin*
