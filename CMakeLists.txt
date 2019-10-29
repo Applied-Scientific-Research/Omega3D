@@ -198,6 +198,7 @@ SET(SOURCES ${HEADERS}
             "src/BoundaryFeature.cpp"
             "src/MeasureFeature.cpp"
             "src/Body.cpp"
+            "src/RenderParams.cpp"
             "src/JsonHelper.cpp"
             "src/IglReadGeom.cpp"
             "src/IglRefine.cpp"
