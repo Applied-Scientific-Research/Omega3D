@@ -46,6 +46,7 @@ public:
 
   // other
   float circ_density = 0.15;	// non-dimensional
+  float vorton_scale = 1.0;	// non-dimensional
   float tracer_scale = 0.15;	// non-dimensional
   float tracer_size;		// dimensional
 };

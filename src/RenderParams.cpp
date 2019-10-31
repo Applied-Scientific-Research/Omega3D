@@ -35,6 +35,9 @@ RenderParams::from_json(const nlohmann::json j) {
   if (j.find("density") != j.end()) {
     circ_density = j["density"];
   }
+  if (j.find("vortonScale") != j.end()) {
+    vorton_scale = j["vortonScale"];
+  }
   if (j.find("tracerScale") != j.end()) {
     tracer_scale = j["tracerScale"];
   }
@@ -52,7 +55,6 @@ RenderParams::from_json(const nlohmann::json j) {
     width = new_vec[0];
     height = new_vec[1];
   }
-
 }
 
 
@@ -63,6 +65,7 @@ RenderParams::to_json() const {
 
   j["density"] = circ_density;
   j["tracerScale"] = tracer_scale;
+  j["vortonScale"] = vorton_scale;
   j["viewPoint"] = {vcx, vcy, vcz};
   j["viewScale"] = vsize;
   j["windowSize"] = {width, height};
