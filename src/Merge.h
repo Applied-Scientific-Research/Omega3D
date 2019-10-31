@@ -78,6 +78,17 @@ size_t merge_close_particles(std::array<Vector<S>,3>& pos,
   nanoflann::SearchParams params;
   params.sorted = true;
 
+  // new merging needs two new thresholds
+  const S initial_thresh = 0.5;
+  const S always_thresh = 0.05;
+
+  // and a measure of the mean strength
+  S meanstr = 0.0;
+  for (size_t i=0; i<n; ++i) {
+    meanstr += std::sqrt(sx[i]*sx[i] + sy[i]*sy[i] + sz[i]*sz[i]);
+  }
+  meanstr /= (S)n;
+
   //
   // merge co-located particles with identical radii
   //
@@ -93,7 +104,7 @@ size_t merge_close_particles(std::array<Vector<S>,3>& pos,
 
       // nominal separation for this particle
       const S nom_sep = r[i] / particle_overlap;
-      const S search_rad = nom_sep * threshold;
+      const S search_rad = nom_sep * initial_thresh;
       const S distsq_thresh = std::pow(search_rad, 2);
 
       // tree-based search with nanoflann
@@ -108,30 +119,42 @@ size_t merge_close_particles(std::array<Vector<S>,3>& pos,
           if (i != iother and not erase_me[iother]) {
             // make sure distance is also less than target particle's threshold
             // note that distance returned from radiusSearch is already squared
-            if (ret_matches[j].second < std::pow(threshold*r[iother]/particle_overlap, 2)) {
+            const S dist = std::sqrt(ret_matches[j].second);
+            if (dist < initial_thresh*r[iother]/particle_overlap) {
               //std::cout << "  particles " << i << " and " << iother << " will merge" << std::endl;
               //std::cout << "    first at " << x[i] << " " << y[i] << " " << z[i] << " with str " << sx[i] << " and rad " << r[i] << std::endl;
               //std::cout << "    other at " << x[iother] << " " << y[iother] << " " << z[iother] << " with str " << sx[iother] << " and rad " << r[iother] << std::endl;
               const S si = std::sqrt(sx[i]*sx[i] + sy[i]*sy[i] + sz[i]*sz[i]) + std::numeric_limits<S>::epsilon();
               const S so = std::sqrt(sx[iother]*sx[iother] + sy[iother]*sy[iother] + sz[iother]*sz[iother]) + std::numeric_limits<S>::epsilon();
-              const S strength_mag = si + so;
-              // find center of strength
-              const S newx = (x[i]*si + x[iother]*so) / strength_mag;
-              const S newy = (y[i]*si + y[iother]*so) / strength_mag;
-              const S newz = (z[i]*si + z[iother]*so) / strength_mag;
-              // move strengths to particle i
-              x[i] = newx;
-              y[i] = newy;
-              z[i] = newz;
-              if (adapt_radii) {
-                r[i] = std::cbrt((si*std::pow(r[i],3) + so*std::pow(r[iother],3))/strength_mag);
+              const S frac = so / (si + so);
+
+              bool do_merge = false;
+              const S min_rad = std::min(r[iother],r[i]) / particle_overlap;
+              // check vs. magnitude of relative error
+              if (dist*frac*si < threshold*meanstr*min_rad) do_merge = true;
+              // or merge regardless if particles are very close
+              if (dist < always_thresh*min_rad) do_merge = true;
+
+              if (do_merge) {
+                // find center of strength
+                const S omfrac = 1.0 - frac;
+                const S newx = x[i]*omfrac + x[iother]*frac;
+                const S newy = y[i]*omfrac + y[iother]*frac;
+                const S newz = z[i]*omfrac + z[iother]*frac;
+                // move strengths to particle i
+                x[i] = newx;
+                y[i] = newy;
+                z[i] = newz;
+                if (adapt_radii) {
+                  r[i] = std::cbrt(omfrac*std::pow(r[i],3) + frac*std::pow(r[iother],3));
+                }
+                sx[i] = sx[i] + sx[iother];
+                sy[i] = sy[i] + sy[iother];
+                sz[i] = sz[i] + sz[iother];
+                //std::cout << "    result   " << x[i] << " " << y[i] << " with str " << sx[i] << " " << sy[i] << " " << sz[i] << " and rad " << r[i] << std::endl;
+                // flag other particle for deletion
+                erase_me[iother] = true;
               }
-              sx[i] = sx[i] + sx[iother];
-              sy[i] = sy[i] + sy[iother];
-              sz[i] = sz[i] + sz[iother];
-              //std::cout << "    result   " << x[i] << " " << y[i] << " with str " << sx[i] << " " << sy[i] << " " << sz[i] << " and rad " << r[i] << std::endl;
-              // flag other particle for deletion
-              erase_me[iother] = true;
             }
           }
         }
