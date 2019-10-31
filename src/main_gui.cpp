@@ -709,12 +709,6 @@ int main(int argc, char const *argv[]) {
       ShowHelpMarker("Adjust how far into the future each step must simulate. Smaller means better accuracy, larger is faster.");
 
       if (is_viscous) {
-        // show the toggle for AMR
-#ifdef PLUGIN_AVRM
-        static bool use_amr = false;
-        ImGui::Checkbox("Allow adaptive resolution", &use_amr);
-        sim.set_amr(use_amr);
-#endif
         sim.set_diffuse(true);
 
         // and let user choose Reynolds number
@@ -1288,11 +1282,55 @@ int main(int argc, char const *argv[]) {
       }
 
       // add button to recenter on all vorticity?
-
-      // help separate this from the final info
-      ImGui::Separator();
     }
 
+
+    // Solver parameters, under its own header
+    ImGui::Spacing();
+    if (ImGui::CollapsingHeader("Solver parameters (advanced)")) {
+
+      static bool relative_thresh = true;
+      ImGui::Checkbox("Thresholds are relative to strongest particle", &relative_thresh);
+      ImGui::SameLine();
+      ShowHelpMarker("If unchecked, the thresholds defined here are absolute and unscaled to the strongest particle.");
+      sim.set_vrm_relative(relative_thresh);
+
+      ImGui::PushItemWidth(-270);
+      static float ignore_thresh = -4;
+      ImGui::SliderFloat("Threshold to ignore", &ignore_thresh, -12, 0, "%.1f");
+      ImGui::SameLine();
+      ShowHelpMarker("During diffusion, ignore any particles with strength magnitude less than this power of ten threshold.");
+      sim.set_vrm_ignore(std::pow(10.f,ignore_thresh));
+      ImGui::PopItemWidth();
+
+#ifdef PLUGIN_SIMPLEX
+      // bool toggle for NNLS vs. Simplex
+      static bool use_simplex = true;
+      ImGui::Checkbox("VRM uses Simplex solver", &use_simplex);
+      sim.set_vrm_simplex(use_simplex);
+#endif
+
+#ifdef PLUGIN_AVRM
+      // show the toggle for AMR
+      static bool use_amr = false;
+      ImGui::Checkbox("Allow adaptive resolution", &use_amr);
+      sim.set_amr(use_amr);
+
+      ImGui::PushItemWidth(-270);
+      static float lapse_rate = 0.2;
+      ImGui::SliderFloat("Radius gradient", &lapse_rate, 0.01, 0.5f, "%.2f");
+      ImGui::SameLine();
+      ShowHelpMarker("During adaptive diffusion, enforce a maximum spatial gradient for particle radii.");
+      sim.set_vrm_radgrad(lapse_rate);
+
+      static float adapt_thresh = -2;
+      ImGui::SliderFloat("Threshold to adapt", &adapt_thresh, -12, 0, "%.1f");
+      ImGui::SameLine();
+      ShowHelpMarker("During diffusion, allow any particles with strength less than this power-of-ten threshold to grow in size.");
+      sim.set_vrm_adapt(std::pow(10.f,adapt_thresh));
+      ImGui::PopItemWidth();
+#endif
+    }
 
     // Output buttons, under a header
     ImGui::Spacing();

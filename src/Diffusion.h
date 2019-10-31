@@ -18,6 +18,8 @@
 #endif
 #include "BEM.h"
 
+#include "json/json.hpp"
+
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -40,13 +42,21 @@ public:
       particle_overlap(1.5)
     {}
 
-  const bool get_diffuse() { return !is_inviscid; }
+  const bool get_diffuse() const { return !is_inviscid; }
   void set_diffuse(const bool _do_diffuse) { is_inviscid = not _do_diffuse; }
   void set_amr(const bool _do_amr) { adaptive_radii = _do_amr; }
+  void set_vrm_relative(const bool _in) { vrm.set_relative(_in); }
+  void set_vrm_ignore(const float _in) { vrm.set_ignore(_in); }
+  void set_vrm_simplex(const bool _in) { vrm.set_simplex(_in); }
+#ifdef PLUGIN_AVRM
+  void set_vrm_radgrad(const float _in) { vrm.set_radgrad(_in); }
+  void set_vrm_adapt(const float _in) { vrm.set_adapt(_in); }
+#endif
   S get_nom_sep_scaled() const { return nom_sep_scaled; }
   S get_particle_overlap() const { return particle_overlap; }
   CoreType get_core_func() const { return core_func; }
 
+  // take a full diffusion step
   void step(const double,
             const double,
             const S,
@@ -55,6 +65,10 @@ public:
             std::vector<Collection>&,
             std::vector<Collection>&,
             BEM<S,I>& _bem);
+
+  // read/write parameters
+  void from_json(const nlohmann::json);
+  void add_to_json(nlohmann::json&) const;
 
 private:
   // the VRM algorithm, template params are storage, solver, max moments
@@ -94,6 +108,14 @@ void Diffusion<S,A,I>::step(const double                _time,
 
   std::cout << "Inside Diffusion::step with dt=" << _dt << std::endl;
 
+  // ensure that we have a current h_nu
+  vrm.set_hnu(std::sqrt(_dt/_re));
+
+#ifdef PLUGIN_AVRM
+  // ensure that it knows to allow or disallow adaptive radii
+  vrm.set_adaptive_radii(adaptive_radii);
+#endif
+
   //
   // always re-run the BEM calculation before shedding
   //
@@ -129,21 +151,9 @@ void Diffusion<S,A,I>::step(const double                _time,
     // Kutta points and lifting lines can generate points here
   }
 
-  // debug stuff
-  //static size_t idx = 1;
-  //std::vector<std::string> dummy;
-  //write_vtk_files<float>(_vort, 100*idx+1, dummy);
-
   //
   // diffuse strength among existing particles
   //
-
-  // ensure that we have a current h_nu
-  vrm.set_hnu(std::sqrt(_dt/_re));
-
-  // ensure that it knows to allow or disallow adaptive radii
-  vrm.set_adaptive_radii(adaptive_radii);
-
   // loop over active vorticity
   for (auto &coll : _vort) {
 
@@ -199,5 +209,50 @@ void Diffusion<S,A,I>::step(const double                _time,
   for (auto &coll : _vort) {
     std::visit([=](auto& elem) { elem.update_max_str(); }, coll);
   }
+}
+
+//
+// read/write parameters to json
+//
+
+// read "simparams" json object
+template <class S, class A, class I>
+void Diffusion<S,A,I>::from_json(const nlohmann::json j) {
+
+  if (j.find("viscous") != j.end()) {
+    std::string viscous = j["viscous"];
+    if (viscous == "vrm") { set_diffuse(true); }
+    else { set_diffuse(false); }
+    std::cout << "  setting is_viscous= " << get_diffuse() << std::endl;
+  }
+
+  vrm.from_json(j);
+
+#ifdef PLUGIN_AVRM
+  // set adaptive-VRM-specific settings
+  if (j.find("adaptiveSize") != j.end()) {
+    // for now, just enable it, don't set parameters
+    set_amr(true);
+    std::cout << "  enabling amr" << std::endl;
+  }
+#endif
+}
+
+// create and write a json object for all diffusion parameters
+template <class S, class A, class I>
+void Diffusion<S,A,I>::add_to_json(nlohmann::json& j) const {
+  //nlohmann::json j;
+
+  j["viscous"] = get_diffuse() ? "vrm" : "none";
+#ifdef PLUGIN_AVRM
+  j["adaptiveSize"] = adaptive_radii;
+#endif
+
+  // eventually write other parameters
+  //j["overlap"] = particle_overlap;
+  //j["core"] = core_func;
+
+  // VRM will write "VRM" and "AMR" parameters
+  vrm.add_to_json(j);
 }
 
