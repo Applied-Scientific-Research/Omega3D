@@ -56,7 +56,9 @@ public:
            std::shared_ptr<Body> _bp)
     : ElementBase<S>(0, _e, _m, _bp),
       np(0),
+      source_str_is_unknown(false),
       vol(-1.0),
+      //solved_omega(0.0),
       max_strength(-1.0) {
 
     // make sure input arrays are correctly-sized
@@ -101,6 +103,8 @@ public:
 
     // compute all basis vectors and panel areas
     compute_bases(nsurfs);
+
+    // are strengths/values on a per-node or per-panel basis? - per panel now
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
@@ -204,13 +208,26 @@ public:
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
+  const Int num_unknowns_per_panel() const { return (source_str_is_unknown ? 3 : 2); }
   const Int get_first_row() const { return istart; }
-  const Int get_num_rows()  const { return bc.size()*bc[0].size() + (is_augmented() ? 3 : 0); }
+  const Int get_num_rows()  const { return (get_npanels()*num_unknowns_per_panel() + (is_augmented() ? 3 : 0)); }
   const Int get_next_row()  const { return istart+get_num_rows(); }
 
   // assign the new strengths from BEM - do not let base class do this
   void set_str(const size_t ioffset, const size_t icnt, Vector<S> _in) {
+    //assert(ps[0] && "Strength array does not exist");
     assert(vs.size() == 2 && "Vortex strength array not initialized");
+
+    // pop off the "unknown" rotation rate and save it
+    if (is_augmented()) {
+      assert(false && "Augmentation not supported! Surfaces.h:221");
+      //solved_omega = _in.back();
+      //std::cout << "    solved rotation rate is " << solved_omega << std::endl;
+      //omega_error = solved_omega - this->B->get_rotvel();
+      //std::cout << "    error in rotation rate is " << omega_error << std::endl;
+      //_in.pop_back();
+    }
+
     assert(_in.size() == vs[0].size()*2 && "Set strength array size does not match");
     assert(ioffset == 0 && "Offset is not zero");
 
@@ -434,21 +451,17 @@ public:
     assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
     // and we trust that we've transformed utc to tc
 
-    // get the body motion
-    const std::array<double,Dimensions> thisvel = this->B->get_vel(_time);
-    const Vec rotvel = this->B->get_rotvel_vec(_time);
-    //std::cout << "in add_body_motion, thisvel is " << thisvel[0] << " " << thisvel[1] << " " << thisvel[2] << std::endl;
-    //std::cout << "in add_body_motion,  rotvel is " << rotvel[0] << " " << rotvel[1] << " " << rotvel[2] << std::endl;
-
     // do this for all nodes - what about panels?
     for (size_t i=0; i<get_npanels(); ++i) {
 
       // apply the translational velocity
+      const std::array<double,Dimensions> thisvel = this->B->get_vel(_time);
       for (size_t d=0; d<Dimensions; ++d) {
         pu[d][i] += _factor * (float)thisvel[d];
       }
 
       // now compute the rotational velocity with respect to the geometric center
+      const Vec rotvel = this->B->get_rotvel_vec(_time);
       // indices for this panel
       const Int id0 = idx[3*i];
       const Int id1 = idx[3*i+1];
@@ -605,12 +618,10 @@ public:
 
   // need to maintain the 3x3 set of basis vectors for each panel
   // this also calculates the triangle areas
+  // always recalculate everything!
   void compute_bases(const Int nnew) {
 
     assert(3*nnew == idx.size() && "Array size mismatch");
-
-    // how big is my set of basis vectors?
-    const Int norig = b[0][0].size();
 
     // resize any vectors
     for (size_t i=0; i<Dimensions; ++i) {
@@ -623,8 +634,8 @@ public:
     // we'll reuse these vectors
     std::array<S,Dimensions> x1, x2, norm;
 
-    // update what we need
-    for (size_t i=norig; i<nnew; ++i) {
+    // update everything
+    for (size_t i=0; i<nnew; ++i) {
       const size_t id0 = idx[3*i];
       const size_t id1 = idx[3*i+1];
       const size_t id2 = idx[3*i+2];
@@ -705,12 +716,6 @@ public:
         pu[d][i] = _fs[d] + pu[d][i] * factor;
       }
     }
-
-    //std::cout << "in finalize_vels, pu is" << std::endl;
-    //for (size_t i=0; i<100; ++i) {
-    //  std::cout << i << " " << pu[0][i] << " " << pu[1][i] << " " << pu[2][i] << " " << std::endl;
-    //}
-
     // must explicitly call the method in the base class, too
     ElementBase<S>::finalize_vels(_fs);
   }
@@ -1083,19 +1088,23 @@ protected:
   std::vector<Int>                 idx;	// indexes into the x array
   Vector<S>                       area; // panel areas
   Basis<S>                           b; // transformed basis vectors: x1 is b[0], x2 is b[1], normal is b[2], normal x is b[2][0]
-  std::array<Vector<S>,Dimensions>  pu; // panel-center velocities (ElementBase stores *node* properties)
+  std::array<Vector<S>,Dimensions>  pu; // velocities on panel centers - "u" is node vels in ElementBase
 
   // strengths and BCs
   std::array<Vector<S>,2>           vs; // vortex sheet strengths of the elements (x1,x2)
   std::vector<Vector<S>>            bc; // boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
   std::optional<Vector<S>>          ss; // source strengths which represent the vel inf of the rotating volume
   std::array<Vector<S>,Dimensions>  ps; // panel-center strengths (do not use s in ElementBase)
+  bool           source_str_is_unknown; // should the BEM solve for source strengths?
 
   // parameters for the encompassing body
   Int                           istart; // index of first entry in RHS vector and A matrix
   S                                vol; // volume of the body - for augmented BEM solution
   std::array<S,Dimensions>         utc; // untransformed geometric center
   std::array<S,Dimensions>          tc; // transformed geometric center
+
+  // augmented-BEM-related
+  //std::array<S,Dimensions> solved_omega; // rotation rate returned from augmented row in BEM
 
 private:
 #ifdef USE_GL

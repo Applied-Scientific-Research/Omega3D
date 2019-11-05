@@ -227,13 +227,6 @@ void solve_bem(const double                         _time,
       }
     }
 
-    // peel off the last entry - the rotation rate - if the equations were augmented
-    const bool is_aug = std::visit([=](auto& elem) { return elem.is_augmented(); }, targ);
-    if (is_aug) {
-      std::cout << "    solved rotation rate is " << new_s.back() << std::endl;
-      new_s.pop_back();
-    }
-
     // and send it to the elements
     std::visit([=](auto& elem) { elem.set_str(tstart, new_s.size(), new_s);  }, targ);
   }
