@@ -137,7 +137,7 @@ void Diffusion<S,A,I>::step(const double                _time,
       Surfaces<S>& surf = std::get<Surfaces<S>>(coll);
 
       // generate particles just above the surface
-      std::vector<S> new_pts = surf.represent_as_particles(0.0001*(S)_dt, _vdelta);
+      std::vector<S> new_pts = surf.represent_as_particles(0.01*(S)vrm.get_hnu(), _vdelta);
 
       // add those particles to the main particle list
       if (_vort.size() == 0) {

@@ -782,7 +782,7 @@ public:
 
   //
   // return a particle version of the panels (useful during Diffusion)
-  // offset is scaled by vdelta
+  // offset is in world units - NOT scaled
   //
   std::vector<S> represent_as_particles(const S _offset, const S _vdelta) {
 
@@ -798,9 +798,6 @@ public:
     // get basis vectors
     std::array<Vector<S>,3>& norm = b[2];
 
-    // how far above the surface
-    const S dn = _offset * _vdelta;
-
     for (size_t i=0; i<num_pts; i++) {
       const Int id0 = idx[3*i];
       const Int id1 = idx[3*i+1];
@@ -810,7 +807,7 @@ public:
       for (size_t j=0; j<3; ++j) px[idx+j] = (1./3.) * (this->x[j][id0] + this->x[j][id1] + this->x[j][id2]);
       // push out a fixed distance
       // this assumes properly resolved, vdelta and dt
-      for (size_t j=0; j<3; ++j) px[idx+j] += dn * norm[j][i];
+      for (size_t j=0; j<3; ++j) px[idx+j] += _offset * norm[j][i];
       // complete the element with a strength
       for (size_t j=0; j<3; ++j) px[idx+3+j] = ps[j][i];
       // and the core size
@@ -837,8 +834,10 @@ public:
   // add and return the total circulation of all elements
   //   specializing the one in ElementBase because we need
   //   to scale by panel area here
-  std::array<S,3> get_total_circ(const double _time) {
-    std::array<S,3> circ;
+  std::array<S,Dimensions> get_total_circ(const double _time) {
+
+    // here is the return vector
+    std::array<S,Dimensions> circ;
     circ.fill(0.0);
 
     if (this->E != inert) {
