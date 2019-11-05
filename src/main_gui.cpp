@@ -1103,8 +1103,8 @@ int main(int argc, char const *argv[]) {
                   sim.add_body(bp);
                   break;
               }
-              //bfeatures.emplace_back(std::make_unique<SolidSquare>(bp, external_flow, xc[0], xc[1], sqside, rotdeg));
-              //std::cout << "Added " << (*bfeatures.back()) << std::endl;
+              bfeatures.emplace_back(std::make_unique<SolidRect>(bp, external_flow, xc[0], xc[1], xc[2], xs[0], xs[1], xs[2]));
+              std::cout << "Added " << (*bfeatures.back()) << std::endl;
               show_bdry_create_window = false;
             }
             ImGui::SameLine();
@@ -1272,7 +1272,7 @@ int main(int argc, char const *argv[]) {
       ImGui::ColorEdit3("feature color",        rparams.default_color);
       ImGui::ColorEdit3("background color",     rparams.clear_color);
       //ImGui::Checkbox("show origin", &show_origin);
-      ImGui::SliderFloat("vorticity density", &(rparams.circ_density), 0.0001f, 1.0f, "%.3f", 4.0f);
+      ImGui::SliderFloat("vorticity density", &(rparams.circ_density), 0.0001f, 1.0f, "%.4f", 4.0f);
       ImGui::SliderFloat("particle scale", &(rparams.vorton_scale), 0.01f, 1.5f, "%.2f", 2.0f);
 
       if (ImGui::Button("Recenter")) {
