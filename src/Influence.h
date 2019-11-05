@@ -47,8 +47,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
   typedef Vc::Vector<S> StoreVec;
-  typedef Vc::Vector<A> AccumVec;
-  assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
+  typedef Vc::SimdArray<A, Vc::Vector<S>::size()> AccumVec;
 
   // create float_v versions of the source vectors
   const Vc::Memory<StoreVec> sxv  = stdvec_to_vcvec<S>(sx[0], 0.0);
@@ -377,8 +376,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
   typedef Vc::Vector<S> StoreVec;
-  typedef Vc::Vector<A> AccumVec;
-  assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
+  typedef Vc::SimdArray<A, Vc::Vector<S>::size()> AccumVec;
 
   // prepare the source panels for vectorization - first the strengths
   const Vc::Memory<StoreVec> ssxv = stdvec_to_vcvec<S>(ss[0], 0.0);
@@ -761,8 +759,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
   typedef Vc::Vector<S> StoreVec;
-  typedef Vc::Vector<A> AccumVec;
-  assert(StoreVec::size() == AccumVec::size() && "Vc enabled and store and accum vectors not the same size");
+  typedef Vc::SimdArray<A, Vc::Vector<S>::size()> AccumVec;
 
   // process source particles into Vc-ready memory format
   const Vc::Memory<StoreVec> sxv  = stdvec_to_vcvec<S>(sx[0], 0.0);
