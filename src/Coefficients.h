@@ -137,6 +137,12 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   const size_t nsrc  = src.get_npanels();
   const size_t ntarg = targ.get_npanels();
 
+  // and how many rows and cols does that mean?
+  const size_t oldncols =  nsrc * src.num_unknowns_per_panel();
+  const size_t oldnrows = ntarg * targ.num_unknowns_per_panel();
+  const size_t nunk = targ.num_unknowns_per_panel();
+  assert(targ.num_unknowns_per_panel() == src.num_unknowns_per_panel() && "nunk are not the same");
+
   // pull references to the element arrays
   const std::array<Vector<S>,Dimensions>&  sx = src.get_pos();
   const std::vector<Int>&                  si = src.get_idx();
@@ -148,13 +154,6 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   const std::vector<Int>&                  ti = targ.get_idx();
   const std::array<Vector<S>,Dimensions>& tb1 = targ.get_x1();
   const std::array<Vector<S>,Dimensions>& tb2 = targ.get_x2();
-  const std::vector<Vector<S>>&           tbc = targ.get_bcs();
-
-  // how many unknowns per element?
-  const size_t nunk  = tbc.size();
-  // must be 1 (source/normal), 2 (vortex/tangential), or 3 (both)
-  assert(nunk>0 and nunk<4);
-  // each panel-panel chunk needs nunk*nunk coefficients
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
@@ -163,7 +162,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
   // allocate space for the output array
   Vector<S> coeffs;
-  coeffs.resize(nsrc*ntarg*nunk*nunk);
+  coeffs.resize(oldncols*oldnrows);
 
   // run a panels-on-points algorithm - THIS CAN BE MORE EFFICIENT
   #pragma omp parallel for

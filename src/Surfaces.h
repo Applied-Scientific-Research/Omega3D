@@ -30,9 +30,10 @@
 
 // useful structure for panel strengths and BCs
 // Strength<S> ps;
-//   ps[0] means that the tangential (vortex) strength is present
-//   ps[1] means that the normal (source) strength is present
-//template <class S> using Strength = std::array<std::optional<Vector<S>>,3>;
+//   ps[0] means that the tangential-1 (vortex) strength is present
+//   ps[1] means that the tangential-2 (vortex) strength is present
+//   ps[2] means that the normal (source) strength is present
+template <class S> using Strength = std::array<std::optional<Vector<S>>,3>;
 
 // useful structure for basis vectors
 // Basis<S> b;
@@ -123,13 +124,19 @@ public:
 
     } else if (this->E == reactive) {
       // value is a boundary condition
+      // always have some value
+      for (size_t d=0; d<3; ++d) {
+        Vector<S> new_bc(nsurfs);
+        bc[d] = std::move(new_bc);
+        std::fill(bc[d]->begin(), bc[d]->end(), 0.0);
+      }
+      // but only set some
       const size_t nper = _val.size()/nsurfs;
       assert(nper>0 and nper<4 && "Number of boundary conditions is not 1..3");
-      bc.resize(nper);
+      assert(nper*nsurfs == _val.size() && "Number of bcs is not a factor of nsurfs");
       for (size_t d=0; d<nper; ++d) {
-        bc[d].resize(nsurfs);
         for (size_t i=0; i<nsurfs; ++i) {
-          bc[d][i] = _val[nper*i+d];
+          (*bc[d])[i] = _val[nper*i+d];
         }
       }
 
@@ -202,7 +209,9 @@ public:
   const Vector<S>&                get_src_str()  const { return *ss; }
 
   // and (reactive only) boundary conditions
-  const std::vector<Vector<S>>&  get_bcs()         const { return bc; }
+  const Vector<S>&                     get_tang1_bcs() const { return *bc[0]; }
+  const Vector<S>&                     get_tang2_bcs() const { return *bc[1]; }
+  const Vector<S>&                     get_norm_bcs()  const { return *bc[2]; }
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
@@ -298,8 +307,8 @@ public:
       S max_bc = 0.0;
       // no matter how many directions of bc, check each one for the max
       for (size_t d=0; d<bc.size(); ++d) {
-        const S this_max = *std::max_element(std::begin(bc[d]), std::end(bc[d]));
-        const S this_min = *std::min_element(std::begin(bc[d]), std::end(bc[d]));
+        const S this_max = *std::max_element(std::begin(*bc[d]), std::end(*bc[d]));
+        const S this_min = *std::min_element(std::begin(*bc[d]), std::end(*bc[d]));
         max_bc = std::max(max_bc, std::max(this_max, -this_min));
       }
       return (float)max_bc;
@@ -380,15 +389,16 @@ public:
 
     } else if (this->E == reactive) {
       // value is a boundary condition
+      // always resize arrays
+      for (size_t d=0; d<3; ++d) {
+        bc[d]->resize(neold+nsurfs);
+      }
       const size_t nper = _val.size()/nsurfs;
       assert(nper>0 and nper<4 && "Number of boundary conditions is not 1..3");
-      // make sure we have the same number of components in the new array as in the old
-      assert(bc.size() == nper && "Boundary condition array is not the correct size");
-      // copy them into place
+      // copy only the new values into place
       for (size_t d=0; d<nper; ++d) {
-        bc[d].resize(neold+nsurfs);
         for (size_t i=0; i<nsurfs; ++i) {
-          bc[d][neold+i] = _val[nper*i+d];
+          (*bc[d])[neold+i] = _val[nper*i+d];
         }
       }
       // upsize vortex sheet and raw strength arrays, too
@@ -831,8 +841,10 @@ public:
       // push out a fixed distance
       // this assumes properly resolved, vdelta and dt
       for (size_t j=0; j<3; ++j) px[idx+j] += _offset * norm[j][i];
-      // complete the element with a strength
+      // the panel strength is the solved strength plus the boundary condition
       for (size_t j=0; j<3; ++j) px[idx+3+j] = ps[j][i];
+      // add on the (vortex) bc value here
+      //if (this->E == reactive) for (size_t j=0; j<3; ++j) px[idx+3+j] = ps[j][i];
       // and the core size
       px[idx+6] = _vdelta;
       //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2];
@@ -842,9 +854,22 @@ public:
     return px;
   }
 
-  // find the new peak strength magnitude
+  // find the new peak vortex strength magnitude
+  S get_max_str() {
+    if (true) {
+    //if (ps[0]) {
+      //const S this_max = *std::max_element(std::begin(*ps[0]), std::end(*ps[0]));
+      //const S this_min = *std::min_element(std::begin(*ps[0]), std::end(*ps[0]));
+      //return std::max(this_max, -this_min);
+      return 1.0;
+    } else {
+      return 1.0;
+    }
+  }
+
+  // smooth the peak strength magnitude
   void update_max_str() {
-    S thismax = ElementBase<S>::get_max_str();
+    S thismax = get_max_str();
 
     // and slowly update the current saved value
     if (max_strength < 0.0) {
@@ -1113,8 +1138,9 @@ protected:
   std::array<Vector<S>,Dimensions>  pu; // velocities on panel centers - "u" is node vels in ElementBase
 
   // strengths and BCs
+  //Strength<S>                       ps; // panel-wise strengths per area (for "active" and "reactive")
+  Strength<S>                       bc; // boundary condition for the elements (only when "reactive")
   std::array<Vector<S>,2>           vs; // vortex sheet strengths of the elements (x1,x2)
-  std::vector<Vector<S>>            bc; // boundary condition for the elements (normal) or (x1,x2) or (x1,x2,normal)
   std::optional<Vector<S>>          ss; // source strengths which represent the vel inf of the rotating volume
   std::array<Vector<S>,Dimensions>  ps; // panel-center strengths (do not use s in ElementBase)
   bool           source_str_is_unknown; // should the BEM solve for source strengths?
@@ -1125,7 +1151,7 @@ protected:
   std::array<S,Dimensions>         utc; // untransformed geometric center
   std::array<S,Dimensions>          tc; // transformed geometric center
 
-  // augmented-BEM-related
+  // augmented-BEM-related (see Omega2D for more)
   //std::array<S,Dimensions> solved_omega; // rotation rate returned from augmented row in BEM
 
 private:

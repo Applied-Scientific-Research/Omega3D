@@ -49,7 +49,7 @@ std::vector<S> vels_to_rhs_panels (Surfaces<S> const& targ) {
   const std::array<Vector<S>,Dimensions>& norm = targ.get_norm();
   //const Vector<S>&                        area = targ.get_area();
   const std::array<Vector<S>,Dimensions>& tu = targ.get_vel();
-  const std::vector<Vector<S>>&           tb = targ.get_bcs();
+  //const Vector<S>&                      tb = targ.get_norm_bcs();
 
   //std::cout << "size of x1 is " << x1.size() << " by " << x1[0].size() << std::endl;
   //std::cout << "size of x2 is " << x2.size() << " by " << x2[0].size() << std::endl;
@@ -61,30 +61,32 @@ std::vector<S> vels_to_rhs_panels (Surfaces<S> const& targ) {
   assert(x1[0].size() == x2[0].size() && "Array size mismatch");
   assert(x1[0].size() == norm[0].size() && "Array size mismatch");
   assert(x1[0].size() == tu[0].size() && "Array size mismatch");
-  assert(tb.size() > 0 && "Target BC vector empty");
-  assert(x1[0].size() == tb[0].size() && "Array size mismatch");
+  //assert(tb.size() > 0 && "Target BC vector empty");
+  //assert(x1[0].size() == tb[0].size() && "Array size mismatch");
 
   // find array sizes
-  const size_t ntarg  = targ.get_npanels();
-  const size_t nunkn  = tb.size();
+  const size_t ntarg = targ.get_npanels();
+  const size_t nunk  = targ.num_unknowns_per_panel();
 
   // prepare the rhs vector
   std::vector<S> rhs;
-  rhs.resize(nunkn*ntarg);
+  rhs.resize(ntarg*nunk);
 
   // convert velocity and boundary condition to RHS values
-  if (nunkn == 1) {
+  // ONLY include the influence of the source boundary condition here, apply vortex before shedding
+
+  if (nunk == 1) {
     // normal-only
     for (size_t i=0; i<ntarg; ++i) {
       rhs[i] = -(tu[0][i]*norm[0][i] + tu[1][i]*norm[1][i] + tu[2][i]*norm[2][i]);
     }
-  } else if (nunkn == 2) {
+  } else if (nunk == 2) {
     // dot product of x1 tangent with local velocity, applying normalization
     for (size_t i=0; i<ntarg; ++i) {
       rhs[2*i+0] = -(tu[0][i]*x1[0][i] + tu[1][i]*x1[1][i] + tu[2][i]*x1[2][i]);
       rhs[2*i+1] = -(tu[0][i]*x2[0][i] + tu[1][i]*x2[1][i] + tu[2][i]*x2[2][i]);
     }
-  } else if (nunkn == 3) {
+  } else if (nunk == 3) {
     // two tangentials then the normal
     for (size_t i=0; i<ntarg; ++i) {
       rhs[3*i+0] = -(tu[0][i]*x1[0][i] + tu[1][i]*x1[1][i] + tu[2][i]*x1[2][i]);
@@ -94,12 +96,12 @@ std::vector<S> vels_to_rhs_panels (Surfaces<S> const& targ) {
   }
 
   // DO NOT include the influence of (at least tangential) boundary condition here, do it before shedding
-  //   nunkn=1 is normal-only
-  //   nunkn=2 is tangential-only (x1, x2)
-  //   nunkn=3 is tangential and normal (x1, x2, norm)
+  //   nunk=1 is normal-only
+  //   nunk=2 is tangential-only (x1, x2)
+  //   nunk=3 is tangential and normal (x1, x2, norm)
   //for (size_t i=0; i<ntarg; ++i) {
-    //for (size_t j=0; j<nunkn; ++j) {
-      //rhs[nunkn*i+j] -= tb[j][i];
+    //for (size_t j=0; j<nunk; ++j) {
+      //rhs[nunk*i+j] -= tb[j][i];
     //}
   //}
 
