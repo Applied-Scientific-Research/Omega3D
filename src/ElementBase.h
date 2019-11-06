@@ -165,9 +165,9 @@ public:
     }
   }
 
-  void add_rot_strengths(const S _constfac, const S _rotfactor) {
-    // do nothing here
-  }
+  // do nothing here
+  void add_unit_rot_strengths(const int _d) {}
+  void add_solved_rot_strengths(const S _factor) {}
 
   // this should work in 3D now
   void transform(const double _time) {

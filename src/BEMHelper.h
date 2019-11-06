@@ -48,9 +48,9 @@ void solve_bem(const double                         _time,
     }
   }
 
-  // add vortex and source strengths to account for rotating bodies
+  // add vortex and source strengths to account for rotating bodies - unless we augment!
   //for (auto &src : _bdry) {
-  //  std::visit([=](auto& elem) { elem.add_rot_strengths(1.0, 0.0); }, src);
+  //  std::visit([=](auto& elem) { elem.add_unit_rot_strengths(0); }, src);
   //}
 
   // need this for dispatching velocity influence calls, template param is accumulator type
@@ -92,15 +92,23 @@ void solve_bem(const double                         _time,
     // and send it over to the BEM system
     std::vector<S> rhs = std::visit(rvisitor, targ);
 
-    // optionally augment with an additional value
-    if (rhs.size() < tnum) {
+    // optionally augment with additional values
+    if (std::visit([=](auto& elem) { return elem.is_augmented(); }, targ)) {
       assert(tnum-rhs.size()==3 && "Number of augmented rows is not 3");
+      assert(std::holds_alternative<Surfaces<S>>(targ) && "Augmented boundary is not Surface!");
+
+      // make this easier
+      //Surfaces<S>& surf = std::get<Surfaces<S>>(targ);
+
+      // WARN - this needs to be changed to reflect what o2d does
+
       // first, add up the free circulation
       std::array<S,3> tot_circ = {0.0, 0.0, 0.0};
       for (auto &src : _vort) {
         const std::array<S,3> this_circ = std::visit([=](auto& elem) { return elem.get_total_circ(_time); }, src);
         for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
       }
+
       // then add up the circulation in bodies other than this one
       for (auto &src : _bdry) {
         // only if this is not the same collection!
@@ -109,6 +117,7 @@ void solve_bem(const double                         _time,
           for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
         }
       }
+
       // negate and append
       for (size_t i=0; i<3; ++i) rhs.push_back(-1.0*tot_circ[i]);
       std::cout << "    augmenting rhs with tot_circ= " << tot_circ[0] << " " << tot_circ[1] << " " << tot_circ[2] << std::endl;
@@ -178,12 +187,16 @@ void solve_bem(const double                         _time,
           std::cout << "  Computing A matrix block [" << tstart << ":" << (tstart+tnum) << "] x [" << sstart << ":" << (sstart+snum) << "]" << std::endl;
 
           // for augmentation, find the induced velocity from the source on the target
-          std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
-          //std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
-          //std::visit([=](auto& elem) { elem.add_rot_strengths(1.0, 0.0); }, src);
-          //std::visit(ivisitor, src, targ);
-          std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
-          std::visit([=](auto& elem) { elem.finalize_vels(std::array<double,Dimensions>({0.0,0.0,0.0})); }, targ);
+          if (std::visit([=](auto& elem) { return elem.is_augmented(); }, src)) {
+            // need to do this 3 times, once for rotation along each axis
+            assert(false && "Augmentation needs three axes calls");
+            std::visit([=](auto& elem) { elem.zero_vels(); }, targ);
+            std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
+            std::visit([=](auto& elem) { elem.add_unit_rot_strengths(0); }, src);
+            std::visit(ivisitor, src, targ);
+            std::visit([=](auto& elem) { elem.zero_strengths(); }, src);
+            std::visit([=](auto& elem) { elem.finalize_vels(std::array<double,Dimensions>({0.0,0.0,0.0})); }, targ);
+          }
 
           // solve for the coefficients in this block
           Vector<S> coeffs = std::visit(cvisitor, src, targ);

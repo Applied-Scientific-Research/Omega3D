@@ -182,29 +182,27 @@ public:
   const S                        get_vol()         const { return vol; }
   const std::array<S,Dimensions> get_geom_center() const { return tc; }
 
-  // callers should never have to change this array
-  const std::vector<Int>&        get_idx()         const { return idx; }
-  const std::vector<Vector<S>>&  get_bcs()         const { return bc; }
-
-  // override the ElementBase versions and send the panel-center vels and strengths
-  const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
-  std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
-  const std::array<Vector<S>,Dimensions>& get_str() const { return ps; }
-  std::array<Vector<S>,Dimensions>&       get_str()       { return ps; }
-
-  // panel properties
+  // panel geometry
+  const std::vector<Int>&                 get_idx()  const { return idx; }
   const std::array<Vector<S>,Dimensions>& get_x1()   const { return b[0]; }
   const std::array<Vector<S>,Dimensions>& get_x2()   const { return b[1]; }
   const std::array<Vector<S>,Dimensions>& get_norm() const { return b[2]; }
   const Vector<S>&                        get_area() const { return area; }
 
-  // vortex strengths
+  // override the ElementBase versions and send the panel-center vels and strengths
+  const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
+  std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
+
+  // fixed or unknown surface strengths, or those due to rotation
+  const std::array<Vector<S>,Dimensions>& get_str() const { return ps; }
+  std::array<Vector<S>,Dimensions>&       get_str()       { return ps; }
   const std::array<Vector<S>,2>&  get_vort_str() const { return vs; }
   std::array<Vector<S>,2>&        get_vort_str()       { return vs; }
-
-  // source strengths
   const bool                      have_src_str() const { return (bool)ss; }
   const Vector<S>&                get_src_str()  const { return *ss; }
+
+  // and (reactive only) boundary conditions
+  const std::vector<Vector<S>>&  get_bcs()         const { return bc; }
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
@@ -228,8 +226,8 @@ public:
       //_in.pop_back();
     }
 
-    assert(_in.size() == vs[0].size()*2 && "Set strength array size does not match");
-    assert(ioffset == 0 && "Offset is not zero");
+    assert(_in.size() == vs[0].size()*num_unknowns_per_panel() && "Set strength array size does not match");
+    //assert(ioffset == 0 && "Offset is not zero");
 
     // copy over the strengths
     for (size_t i=0; i<get_npanels(); ++i) {
@@ -296,16 +294,18 @@ public:
   }
 
   const float get_max_bc_value() const {
-    S max_bc = 0.0;
-    
-    // no matter how many directions of bc, check each one for the max
-    for (size_t d=0; d<bc.size(); ++d) {
-      const S this_max = *std::max_element(std::begin(bc[d]), std::end(bc[d]));
-      const S this_min = *std::min_element(std::begin(bc[d]), std::end(bc[d]));
-      max_bc = std::max(max_bc, std::max(this_max, -this_min));
+    if (this->E == reactive) {
+      S max_bc = 0.0;
+      // no matter how many directions of bc, check each one for the max
+      for (size_t d=0; d<bc.size(); ++d) {
+        const S this_max = *std::max_element(std::begin(bc[d]), std::end(bc[d]));
+        const S this_min = *std::min_element(std::begin(bc[d]), std::end(bc[d]));
+        max_bc = std::max(max_bc, std::max(this_max, -this_min));
+      }
+      return (float)max_bc;
+    } else {
+      return (float)0.0;
     }
-
-    return (float)max_bc;
   }
 
   // add more nodes and panels to this collection
@@ -497,20 +497,52 @@ public:
     }
   }
 
+  // three ways to add source and vortex rotational strengths to the surface
+  // first: as a multiple of the current, defined rotation rate
+  void add_rot_strengths(const S _factor) {
+    // if no parent Body, forget it
+    if (not this->B) return;
+    // get current rotation rate
+    const std::array<double,Dimensions> rotvel = this->B->get_rotvel_vec();
+    // call parent
+    add_rot_strengths_base(_factor * rotvel);
+  }
+
+  // second: assuming unit rotation rate (for finding the BEM influence matrix)
+  void add_unit_rot_strengths(const int _d) {
+    assert((_d>0 and _d<3) && "Invalid dimension");
+    std::array<double,Dimensions> rotvel = {{0.0, 0.0, 0.0}};
+    rotvel[_d] = 1.0;
+    add_rot_strengths_base(rotvel);
+  }
+
+  // third: as a multiple of the rotation rate
+  void add_solved_rot_strengths(const S _factor) {
+    if (is_augmented()) {
+      // use the augmented-BEM result for rotation rate
+      assert(false && "Augmentation not yet supported");
+      //add_rot_strengths_base(_factor * solved_omega);
+    } else {
+      // use the predefined rotationrate
+      add_rot_strengths(_factor);
+    }
+  }
+
   // augment the strengths with a value equal to that which accounts for
   //   the solid-body rotation of the object
   // NOTE: this needs to provide both the vortex AND source strengths!
   // AND we don't have the time - assume bodies have been transformed
-  void add_rot_strengths(const S _constfac, const S _rotfactor) {
+  void add_rot_strengths_base(const std::array<double,Dimensions> _rotvel) {
 
+    // No - ALWAYS allow this to run
     // if no rotation, or no parent Body, or attached to ground, then no problem!
-    if (not this->B) return;
-    if (std::string("ground").compare(this->B->get_name()) == 0) return;
+    //if (not this->B) return;
+    //if (std::string("ground").compare(this->B->get_name()) == 0) return;
 
     // if no rotation, then we don't need to add anything
-    const auto rotvel = this->B->get_rotvel_vec();
-    if (std::abs(rotvel[0]) + std::abs(rotvel[1]) + std::abs(rotvel[2])
-        > std::numeric_limits<double>::epsilon()) return;
+    //const auto rotvel = this->B->get_rotvel_vec();
+    //if (std::abs(rotvel[0]) + std::abs(rotvel[1]) + std::abs(rotvel[2])
+    //    > std::numeric_limits<double>::epsilon()) return;
 
     // make sure we've calculated transformed center (we do this when we do volume)
     assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
@@ -528,11 +560,10 @@ public:
     //std::cout << "Inside add_rot_strengths, sizes are: " << get_npanels() << " " << ss->size() << std::endl;
     assert(ps[0].size() == get_npanels() && "Strength array is not the same as panel count");
 
-    // NEEDS WORK - THIS IS FROM THE 2D CODE - FIX
-
-    // what is the actual factor that we will add?
-    //const S factor = _constfac + rotvel*_rotfactor;
-    const S factor = 0.0;
+    // get basis vectors
+    std::array<Vector<S>,3>& t1   = b[0];
+    std::array<Vector<S>,3>& t2   = b[1];
+    std::array<Vector<S>,3>& norm = b[2];
 
     // still here? let's do it. use the untransformed coordinates
     for (size_t i=0; i<get_npanels(); i++) {
@@ -545,33 +576,25 @@ public:
       const S dy = ((*this->ux)[1][id0] + (*this->ux)[1][id1] + (*this->ux)[1][id2])/3.0 - utc[1];
       const S dz = ((*this->ux)[2][id0] + (*this->ux)[2][id1] + (*this->ux)[2][id2])/3.0 - utc[2];
       // velocity of the panel center
-      const S ui = factor * (rotvel[1]*dz - rotvel[2]*dy);
-      const S vi = factor * (rotvel[2]*dx - rotvel[0]*dz);
-      const S wi = factor * (rotvel[0]*dy - rotvel[1]*dx);
+      const S ui = _rotvel[1]*dz - _rotvel[2]*dy;
+      const S vi = _rotvel[2]*dx - _rotvel[0]*dz;
+      const S wi = _rotvel[0]*dy - _rotvel[1]*dx;
 
-      // FIX this stuff below...
-
-/*
-      // panel tangential vector, fluid to the left, body to the right
-      S panelx = (*this->ux)[0][jp1] - (*this->ux)[0][j];
-      S panely = (*this->ux)[1][jp1] - (*this->ux)[1][j];
-      const S panell = 1.0 / std::sqrt(panelx*panelx + panely*panely);
-      panelx *= panell;
-      panely *= panell;
-
-      // the vortex strength - we ADD to the existing
-      vs[i] += -1.0 * (ui*panelx + vi*panely);
+      // the vortex strengths - we ADD to the existing
+      const S new_vort1 = -1.0 * (ui*t1[0][i] + vi*t1[1][i] + wi*t1[2][i]);
+      //(*ps[0])[i] += new_vort1;
+      const S new_vort2 = -1.0 * (ui*t2[0][i] + vi*t2[1][i] + wi*t2[2][i]);
+      //(*ps[1])[i] += new_vort1;
 
       // the source strength
-      (*ss)[i] += -1.0 * (ui*panely - vi*panelx);
+      const S new_src = -1.0 * (ui*norm[0][i] + vi*norm[1][i] + wi*norm[2][i]);
+      //(*ps[2])[i] += new_src;
 
       // debug print
-      if (_rotfactor > 0.0 and false) {
-        std::cout << "  panel " << i << " at " << dx << " " << dy
-                  << " adds to vortex str " << (-1.0 * (ui*panelx + vi*panely))
-                  << " and source str " << (-1.0 * (ui*panely - vi*panelx)) << std::endl;
+      if (std::abs(_rotvel[0]) > 0.0 and false) {
+        std::cout << "  panel " << i << " at " << dx << " " << dy << " " << dz << " adds to vortex str "
+                  << new_vort1 << " " << new_vort2 << " and source str " << new_src << std::endl;
       }
-*/
     }
   }
 
