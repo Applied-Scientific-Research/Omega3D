@@ -172,7 +172,7 @@ SolidRect::init_elements(const float _ips) const {
 
   // estimate the triangle spacing for the scaled rectangle
   float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
-  float meansize = 0.75 * maxscale;
+  float meansize = 0.7 * maxscale;
 
   // then, iteratively refine it
   std::cout << "  rectangle is cube with 12";
