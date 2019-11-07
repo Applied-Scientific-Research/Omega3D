@@ -39,14 +39,14 @@ public:
   float vsize = 2.0f;
 
   // colors
-  float pos_circ_color[4] = {177./255.,  40./255.,  40./255., 1.0};
+  float pos_circ_color[4] = {239./255.,  54./255.,  54./255., 1.0};
   float neg_circ_color[4] = { 64./255.,  64./255., 255./255., 1.0};
-  float default_color[4]  = {204./255., 204./255., 204./255., 1.0};
+  float default_color[4]  = { 68./255.,  68./255.,  68./255., 1.0};
   float clear_color[4]    = {  0./255.,   0./255.,   0./255., 1.0};
 
   // other
   float circ_density = 0.15;	// non-dimensional
-  float vorton_scale = 1.0;	// non-dimensional
+  float vorton_scale = 0.1;	// non-dimensional
   float tracer_scale = 0.15;	// non-dimensional
   float tracer_size;		// dimensional
 };
