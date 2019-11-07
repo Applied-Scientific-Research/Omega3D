@@ -606,7 +606,7 @@ int main(int argc, char const *argv[]) {
           rparams.vcy = 0.0;
           rparams.vcz = 0.0;
           rparams.vsize = 4.0;
-          rparams.circ_density = 0.05;
+          rparams.circ_density = 0.007;
           // start it up
           sim_is_running = true;
           // and make sure we don't keep re-entering this
@@ -631,7 +631,7 @@ int main(int argc, char const *argv[]) {
           rparams.vcy = 0.0;
           rparams.vcz = 0.0;
           rparams.vsize = 4.0;
-          rparams.circ_density = 0.01;
+          rparams.circ_density = 0.004;
           // start it up
           sim_is_running = true;
           // and make sure we don't keep re-entering this
