@@ -132,13 +132,17 @@ public:
       }
       // but only set some
       const size_t nper = _val.size()/nsurfs;
-      assert(nper>0 and nper<4 && "Number of boundary conditions is not 1..3");
+      //assert(nper>0 and nper<4 && "Number of boundary conditions is not 1..3");
+      assert(nper==3 && "Number of boundary condition values per panel is not 3");
       assert(nper*nsurfs == _val.size() && "Number of bcs is not a factor of nsurfs");
       for (size_t d=0; d<nper; ++d) {
         for (size_t i=0; i<nsurfs; ++i) {
           (*bc[d])[i] = _val[nper*i+d];
         }
       }
+
+      // convert the bc from velocities to basis-vector quantities
+      bcs_to_bcs(0,nsurfs);
 
       // make space for the unknown, panel-centric strengths
       for (size_t d=0; d<2; ++d) {
@@ -305,12 +309,18 @@ public:
   const float get_max_bc_value() const {
     if (this->E == reactive) {
       S max_bc = 0.0;
-      // no matter how many directions of bc, check each one for the max
-      for (size_t d=0; d<bc.size(); ++d) {
-        const S this_max = *std::max_element(std::begin(*bc[d]), std::end(*bc[d]));
-        const S this_min = *std::min_element(std::begin(*bc[d]), std::end(*bc[d]));
-        max_bc = std::max(max_bc, std::max(this_max, -this_min));
+      // new way
+      for (size_t i=0; i<get_npanels(); ++i) {
+        const S this_bc = std::pow((*bc[0])[i],2) + std::pow((*bc[1])[i],2) + std::pow((*bc[2])[i],2);
+        if (this_bc > max_bc) max_bc = this_bc;
       }
+      max_bc = std::sqrt(max_bc);
+      // old way
+      //for (size_t d=0; d<bc.size(); ++d) {
+      //  const S this_max = *std::max_element(std::begin(*bc[d]), std::end(*bc[d]));
+      //  const S this_min = *std::min_element(std::begin(*bc[d]), std::end(*bc[d]));
+      //  max_bc = std::max(max_bc, std::max(this_max, -this_min));
+      //}
       return (float)max_bc;
     } else {
       return (float)0.0;
@@ -394,13 +404,17 @@ public:
         bc[d]->resize(neold+nsurfs);
       }
       const size_t nper = _val.size()/nsurfs;
-      assert(nper>0 and nper<4 && "Number of boundary conditions is not 1..3");
-      // copy only the new values into place
+      //assert(nper>0 and nper<4 && "Number of boundary conditions is not 1..3");
+      assert(nper==3 && "Number of boundary condition values is not 3");
       for (size_t d=0; d<nper; ++d) {
         for (size_t i=0; i<nsurfs; ++i) {
           (*bc[d])[neold+i] = _val[nper*i+d];
         }
       }
+
+      // convert the bc from velocities to basis-vector quantities
+      bcs_to_bcs(neold,nsurfs);
+
       // upsize vortex sheet and raw strength arrays, too
       for (size_t d=0; d<2; ++d) {
         vs[d].resize(neold+nsurfs);
@@ -704,6 +718,25 @@ public:
     }
   }
 
+  // need to convert the boundary conditions from global velocities into basis-frame vels
+  void bcs_to_bcs(const Int nold, const Int nnew) {
+
+    // get basis vectors - we just computed them
+    std::array<Vector<S>,3>& t1 = b[0];
+    std::array<Vector<S>,3>& t2 = b[1];
+    std::array<Vector<S>,3>& nm = b[2];
+
+    // update only the new panels
+    for (size_t i=nold; i<nold+nnew; ++i) {
+      const std::array<S,3> oldbc = {{ (*bc[0])[i], (*bc[1])[i], (*bc[2])[i] }};
+      (*bc[0])[i] = t1[0][i]*oldbc[0] + t1[0][i]*oldbc[1] + t1[0][i]*oldbc[2];
+      (*bc[1])[i] = t2[0][i]*oldbc[0] + t2[0][i]*oldbc[1] + t2[0][i]*oldbc[2];
+      (*bc[2])[i] = nm[0][i]*oldbc[0] + nm[0][i]*oldbc[1] + nm[0][i]*oldbc[2];
+
+      //std::cout << "elem near " << this->x[0][id0] << " " << this->x[1][id0] << " " << this->x[2][id0] << " has norm " << b[2][0][i] << " " << b[2][1][i] << " " << b[2][2][i] << std::endl;
+    }
+  }
+
   // when transforming a body-bound object to a new time, we must also transform the geometric center
   void transform(const double _time) {
     // must explicitly call the method in the base class
@@ -829,7 +862,11 @@ public:
     std::vector<S> px(num_pts*7);
 
     // get basis vectors
+    std::array<Vector<S>,3>&   x1 = b[0];
+    std::array<Vector<S>,3>&   x2 = b[1];
     std::array<Vector<S>,3>& norm = b[2];
+    Vector<S>&                bc1 = *bc[0];
+    Vector<S>&                bc2 = *bc[1];
 
     for (size_t i=0; i<num_pts; i++) {
       const Int id0 = idx[3*i];
@@ -843,8 +880,10 @@ public:
       for (size_t j=0; j<3; ++j) px[idx+j] += _offset * norm[j][i];
       // the panel strength is the solved strength plus the boundary condition
       for (size_t j=0; j<3; ++j) px[idx+3+j] = ps[j][i];
-      // add on the (vortex) bc value here
-      //if (this->E == reactive) for (size_t j=0; j<3; ++j) px[idx+3+j] = ps[j][i];
+      // add on the (vortex) bc values here
+      if (this->E == reactive) {
+        for (size_t j=0; j<3; ++j) px[idx+3+j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
+      }
       // and the core size
       px[idx+6] = _vdelta;
       //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2];

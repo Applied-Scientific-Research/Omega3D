@@ -98,9 +98,9 @@ Ovoid::init_elements(const float _ips) const {
     epack.x[3*i+2] = in_z * m_sz + m_z;
   }
 
-  // finally, assume standard behavior: reactive, no-tangential-flow panels
+  // finally, assume standard behavior: reactive, zero-flow panels
   const size_t nsurfs = epack.idx.size() / 3;
-  epack.val.resize(2*nsurfs);
+  epack.val.resize(3*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
 
   return epack;
@@ -194,9 +194,9 @@ SolidRect::init_elements(const float _ips) const {
     epack.x[3*i+2] = in_z * m_sz + m_z;
   }
 
-  // finally, assume standard behavior: reactive, no-tangential-flow panels
+  // finally, assume standard behavior: reactive, zero-flow panels
   const size_t nsurfs = epack.idx.size() / 3;
-  epack.val.resize(2*nsurfs);
+  epack.val.resize(3*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
 
   return epack;
@@ -262,9 +262,9 @@ ExteriorFromFile::init_elements(const float _ips) const {
 
   ElementPacket<float> epack = read_geometry_file(m_infile);
 
-  // assume standard behavior: reactive, no-tangential-flow panels
+  // assume standard behavior: reactive, zero-flow panels
   const size_t nsurfs = epack.idx.size() / 3;
-  epack.val.resize(2*nsurfs);
+  epack.val.resize(3*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
 
   // scale and translate here
