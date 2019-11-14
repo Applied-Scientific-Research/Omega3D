@@ -66,6 +66,16 @@ public:
     assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
     const size_t nsurfs = _idx.size() / Dimensions;
 
+    // always initialize the ps panel strength optionals
+    if (this->E != inert) {
+      // HACK - do not init source strengths for now
+      //for (size_t d=0; d<3; ++d) {
+      for (size_t d=0; d<2; ++d) {
+        Vector<S> new_s;
+        ps[d] = std::move(new_s);
+       }
+    }
+
     // if no surfs, quit out now
     if (nsurfs == 0) {
       // but still initialize ux before we go (in case first bfeature is not enabled)
@@ -109,13 +119,15 @@ public:
 
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
-      // value is a fixed strength for the segment
-      assert(_val.size() == 2*nsurfs && "Value array is not an even multiple of panel count");
-      // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths
-      for (size_t d=0; d<2; ++d) {
-        vs[d].resize(nsurfs);
-        for (size_t i=0; i<nsurfs; ++i) {
-          vs[d][i] = _val[2*i+d];
+      // value is a fixed strength for the panel
+      assert(_val.size() == 3*nsurfs && "Value array is not an even multiple of panel count");
+      // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths and source sheet str
+      for (size_t d=0; d<3; ++d) {
+        if (ps[d]) {
+          ps[d]->resize(nsurfs);
+          for (size_t i=0; i<nsurfs; ++i) {
+            (*ps[d])[i] = _val[3*i+d];
+          }
         }
       }
 
@@ -144,10 +156,12 @@ public:
       // convert the bc from velocities to basis-vector quantities
       bcs_to_bcs(0,nsurfs);
 
-      // make space for the unknown, panel-centric strengths
-      for (size_t d=0; d<2; ++d) {
-        vs[d].resize(nsurfs);
-        std::fill(vs[d].begin(), vs[d].end(), 0.0);
+      // make space for the unknown sheet strengths
+      for (size_t d=0; d<3; ++d) {
+        if (ps[d]) {
+          ps[d]->resize(nsurfs);
+          std::fill(ps[d]->begin(), ps[d]->end(), 0.0);
+        }
       }
 
       // we still need total strengths (ts)
@@ -207,10 +221,13 @@ public:
   // fixed or unknown surface strengths, or those due to rotation
   const std::array<Vector<S>,Dimensions>& get_str() const { return ts; }
   std::array<Vector<S>,Dimensions>&       get_str()       { return ts; }
-  const std::array<Vector<S>,2>&  get_vort_str() const { return vs; }
-  std::array<Vector<S>,2>&        get_vort_str()       { return vs; }
-  const bool                      have_src_str() const { return (bool)ss; }
-  const Vector<S>&                get_src_str()  const { return *ss; }
+  const Vector<S>&                  get_vort1_str() const { return *ps[0]; }
+  Vector<S>&                        get_vort1_str()       { return *ps[0]; }
+  const Vector<S>&                  get_vort2_str() const { return *ps[1]; }
+  Vector<S>&                        get_vort2_str()       { return *ps[1]; }
+  const bool                         have_src_str() const { return (bool)ps[2]; }
+  const Vector<S>&                    get_src_str() const { return *ps[2]; }
+  Vector<S>&                          get_src_str()       { return *ps[2]; }
 
   // and (reactive only) boundary conditions
   const Vector<S>&                     get_tang1_bcs() const { return *bc[0]; }
@@ -226,8 +243,8 @@ public:
 
   // assign the new strengths from BEM - do not let base class do this
   void set_str(const size_t ioffset, const size_t icnt, Vector<S> _in) {
-    //assert(ps[0] && "Strength array does not exist");
-    assert(vs.size() == 2 && "Vortex strength array not initialized");
+
+    assert(ps[0] && "Strength array does not exist");
 
     // pop off the "unknown" rotation rate and save it
     if (is_augmented()) {
@@ -239,14 +256,27 @@ public:
       //_in.pop_back();
     }
 
-    assert(_in.size() == vs[0].size()*num_unknowns_per_panel() && "Set strength array size does not match");
+    assert(_in.size() == (*ps[0]).size()*num_unknowns_per_panel() && "Set strength array size does not match");
     //assert(ioffset == 0 && "Offset is not zero");
 
-    // copy over the strengths
-    for (size_t i=0; i<get_npanels(); ++i) {
-      vs[0][i] = _in[2*i+0];
-      vs[1][i] = _in[2*i+1];
-      //std::cout << "elem " << i << " with area " << area[i] << " has vs " << vs[0][i] << " " << vs[1][i] << std::endl;
+    // copy the BEM-solved strengths into the panel-strength data structures
+    if (have_src_str()) {
+      assert(_in.size() == get_npanels()*3 && "Set strength array size does not match");
+      // vortex and source terms
+      for (size_t i=0; i<get_npanels(); ++i) {
+        (*ps[0])[i] = _in[3*i+0];
+        (*ps[1])[i] = _in[3*i+1];
+        (*ps[2])[i] = _in[3*i+2];
+        //std::cout << "elem " << i << " with area " << area[i] << " has vs " << vs[0][i] << " " << vs[1][i] << std::endl;
+      }
+    } else {
+      assert(_in.size() == get_npanels()*2 && "Set strength array size does not match");
+      // vortex only
+      for (size_t i=0; i<get_npanels(); ++i) {
+        (*ps[0])[i] = _in[2*i+0];
+        (*ps[1])[i] = _in[2*i+1];
+        //std::cout << "elem " << i << " with area " << area[i] << " has vs " << vs[0][i] << " " << vs[1][i] << std::endl;
+      }
     }
 
     // now recompute the total panel strengths (ts)
@@ -254,10 +284,11 @@ public:
   }
 
   // convert vortex sheet strength to absolute panel strength
+  // HACK - throw away the source strength
   void vortex_sheet_to_panel_strength(const size_t num) {
 
-    assert(vs[0].size() == num && "Input array sizes do not match");
-    assert(vs[0].size() == b[0][0].size() && "Input array sizes do not match");
+    assert(ps[0]->size() == num && "Input array sizes do not match");
+    assert(ps[0]->size() == b[0][0].size() && "Input array sizes do not match");
 
     // make sure the arrays are sized properly
     for (size_t d=0; d<3; ++d) {
@@ -271,12 +302,12 @@ public:
     // now copy the values over (do them all)
     for (size_t i=0; i<num; ++i) {
       for (size_t d=0; d<Dimensions; ++d) {
-        ts[d][i] = (vs[0][i]*x1[d][i] + vs[1][i]*x2[d][i]) * area[i];
+        ts[d][i] = ((*ps[0])[i]*x1[d][i] + (*ps[1])[i]*x2[d][i]) * area[i];
       }
       //std::cout << "elem " << i << " has" << std::endl;
       //std::cout << "  x1 " << x1[0][i] << " " << x1[1][i] << " " << x1[2][i] << std::endl;
       //std::cout << "  x2 " << x2[0][i] << " " << x2[1][i] << " " << x2[2][i] << std::endl;
-      //std::cout << "  vs " << vs[0][i] << " " << vs[1][i] << std::endl;
+      //std::cout << "  ps " << (*ps[0])[i] << " " << (*ps[1])[i] << std::endl;
       //std::cout << "  ts " << ts[0][i] << " " << ts[1][i] << " " << ts[2][i] << std::endl;
       //std::cout << "elem " << i << " has s " << ts[0][i] << " " << ts[1][i] << " " << ts[2][i] << std::endl;
     }
@@ -309,18 +340,11 @@ public:
   const float get_max_bc_value() const {
     if (this->E == reactive) {
       S max_bc = 0.0;
-      // new way
       for (size_t i=0; i<get_npanels(); ++i) {
         const S this_bc = std::pow((*bc[0])[i],2) + std::pow((*bc[1])[i],2) + std::pow((*bc[2])[i],2);
         if (this_bc > max_bc) max_bc = this_bc;
       }
       max_bc = std::sqrt(max_bc);
-      // old way
-      //for (size_t d=0; d<bc.size(); ++d) {
-      //  const S this_max = *std::max_element(std::begin(*bc[d]), std::end(*bc[d]));
-      //  const S this_min = *std::min_element(std::begin(*bc[d]), std::end(*bc[d]));
-      //  max_bc = std::max(max_bc, std::max(this_max, -this_min));
-      //}
       return (float)max_bc;
     } else {
       return (float)0.0;
@@ -385,12 +409,14 @@ public:
     // now, depending on the element type, put the value somewhere
     if (this->E == active) {
       // value is a fixed strength for the element
-      assert(_val.size() == 2*nsurfs && "Value array is not an even multiple of panel count");
-      // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths
-      for (size_t d=0; d<2; ++d) {
-        vs[d].resize(neold+nsurfs);
-        for (size_t i=0; i<nsurfs; ++i) {
-          vs[d][neold+i] = _val[2*i+d];
+      assert(_val.size() == 3*nsurfs && "Value array is not an even multiple of panel count");
+      // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths and source sheet str
+      for (size_t d=0; d<3; ++d) {
+        if (ps[d]) {
+          ps[d]->resize(neold+nsurfs);
+          for (size_t i=0; i<nsurfs; ++i) {
+            (*ps[d])[neold+i] = _val[3*i+d];
+          }
         }
       }
 
@@ -416,9 +442,11 @@ public:
       bcs_to_bcs(neold,nsurfs);
 
       // upsize vortex sheet and raw strength arrays, too
-      for (size_t d=0; d<2; ++d) {
-        vs[d].resize(neold+nsurfs);
-        //std::fill(vs[d].begin(), vs[d].end(), 0.0);
+      for (size_t d=0; d<3; ++d) {
+        if (ps[d]) {
+          ps[d]->resize(neold+nsurfs);
+          //std::fill(ps[d]->begin(), ps[d]->end(), 0.0);
+        }
       }
       for (size_t d=0; d<3; ++d) {
         ts[d].resize(neold+nsurfs);
@@ -510,14 +538,11 @@ public:
     // call base class first
     ElementBase<S>::zero_strengths();
 
-    // and reset any panel strengths
-    for (size_t d=0; d<2; ++d) {
-      std::fill(vs[d].begin(), vs[d].end(), 0.0);
-    }
-
-    // and reset the source strengths here
-    if (ss) {
-      std::fill(ss->begin(), ss->end(), 0.0);
+    // and reset any panel vortex or source strengths
+    for (size_t d=0; d<3; ++d) {
+      if (ps[d]) {
+        std::fill(ps[d]->begin(), ps[d]->end(), 0.0);
+      }
     }
   }
 
@@ -572,16 +597,16 @@ public:
     assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
     // and we trust that we've transformed utc to tc
 
-    // have we made ss yet? or is it the right size?
-    if (ss) {
-      ss->resize(get_npanels());
+    // have we made source strength vector yet? or is it the right size?
+    if (ps[2]) {
+      ps[2]->resize(get_npanels());
     } else {
       // value is a fixed strength for the segment
       Vector<S> new_ss(get_npanels());
-      ss = std::move(new_ss);
+      *ps[2] = std::move(new_ss);
     }
 
-    //std::cout << "Inside add_rot_strengths, sizes are: " << get_npanels() << " " << ss->size() << std::endl;
+    //std::cout << "Inside add_rot_strengths, sizes are: " << get_npanels() << " " << ps[2]->size() << std::endl;
     assert(ts[0].size() == get_npanels() && "Strength array is not the same as panel count");
 
     // get basis vectors
@@ -606,13 +631,13 @@ public:
 
       // the vortex strengths - we ADD to the existing
       const S new_vort1 = -1.0 * (ui*t1[0][i] + vi*t1[1][i] + wi*t1[2][i]);
-      //(*ps[0])[i] += new_vort1;
+      (*ps[0])[i] += new_vort1;
       const S new_vort2 = -1.0 * (ui*t2[0][i] + vi*t2[1][i] + wi*t2[2][i]);
-      //(*ps[1])[i] += new_vort1;
+      (*ps[1])[i] += new_vort2;
 
       // the source strength
       const S new_src = -1.0 * (ui*norm[0][i] + vi*norm[1][i] + wi*norm[2][i]);
-      //(*ps[2])[i] += new_src;
+      (*ps[2])[i] += new_src;
 
       // debug print
       if (std::abs(_rotvel[0]) > 0.0 and false) {
@@ -895,14 +920,16 @@ public:
 
   // find the new peak vortex sheet strength magnitude
   S get_max_str() {
-    if (true) {
-    //if (ps[0]) {
-      //const S this_max = *std::max_element(std::begin(*ps[0]), std::end(*ps[0]));
-      //const S this_min = *std::min_element(std::begin(*ps[0]), std::end(*ps[0]));
-      //return std::max(this_max, -this_min);
-      return 1.0;
+    if (this->E != inert) {
+      S max_ps = 0.0;
+      for (size_t i=0; i<get_npanels(); ++i) {
+        const S this_ps = std::pow((*ps[0])[i],2) + std::pow((*ps[1])[i],2);
+        if (this_ps > max_ps) max_ps = this_ps;
+      }
+      max_ps = std::sqrt(max_ps);
+      return (S)max_ps;
     } else {
-      return 1.0;
+      return (S)1.0;
     }
   }
 
@@ -1177,10 +1204,9 @@ protected:
   std::array<Vector<S>,Dimensions>  pu; // velocities on panel centers - "u" is node vels in ElementBase
 
   // strengths and BCs
-  //Strength<S>                       ps; // panel-wise strengths per area (for "active" and "reactive")
+  Strength<S>                       ps; // panel-wise strengths per area (for "active" and "reactive")
+                                        // vortex sheet strengths are 0 and 1, source is in 2
   Strength<S>                       bc; // boundary condition for the elements (only when "reactive")
-  std::array<Vector<S>,2>           vs; // vortex sheet strengths of the elements (x1,x2)
-  std::optional<Vector<S>>          ss; // source strengths which represent the vel inf of the rotating volume
   std::array<Vector<S>,Dimensions>  ts; // total element strengths (do not use s in ElementBase)
   bool           source_str_is_unknown; // should the BEM solve for source strengths?
 
