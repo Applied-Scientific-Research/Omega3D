@@ -424,6 +424,7 @@ std::string write_vtu_panels(Surfaces<S> const& surf, const size_t file_idx, con
   std::string scalar_list;
 
   if (has_strengths) vector_list.append("vortex sheet strength,");
+  if (surf.have_src_str()) scalar_list.append("source sheet strength,");
   //if (has_radii) scalar_list.append("area,");
 
   if (vector_list.size()>1) {
@@ -443,14 +444,15 @@ std::string write_vtu_panels(Surfaces<S> const& surf, const size_t file_idx, con
     }
 
     // convenience references
-    std::array<Vector<S>,2> const & vs = surf.get_vort_str();
+    Vector<S>              const & vs1 = surf.get_vort1_str();
+    Vector<S>              const & vs2 = surf.get_vort2_str();
     std::array<Vector<S>,3> const & x1 = surf.get_x1();
     std::array<Vector<S>,3> const & x2 = surf.get_x2();
 
     // now copy the values over (do them all)
     for (size_t i=0; i<surf.get_npanels(); ++i) {
       for (size_t d=0; d<Dimensions; ++d) {
-        str[d][i] = vs[0][i]*x1[d][i] + vs[1][i]*x2[d][i];
+        str[d][i] = vs1[i]*x1[d][i] + vs2[i]*x2[d][i];
       }
     }
 
@@ -459,6 +461,14 @@ std::string write_vtu_panels(Surfaces<S> const& surf, const size_t file_idx, con
     printer.PushAttribute( "Name", "vortex sheet strength" );
     printer.PushAttribute( "type", "Float32" );
     write_DataArray (printer, str, compress, asbase64);
+    printer.CloseElement();	// DataArray
+  }
+
+  if (surf.have_src_str()) {
+    printer.OpenElement( "DataArray" );
+    printer.PushAttribute( "Name", "source sheet strength" );
+    printer.PushAttribute( "type", "Float32" );
+    write_DataArray (printer, surf.get_src_str(), compress, asbase64);
     printer.CloseElement();	// DataArray
   }
 
