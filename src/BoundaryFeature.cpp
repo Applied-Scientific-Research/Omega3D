@@ -300,7 +300,15 @@ ExteriorFromFile::to_string() const {
 
 void
 ExteriorFromFile::from_json(const nlohmann::json j) {
-  m_infile = j["geometry"];
+
+  // be smarter about the string - this allows the code to compile with GCC 7.2.0
+  nlohmann::json infile_object = j["geometry"];
+  if (infile_object.is_string()) {
+    m_infile = infile_object.get<std::string>();
+  }
+  // this used to be:
+  //m_infile = j["geometry"];
+
   const std::vector<float> tr = j["translation"];
   m_x = tr[0];
   m_y = tr[1];
