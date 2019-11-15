@@ -348,6 +348,11 @@ std::string Simulation::check_initialization() {
     }
   }
 
+  // Check for very large BEM problem
+  if (get_npanels() > 21000) {
+    retstr.append("Boundary features have too many panels, program will run out of memory. Reduce Reynolds number or increase time step or both.\n");
+  }
+
   // Check for excessive elongation
   float max_elong = 0.0;
   for (auto &coll: vort) {
