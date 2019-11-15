@@ -7,6 +7,7 @@
 
 #include "Simulation.h"
 #include "Points.h"
+#include "Reflect.h"
 #include "BEMHelper.h"
 #include "VtkXmlHelper.h"
 #include "Split.h"
@@ -295,6 +296,16 @@ void Simulation::clear_bodies() {
 
 // Write a set of vtu files for the particles and panels
 std::vector<std::string> Simulation::write_vtk(const int _index) {
+
+  // solve the BEM (before any VTK or status file output)
+  //std::cout << "Updating element vels" << std::endl;
+  std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
+  clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
+  solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
+  conv.find_vels(thisfs, vort, bdry, vort);
+  conv.find_vels(thisfs, vort, bdry, fldpt);
+  conv.find_vels(thisfs, vort, bdry, bdry);
+
   // may eventually want to avoid clobbering by maintaining an internal count of the
   //   number of simulations run from this execution of the GUI
   std::vector<std::string> files;
@@ -465,7 +476,7 @@ void Simulation::first_step() {
   // this is the first step, just solve BEM and return - it's time=0
 
   // update BEM and find vels on any particles but DO NOT ADVECT
-  conv.advect_1st(time, 0.0, thisfs, vort, bdry, fldpt, bem);
+  conv.advect_1st(time, 0.0, thisfs, get_ips(), vort, bdry, fldpt, bem);
 
   // and write status file
   dump_stats_to_status();
@@ -495,14 +506,14 @@ void Simulation::step() {
   //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
 
   // advect with no diffusion (must update BEM strengths)
-  //conv.advect_1st(time, dt, thisfs, vort, bdry, fldpt, bem);
-  conv.advect_2nd(time, dt, thisfs, vort, bdry, fldpt, bem);
+  //conv.advect_1st(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
+  conv.advect_2nd(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
 
   // operator splitting requires another half-step diffuse (must compute new coefficients)
   //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
 
   // push field points out of objects every few steps
-  //if (nstep%5 == 0) clear_inner_layer<STORE>(bdry, fldpt, (STORE)0.0, (STORE)(0.5*get_ips()));
+  if (nstep%5 == 0) clear_inner_layer<STORE>(1, bdry, fldpt, (STORE)0.0, (STORE)(0.5*get_ips()));
 
   // step complete, now split any elongated particles
   for (auto &coll: vort) {
@@ -546,13 +557,6 @@ void Simulation::step() {
   // only increment step here!
   nstep++;
 
-  // solve the BEM (before any VTK or status file output)
-  std::cout << "Updating element vels" << std::endl;
-  solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
-  conv.find_vels(thisfs, vort, bdry, vort);
-  conv.find_vels(thisfs, vort, bdry, fldpt);
-  conv.find_vels(thisfs, vort, bdry, bdry);
-
   // and write status file
   dump_stats_to_status();
 }
@@ -567,6 +571,18 @@ void Simulation::dump_stats_to_status() {
     sf.append_value((int)get_nparts());
 
     // more advanced info
+
+    std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
+
+    // push away particles inside or too close to the body
+    clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
+    // solve the BEM (before any VTK or status file output)
+    solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
+
+    // but do we really need to do these?
+    //conv.find_vels(thisfs, vort, bdry, vort);
+    //conv.find_vels(thisfs, vort, bdry, fldpt);
+    //conv.find_vels(thisfs, vort, bdry, bdry);
 
     // add up the total circulation
     std::array<float,3> tot_circ = {0.0};

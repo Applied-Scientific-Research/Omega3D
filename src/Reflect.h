@@ -180,6 +180,7 @@ ClosestReturn<S> panel_point_distance(const S sx0, const S sy0, const S sz0,
 //
 template <class S>
 void reflect_panp2 (Surfaces<S> const& _src, Points<S>& _targ) {
+
   //std::cout << "  inside reflect(Surfaces, Points)" << std::endl;
   std::cout << "  Reflecting" << _targ.to_string() << " from near" << _src.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
@@ -187,7 +188,7 @@ void reflect_panp2 (Surfaces<S> const& _src, Points<S>& _targ) {
   // get handles for the vectors
   std::array<Vector<S>,Dimensions> const& sx = _src.get_pos();
   std::vector<Int> const&                 si = _src.get_idx();
-  std::array<Vector<S>,3> const&          sn = _src.get_norm();
+  std::array<Vector<S>,Dimensions> const& sn = _src.get_norm();
   std::array<Vector<S>,Dimensions>&       tx = _targ.get_pos();
 
   size_t num_reflected = 0;
@@ -430,12 +431,12 @@ std::pair<S,S> get_cut_entry (std::vector<std::tuple<S,S,S>>& ct, const S _pos) 
 // naive caller for the O(N^2) panel-particle clear-inner-layer kernel
 //
 template <class S>
-void clear_inner_panp2 (Surfaces<S> const & _src,
+void clear_inner_panp2 (const int _method,
+                        Surfaces<S> const & _src,
                         Points<S>& _targ,
                         const S _cutoff_mult,
                         const S _ips) {
 
-  //std::cout << "  inside clear_inner_layer(Surfaces, Points)" << std::endl;
   std::cout << "  Clearing" << _targ.to_string() << " from near" << _src.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
 
@@ -449,7 +450,7 @@ void clear_inner_panp2 (Surfaces<S> const & _src,
   // get handles for the vectors
   std::array<Vector<S>,Dimensions> const& sx = _src.get_pos();
   std::vector<Int> const&                 si = _src.get_idx();
-  std::array<Vector<S>,3> const&          sn = _src.get_norm();
+  std::array<Vector<S>,Dimensions> const& sn = _src.get_norm();
 
   std::array<Vector<S>,Dimensions>&       tx = _targ.get_pos();
   std::array<Vector<S>,Dimensions>&       ts = _targ.get_str();
@@ -545,27 +546,56 @@ void clear_inner_panp2 (Surfaces<S> const & _src,
 
     const S this_radius = are_fldpts ? _ips : tr[i];
 
-    if (dotp < this_radius) {
-      //std::cout << "  CLEARING pt at " << tx[0][i] << " " << tx[1][i] << " because dotp " << dotp << " and norm " << norm[0] << " " << norm[1] << std::endl;
+    if (_method == 0) {
+      if (dotp < this_radius) {
+        //std::cout << "  CLEARING pt at " << tx[0][i] << " " << tx[1][i] << " because dotp " << dotp << " and norm " << norm[0] << " " << norm[1] << std::endl;
 
-      // use precomputed table lookups for new position and remaining strength
-      std::pair<S,S> entry = get_cut_entry(ct, dotp/this_radius);
-      if (not are_fldpts) for (size_t d=0; d<3; ++d) ts[d][i] *= std::get<0>(entry);
-      for (size_t d=0; d<3; ++d) tx[d][i] += std::get<1>(entry) * this_radius * mnorm[d];
+        // use precomputed table lookups for new position and remaining strength
+        if (not are_fldpts) {
+          const std::pair<S,S> entry = get_cut_entry(ct, dotp/this_radius);
+
+          // modify the particle in question
+          for (size_t d=0; d<3; ++d) ts[d][i] *= std::get<0>(entry);
+          for (size_t d=0; d<3; ++d) tx[d][i] += std::get<1>(entry) * this_radius * mnorm[d];
+        }
 
       //std::cout << "  PUSHING " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]);
       //std::cout << "    to " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]) << " and scale str by " << sfac << std::endl;
       // do not change radius yet
       //std::cout << "    TO " << tx[0][i] << " " << tx[1][i] << " and weaken by " << sfac << std::endl;
 
-      num_cropped++;
+        num_cropped++;
+      }
+
+    } else if (_method == 1) {
+      // simply push the particles until it is a certain distance from the body, keeping all strength
+      //std::cout << "  particle " << i << " at " << tx[0][i] << " " << tx[1][i] << " has dotp " << dotp << std::endl;
+      if (dotp < 0.0) {
+        // modify the particle in question
+        //std::cout << "  pushing " << tx[0][i] << " " << tx[1][i];
+        for (size_t d=0; d<3; ++d) tx[d][i] -= dotp * mnorm[d];
+        //std::cout << " to " << tx[0][i] << " " << tx[1][i] << std::endl;
+        num_cropped++;
+      }
     }
 
   } // end loop over particles
 
   // we did not resize the x array, so we don't need to touch the u array
 
-  std::cout << "    cropped " << num_cropped << " particles" << std::endl;
+  if (_method == 0) {
+    std::cout << "    cropped " << num_cropped << " particles" << std::endl;
+  } else if (_method == 1) {
+    std::cout << "    pushed " << num_cropped << " particles" << std::endl;
+  }
+
+  if (_method==0 and not are_fldpts) {
+    //S this_circ = 0.0;
+    //for (int32_t i=0; i<(int32_t)_targ.get_n(); ++i) this_circ += ts[i];
+    //std::cout << "    circulation after: " << this_circ << std::endl;
+    //std::cout << "    removed: " << circ_removed << std::endl;
+  }
+
   // flops count here is taken from reflect - might be different here
   const S flops = 149.0 * (float)_targ.get_n() * (float)_src.get_npanels();
 
@@ -580,10 +610,11 @@ void clear_inner_panp2 (Surfaces<S> const & _src,
 // clean up by removing the innermost layer - the one that will be represented by boundary strengths
 //
 template <class S>
-void clear_inner_layer(std::vector<Collection> const & _bdry,
-                       std::vector<Collection>&        _vort,
-                       const S                         _cutoff_factor,
-                       const S                         _ips) {
+void clear_inner_layer(const int                _method,
+                       std::vector<Collection>& _bdry,
+                       std::vector<Collection>& _vort,
+                       const S                  _cutoff_factor,
+                       const S                  _ips) {
 
   // may need to do this multiple times to clear out concave zones!
   // this should only function when _vort is Points and _bdry is Surfaces
@@ -591,12 +622,19 @@ void clear_inner_layer(std::vector<Collection> const & _bdry,
     if (std::holds_alternative<Points<S>>(targ)) {
       Points<S>& pts = std::get<Points<S>>(targ);
 
-      for (auto &src : _bdry) {
-        if (std::holds_alternative<Surfaces<S>>(src)) {
-          Surfaces<S> const & surf = std::get<Surfaces<S>>(src);
+      // don't push anything if they don't move themselves
+      if (pts.get_movet() == lagrangian) {
 
-          // call the specific panels-affect-points routine
-          (void) clear_inner_panp2<S>(surf, pts, _cutoff_factor, _ips);
+        for (auto &src : _bdry) {
+          if (std::holds_alternative<Surfaces<S>>(src)) {
+            Surfaces<S>& surf = std::get<Surfaces<S>>(src);
+
+            // call the specific panels-affect-points routine
+            (void) clear_inner_panp2<S>(_method, surf, pts, _cutoff_factor, _ips);
+
+            // and tell the boundary collection that it reabsorbed that much
+            //surf.add_to_reabsorbed(lost_circ);
+          }
         }
       }
     }

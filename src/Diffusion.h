@@ -59,6 +59,7 @@ public:
   const float get_vrm_adapt() const { return vrm.get_adapt(); }
 #endif
   S get_nom_sep_scaled() const { return nom_sep_scaled; }
+  S get_nom_sep() { return nom_sep_scaled * vrm.get_hnu(); }
   S get_particle_overlap() const { return particle_overlap; }
   CoreType get_core_func() const { return core_func; }
 
@@ -125,6 +126,8 @@ void Diffusion<S,A,I>::step(const double                _time,
   //
   // always re-run the BEM calculation before shedding
   //
+  // first push away particles inside or too close to the body
+  clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), get_nom_sep());
   solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
   //
@@ -202,7 +205,8 @@ void Diffusion<S,A,I>::step(const double                _time,
   //
   // clean up by removing the innermost layer - the one that will be represented by boundary strengths
   //
-  (void) clear_inner_layer<S>(_bdry, _vort, 0.0, _vdelta/particle_overlap);
+  // use method which trims circulations under the threshold
+  (void) clear_inner_layer<S>(0, _bdry, _vort, 0.0, _vdelta/particle_overlap);
 
 
   //

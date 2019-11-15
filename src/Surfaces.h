@@ -552,9 +552,10 @@ public:
     // if no parent Body, forget it
     if (not this->B) return;
     // get current rotation rate
-    const std::array<double,Dimensions> rotvel = this->B->get_rotvel_vec();
+    std::array<double,Dimensions> rotvel = this->B->get_rotvel_vec();
+    for (size_t d=0; d<3; ++d) rotvel[d] *= _factor;
     // call parent
-    add_rot_strengths_base(_factor * rotvel);
+    add_rot_strengths_base(rotvel);
   }
 
   // second: assuming unit rotation rate (for finding the BEM influence matrix)

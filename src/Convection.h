@@ -13,6 +13,7 @@
 #include "Influence.h"
 #include "BEM.h"
 #include "BEMHelper.h"
+#include "Reflect.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -36,6 +37,7 @@ public:
   void advect_1st(const double,
                   const double,
                   const std::array<double,Dimensions>&,
+                  const S,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
@@ -43,6 +45,7 @@ public:
   void advect_2nd(const double,
                   const double,
                   const std::array<double,Dimensions>&,
+                  const S,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
@@ -71,9 +74,9 @@ void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
   InfluenceVisitor<A> visitor;
 
   // add vortex and source strengths to account for rotating bodies
-  //for (auto &src : _bdry) {
-    //std::visit([=](auto& elem) { elem.add_rot_strengths(0.0, 1.0); }, src);
-  //}
+  for (auto &src : _bdry) {
+    std::visit([=](auto& elem) { elem.add_solved_rot_strengths(1.0); }, src);
+  }
 
   // find the influence on every field point/tracer element
   for (auto &targ : _targets) {
@@ -98,18 +101,19 @@ void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
   }
 
   // remove vortex and source strengths due to rotation
-  //for (auto &src : _bdry) {
-    //std::visit([=](auto& elem) { elem.add_rot_strengths(0.0, -1.0); }, src);
-  //}
+  for (auto &src : _bdry) {
+    std::visit([=](auto& elem) { elem.add_solved_rot_strengths(-1.0); }, src);
+  }
 }
 
 //
 // first-order Euler forward integration
 //
 template <class S, class A, class I>
-void Convection<S,A,I>::advect_1st(const double _time,
-                                   const double _dt,
+void Convection<S,A,I>::advect_1st(const double                         _time,
+                                   const double                         _dt,
                                    const std::array<double,Dimensions>& _fs,
+                                   const S                              _ips,
                                    std::vector<Collection>&             _vort,
                                    std::vector<Collection>&             _bdry,
                                    std::vector<Collection>&             _fldpt,
@@ -119,6 +123,9 @@ void Convection<S,A,I>::advect_1st(const double _time,
 
   // part A - unknowns
 
+  // push away particles inside or too close to the body
+  clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _ips);
+  // and solve the bem
   solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
   // part B - knowns
@@ -147,9 +154,10 @@ void Convection<S,A,I>::advect_1st(const double _time,
 // second-order RK2 forward integration
 //
 template <class S, class A, class I>
-void Convection<S,A,I>::advect_2nd(const double _time,
-                                   const double _dt,
+void Convection<S,A,I>::advect_2nd(const double                         _time,
+                                   const double                         _dt,
                                    const std::array<double,Dimensions>& _fs,
+                                   const S                              _ips,
                                    std::vector<Collection>&             _vort,
                                    std::vector<Collection>&             _bdry,
                                    std::vector<Collection>&             _fldpt,
@@ -159,6 +167,8 @@ void Convection<S,A,I>::advect_2nd(const double _time,
 
   // take the first Euler step ---------
 
+  // push away particles inside or too close to the body
+  clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _ips);
   // perform the first BEM
   solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
@@ -182,8 +192,9 @@ void Convection<S,A,I>::advect_2nd(const double _time,
 
   // begin the 2nd step ---------
 
+  // push away particles inside or too close to the body
+  clear_inner_layer<S>(1, _bdry, interim_vort, 1.0/std::sqrt(2.0*M_PI), _ips);
   // perform the second BEM
-  //solve_bem<S,A,I>(_time + _dt, _fs, interim_vort, interim_bdry, _bem);
   solve_bem<S,A,I>(_time + _dt, _fs, interim_vort, _bdry, _bem);
 
   // find the derivatives
