@@ -28,7 +28,10 @@
 
 template <class S>
 Vector<S> points_on_points_coeff (Points<S> const& src, Points<S>& targ) {
+  std::cout << "    0_0 compute coefficients of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
+
+  assert(false && "ERROR: points_on_points_coeff is not implemented");
 
   // when we need this, copy it from Influence.h
   Vector<S> coeffs;
@@ -45,9 +48,13 @@ Vector<S> points_on_points_coeff (Points<S> const& src, Points<S>& targ) {
 template <class S>
 Vector<S> panels_on_points_coeff (Surfaces<S> const& src, Points<S>& targ) {
   std::cout << "    1_0 compute coefficients of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  auto start = std::chrono::system_clock::now();
+
+  assert(false && "ERROR: panels_on_points_coeff is not implemented");
 
   Vector<S> coeffs;
-  return coeffs;
+  float flops = 0.0;
+
 /*
   // get references to use locally
   const std::array<Vector<S>,Dimensions>& sx = src.get_pos();
@@ -81,15 +88,26 @@ Vector<S> panels_on_points_coeff (Surfaces<S> const& src, Points<S>& targ) {
     tu[2][i] += accumw;
   }
 */
+
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
+  printf("    panels_on_points_coeff: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
+
+  return coeffs;
 }
 
 
 template <class S>
 Vector<S> points_on_panels_coeff (Points<S> const& src, Surfaces<S>& targ) {
   std::cout << "    0_1 compute coefficients of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  auto start = std::chrono::system_clock::now();
+
+  assert(false && "ERROR: points_on_panels_coeff is not implemented");
 
   Vector<S> coeffs;
-  return coeffs;
+  float flops = 0.0;
+
 /*
   // get references to use locally
   const std::array<Vector<S>,Dimensions>& sx = src.get_pos();
@@ -123,14 +141,18 @@ Vector<S> points_on_panels_coeff (Points<S> const& src, Surfaces<S>& targ) {
     tu[2][i] -= accumw;
   }
 */
+
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
+  printf("    points_on_panels_coeff: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
+
+  return coeffs;
 }
 
 template <class S>
 Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   std::cout << "    1_1 compute coefficients of" << src.to_string() << " on" << targ.to_string() << std::endl;
-
-  // use floats to prevent overruns
-  float flops = 0.0;
   auto start = std::chrono::system_clock::now();
 
   // how large of a problem do we have?
@@ -163,6 +185,9 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   // allocate space for the output array
   Vector<S> coeffs;
   coeffs.resize(oldncols*oldnrows);
+
+  // use floats to prevent overruns
+  float flops = 0.0;
 
   // run a panels-on-points algorithm - THIS CAN BE MORE EFFICIENT
   #pragma omp parallel for
@@ -475,11 +500,6 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       std::cout << std::endl;
     }
   }
-
-  //auto end = std::chrono::system_clock::now();
-  //std::chrono::duration<double> elapsed_seconds = end-start;
-  //const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
-  //printf("    matrix block:\t[%.4f] cpu seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
 
   return augcoeff;
 }
