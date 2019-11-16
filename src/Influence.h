@@ -600,18 +600,33 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           AccumVec accumvz(0.0);
           AccumVec accumwz(0.0);
 
-          for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
-            // NOTE: .vectorAt(i) gets the vector at scalar position i
-            //       .vector(i) gets the i'th vector!!!
-            kernel_2v_0bg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
-                                             sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
-                                             sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
-                                             ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
-                                             txv, tyv, tzv, trv,
-                                             &accumu, &accumv, &accumw,
-                                             &accumux, &accumvx, &accumwx,
-                                             &accumuy, &accumvy, &accumwy,
-                                             &accumuz, &accumvz, &accumwz);
+          if (havess) {
+            for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
+              // NOTE: .vectorAt(i) gets the vector at scalar position i
+              //       .vector(i) gets the i'th vector!!!
+              kernel_2vs_0bg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                                sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                                sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                                ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                                sssv.vector(j),
+                                                txv, tyv, tzv, trv,
+                                                &accumu, &accumv, &accumw,
+                                                &accumux, &accumvx, &accumwx,
+                                                &accumuy, &accumvy, &accumwy,
+                                                &accumuz, &accumvz, &accumwz);
+            }
+          } else {
+            for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
+              kernel_2v_0bg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                               sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                               sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                               ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                               txv, tyv, tzv, trv,
+                                               &accumu, &accumv, &accumw,
+                                               &accumux, &accumvx, &accumwx,
+                                               &accumuy, &accumvy, &accumwy,
+                                               &accumuz, &accumvz, &accumwz);
+            }
           }
 
           tu[0][i] += accumu.sum();
