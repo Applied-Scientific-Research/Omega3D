@@ -437,7 +437,11 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   if (targ.is_inert()) {
 
     if (opttug) { // velocity-and-grads kernel -------------------------------------------------
-      std::cout << "    2_0pg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      if (havess) {
+        std::cout << "    2vs_0pg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      } else {
+        std::cout << "    2v_0pg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      }
 
       #ifdef USE_VC
         assert(false && "Velocity gradient influence on points with Vc is unsupported!");
@@ -460,21 +464,26 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           A accumuz = 0.0;
           A accumvz = 0.0;
           A accumwz = 0.0;
-          for (size_t j=0; j<src.get_npanels(); ++j) {
-            const size_t jp0 = si[3*j];
-            const size_t jp1 = si[3*j+1];
-            const size_t jp2 = si[3*j+2];
-            //if (havess) {
-              //kernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                    sss[j]/sa[j],
-              //                    tx[0][i], tx[1][i], tx[2][i],
-              //                    &accumu, &accumv, &accumw,
-              //                    &accumux, &accumvx, &accumwx,
-              //                    &accumuy, &accumvy, &accumwy,
-              //                    &accumuz, &accumvz, &accumwz);
-            //} else {
+          if (havess) {
+            for (size_t j=0; j<src.get_npanels(); ++j) {
+              const size_t jp0 = si[3*j];
+              const size_t jp1 = si[3*j+1];
+              const size_t jp2 = si[3*j+2];
+              kernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                  ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                  tx[0][i], tx[1][i], tx[2][i],
+                                  &accumu, &accumv, &accumw,
+                                  &accumux, &accumvx, &accumwx,
+                                  &accumuy, &accumvy, &accumwy,
+                                  &accumuz, &accumvz, &accumwz);
+            }
+          } else {
+            for (size_t j=0; j<src.get_npanels(); ++j) {
+              const size_t jp0 = si[3*j];
+              const size_t jp1 = si[3*j+1];
+              const size_t jp2 = si[3*j+2];
               kernel_2v_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -484,7 +493,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                  &accumux, &accumvx, &accumwx,
                                  &accumuy, &accumvy, &accumwy,
                                  &accumuz, &accumvz, &accumwz);
-            //}
+            }
           }
           tu[0][i] += accumu;
           tu[1][i] += accumv;
@@ -501,10 +510,14 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
         }
       #endif // no Vc
 
-      flops *= 12.0 + 300.0*(float)src.get_npanels();
+      flops *= 12.0 + (havess ? 401. : 300.)*(float)src.get_npanels();
 
     } else { // velocity-only kernel -----------------------------------------------------------
-      std::cout << "    2_0p compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      if (havess) {
+        std::cout << "    2vs_0p compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      } else {
+        std::cout << "    2v_0p compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      }
 
       #ifdef USE_VC
         assert(false && "Velocity influence on points with Vc is unsupported!");
@@ -523,7 +536,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               kernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                 ss[0][j], ss[1][j], ss[2][j], sss[j]/sa[j],
+                                 ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
                                  tx[0][i], tx[1][i], tx[2][i],
                                  &accumu, &accumv, &accumw);
             }
@@ -546,7 +559,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
         }
       #endif // no Vc
 
-      flops *= 3.0 + 160.0*(float)src.get_npanels();
+      flops *= 3.0 + (havess ? 185. : 160.)*(float)src.get_npanels();
     }
 
   //
@@ -558,7 +571,12 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
     const Vector<S>&                            tr = targ.get_rad();
 
     if (opttug) { // velocity-and-grads kernel -------------------------------------------------
-      std::cout << "    2_0bg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      if (havess) {
+        std::cout << "    2vs_0bg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      } else {
+        std::cout << "    2v_0bg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      }
+
       // get the pointer from the optional
       std::array<Vector<S>,9>& tug = *opttug;
 
@@ -625,19 +643,36 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           A accumuz = 0.0;
           A accumvz = 0.0;
           A accumwz = 0.0;
-          for (size_t j=0; j<src.get_npanels(); ++j) {
-            const size_t jp0 = si[3*j];
-            const size_t jp1 = si[3*j+1];
-            const size_t jp2 = si[3*j+2];
-            kernel_2v_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                               sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                               sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                               ss[0][j], ss[1][j], ss[2][j],
-                               tx[0][i], tx[1][i], tx[2][i], tr[i],
-                               &accumu, &accumv, &accumw,
-                               &accumux, &accumvx, &accumwx,
-                               &accumuy, &accumvy, &accumwy,
-                               &accumuz, &accumvz, &accumwz);
+          if (havess) {
+            for (size_t j=0; j<src.get_npanels(); ++j) {
+              const size_t jp0 = si[3*j];
+              const size_t jp1 = si[3*j+1];
+              const size_t jp2 = si[3*j+2];
+              kernel_2vs_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                  ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                  tx[0][i], tx[1][i], tx[2][i], tr[i],
+                                  &accumu, &accumv, &accumw,
+                                  &accumux, &accumvx, &accumwx,
+                                  &accumuy, &accumvy, &accumwy,
+                                  &accumuz, &accumvz, &accumwz);
+            }
+          } else {
+            for (size_t j=0; j<src.get_npanels(); ++j) {
+              const size_t jp0 = si[3*j];
+              const size_t jp1 = si[3*j+1];
+              const size_t jp2 = si[3*j+2];
+              kernel_2v_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                 sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                 sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                 ss[0][j], ss[1][j], ss[2][j],
+                                 tx[0][i], tx[1][i], tx[2][i], tr[i],
+                                 &accumu, &accumv, &accumw,
+                                 &accumux, &accumvx, &accumwx,
+                                 &accumuy, &accumvy, &accumwy,
+                                 &accumuz, &accumvz, &accumwz);
+            }
           }
           tu[0][i] += accumu;
           tu[1][i] += accumv;
@@ -654,10 +689,14 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
         }
       #endif // no Vc
 
-      flops *= 12.0 + 308.0*(float)src.get_npanels();
+      flops *= 12.0 + (havess ? 409. : 308.)*(float)src.get_npanels();
 
     } else { // velocity-only kernel -----------------------------------------------------------
-      std::cout << "    2_0b compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      if (havess) {
+        std::cout << "    2vs_0b compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      } else {
+        std::cout << "    2v_0b compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+      }
 
       #ifdef USE_VC
         assert(false && "Velocity influence on vortons with Vc is unsupported!");
@@ -668,16 +707,30 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           A accumu = 0.0;
           A accumv = 0.0;
           A accumw = 0.0;
-          for (size_t j=0; j<src.get_npanels(); ++j) {
-            const size_t jp0 = si[3*j];
-            const size_t jp1 = si[3*j+1];
-            const size_t jp2 = si[3*j+2];
-            kernel_2v_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                              sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                              sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                              ss[0][j], ss[1][j], ss[2][j],
-                              tx[0][i], tx[1][i], tx[2][i], tr[i],
-                              &accumu, &accumv, &accumw);
+          if (havess) {
+            for (size_t j=0; j<src.get_npanels(); ++j) {
+              const size_t jp0 = si[3*j];
+              const size_t jp1 = si[3*j+1];
+              const size_t jp2 = si[3*j+2];
+              kernel_2vs_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                 sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                 sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                 ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                 tx[0][i], tx[1][i], tx[2][i], tr[i],
+                                 &accumu, &accumv, &accumw);
+            }
+          } else {
+            for (size_t j=0; j<src.get_npanels(); ++j) {
+              const size_t jp0 = si[3*j];
+              const size_t jp1 = si[3*j+1];
+              const size_t jp2 = si[3*j+2];
+              kernel_2v_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                ss[0][j], ss[1][j], ss[2][j],
+                                tx[0][i], tx[1][i], tx[2][i], tr[i],
+                                &accumu, &accumv, &accumw);
+            }
           }
           tu[0][i] += accumu;
           tu[1][i] += accumv;
@@ -685,7 +738,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
         }
       #endif // no Vc
 
-      flops *= 3.0 + 168.0*(float)src.get_npanels();
+      flops *= 3.0 + (havess ? 193. : 168.)*(float)src.get_npanels();
     }
 
   }
@@ -777,7 +830,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
 //
 template <class S, class A>
 void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
-  std::cout << "    0_2 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  std::cout << "    0v_2p compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
 
   // get references to use locally

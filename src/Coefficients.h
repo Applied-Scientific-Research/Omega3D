@@ -74,11 +74,11 @@ Vector<S> panels_on_points_coeff (Surfaces<S> const& src, Points<S>& targ) {
     for (size_t j=0; j<src.get_n(); ++j) {
       const size_t jp0 = si[2*j];
       const size_t jp1 = si[2*j+1];
-      kernel_2_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                       sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                       ss[0][j], ss[1][j], ss[2][j],
-                       tx[0][i], tx[1][i], tx[2][i],
-                       &accumu, &accumv, &accumw);
+      kernel_2v_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                        sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                        ss[0][j], ss[1][j], ss[2][j],
+                        tx[0][i], tx[1][i], tx[2][i],
+                        &accumu, &accumv, &accumw);
     }
     //tu[0][i] += accum[0];
     //tu[1][i] += accum[1];
@@ -126,11 +126,11 @@ Vector<S> points_on_panels_coeff (Points<S> const& src, Surfaces<S>& targ) {
     const size_t ip1 = ti[2*i+1];
     for (size_t j=0; j<src.get_n(); ++j) {
       // note that this is the same kernel as panels_on_points_coeff!
-      kernel_2_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
-                       tx[0][ip1], tx[1][ip1], tx[2][ip1],
-                       ss[0][j], ss[1][j], ss[2][j],
-                       sx[0][j], sx[1][j], sx[2][j],
-                       &accumu, &accumv, &accumw);
+      kernel_2v_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
+                        tx[0][ip1], tx[1][ip1], tx[2][ip1],
+                        ss[0][j], ss[1][j], ss[2][j],
+                        sx[0][j], sx[1][j], sx[2][j],
+                        &accumu, &accumv, &accumw);
     }
     // we use it backwards, so the resulting velocities are negative
     //tu[0][i] -= accum[0];
@@ -152,7 +152,7 @@ Vector<S> points_on_panels_coeff (Points<S> const& src, Surfaces<S>& targ) {
 
 template <class S>
 Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
-  std::cout << "    1_1 compute coefficients of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  std::cout << "    2_2 compute coefficients of" << src.to_string() << " on" << targ.to_string() << std::endl;
   auto start = std::chrono::system_clock::now();
 
   // how large of a problem do we have?
@@ -252,12 +252,12 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
       // first, strength along panel-centric x1 vector
-      kernel_2_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
-                                     sx1, sy1, sz1,
-                                     sx2, sy2, sz2,
-                                     StoreVec(sb1[0][j]), StoreVec(sb1[1][j]), StoreVec(sb1[2][j]),
-                                     txi, tyi, tzi,
-                                     &resultu, &resultv, &resultw);
+      kernel_2v_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
+                                      sx1, sy1, sz1,
+                                      sx2, sy2, sz2,
+                                      StoreVec(sb1[0][j]), StoreVec(sb1[1][j]), StoreVec(sb1[2][j]),
+                                      txi, tyi, tzi,
+                                      &resultu, &resultv, &resultw);
 
       // dot product with tangent vector, applying normalization here
       // spread the results from a vector register back to the primary array
@@ -274,12 +274,12 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
       // now, along x2 direction (another 168+20 flops)
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
-      kernel_2_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
-                                     sx1, sy1, sz1,
-                                     sx2, sy2, sz2,
-                                     StoreVec(sb2[0][j]), StoreVec(sb2[1][j]), StoreVec(sb2[2][j]),
-                                     txi, tyi, tzi,
-                                     &resultu, &resultv, &resultw);
+      kernel_2v_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
+                                      sx1, sy1, sz1,
+                                      sx2, sy2, sz2,
+                                      StoreVec(sb2[0][j]), StoreVec(sb2[1][j]), StoreVec(sb2[2][j]),
+                                      txi, tyi, tzi,
+                                      &resultu, &resultv, &resultw);
       for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
         const size_t idx = i*StoreVec::size() + ii;
         coeffs[jptr[1]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]) * sarea;
@@ -334,12 +334,12 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
       // first, strength along panel-centric x1 vector
-      kernel_2_0p<S,S>(sx0, sy0, sz0,
-                       sx1, sy1, sz1,
-                       sx2, sy2, sz2,
-                       sb1[0][j], sb1[1][j], sb1[2][j],
-                       txi, tyi, tzi,
-                       &resultu, &resultv, &resultw);
+      kernel_2v_0p<S,S>(sx0, sy0, sz0,
+                        sx1, sy1, sz1,
+                        sx2, sy2, sz2,
+                        sb1[0][j], sb1[1][j], sb1[2][j],
+                        txi, tyi, tzi,
+                        &resultu, &resultv, &resultw);
 
       // dot product with tangent vector, applying normalization here
       coeffs[jptr[0]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
@@ -353,12 +353,12 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
       // now, along x2 direction (another 168+20 flops)
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
-      kernel_2_0p<S,S>(sx0, sy0, sz0,
-                       sx1, sy1, sz1,
-                       sx2, sy2, sz2,
-                       sb2[0][j], sb2[1][j], sb2[2][j],
-                       txi, tyi, tzi,
-                       &resultu, &resultv, &resultw);
+      kernel_2v_0p<S,S>(sx0, sy0, sz0,
+                        sx1, sy1, sz1,
+                        sx2, sy2, sz2,
+                        sb2[0][j], sb2[1][j], sb2[2][j],
+                        txi, tyi, tzi,
+                        &resultu, &resultv, &resultw);
       coeffs[jptr[1]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
       coeffs[jptr[1]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
       if (targ_has_src) coeffs[jptr[1]++] = (resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i]) * sarea;
