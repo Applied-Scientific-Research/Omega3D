@@ -81,6 +81,31 @@ static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
   *tw += r2 * dzxw;
 }
 
+// same, but vortex+source strength
+template <class S, class A>
+static inline void kernel_0vs_0p (const S sx, const S sy, const S sz,
+                                  const S sr,
+                                  const S ssx, const S ssy, const S ssz, const S ss,
+                                  const S tx, const S ty, const S tz,
+                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
+  // 34 flops
+  const S dx = tx - sx;
+  const S dy = ty - sy;
+  const S dz = tz - sz;
+  S r2 = dx*dx + dy*dy + dz*dz + sr*sr;
+#ifdef USE_VC
+  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#else
+  r2 = 1.0 / (r2*std::sqrt(r2));
+#endif
+  const S dxxw = dz*ssy - dy*ssz + dx*ss;
+  const S dyxw = dx*ssz - dz*ssx + dy*ss;
+  const S dzxw = dy*ssx - dx*ssy + dz*ss;
+  *tu += r2 * dxxw;
+  *tv += r2 * dyxw;
+  *tw += r2 * dzxw;
+}
+
 // same, but source strength only
 template <class S, class A>
 static inline void kernel_0s_0p (const S sx, const S sy, const S sz,
@@ -210,12 +235,12 @@ static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
 //   160 flops
 //
 template <class S, class A>
-static inline void kernel_2_0p (const S sx0, const S sy0, const S sz0,
-                                const S sx1, const S sy1, const S sz1,
-                                const S sx2, const S sy2, const S sz2,
-                                const S ssx, const S ssy, const S ssz,
-                                const S tx, const S ty, const S tz,
-                                A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
+static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
+                                 const S sx1, const S sy1, const S sz1,
+                                 const S sx2, const S sy2, const S sz2,
+                                 const S ssx, const S ssy, const S ssz,
+                                 const S tx, const S ty, const S tz,
+                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ssx;
@@ -270,64 +295,128 @@ static inline void kernel_2_0p (const S sx0, const S sy0, const S sz0,
   }
 }
 
-
-// same, but for source source terms
+// same for vortex+source terms
+//   185 flops
 template <class S, class A>
-static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
-                                const S sx1, const S sy1, const S sz1,
-                                const S sx2, const S sy2, const S sz2,
-                                const S ss,
-                                const S tx, const S ty, const S tz,
-                                A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
+static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
+                                  const S sx1, const S sy1, const S sz1,
+                                  const S sx2, const S sy2, const S sz2,
+                                  const S ssx, const S ssy, const S ssz, const S ss,
+                                  const S tx, const S ty, const S tz,
+                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
 
-  // scale the strength by 1/4, to account for the 4 calls below (3 flops)
-  const S strx = S(0.25) * ss;
+  // scale the strength by 1/4, to account for the 4 calls below (4 flops)
+  const S strx = S(0.25) * ssx;
+  const S stry = S(0.25) * ssy;
+  const S strz = S(0.25) * ssz;
+  const S strs = S(0.25) * ss;
 
-  // first source point (37 flops)
+  // first source point (43 flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (28 flops)
-    (void) kernel_0s_0p (sx, sy, sz, (S)0.0,
-                        strx,
-                        tx, ty, tz,
-                        tu, tv, tw);
+    // accumulate the influence (34 flops)
+    (void) kernel_0vs_0p (sx, sy, sz, (S)0.0,
+                          strx, stry, strz, strs,
+                          tx, ty, tz,
+                          tu, tv, tw);
   }
 
-  // second source point (40)
+  // second source point (46)
+  {
+    const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
+    const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
+    const S sz = (S(4.0)*sz0 + sz1 + sz2) / S(6.0);
+    (void) kernel_0vs_0p (sx, sy, sz, (S)0.0,
+                          strx, stry, strz, strs,
+                          tx, ty, tz,
+                          tu, tv, tw);
+  }
+
+  // third source point (46)
+  {
+    const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
+    const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
+    const S sz = (sz0 + S(4.0)*sz1 + sz2) / S(6.0);
+    (void) kernel_0vs_0p (sx, sy, sz, (S)0.0,
+                          strx, stry, strz, strs,
+                          tx, ty, tz,
+                          tu, tv, tw);
+  }
+
+  // final source point (46)
+  {
+    const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
+    const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
+    const S sz = (sz0 + sz1 + S(4.0)*sz2) / S(6.0);
+    (void) kernel_0vs_0p (sx, sy, sz, (S)0.0,
+                          strx, stry, strz, strs,
+                          tx, ty, tz,
+                          tu, tv, tw);
+  }
+}
+
+// same, but for source source terms only
+//   122 flops
+template <class S, class A>
+static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
+                                 const S sx1, const S sy1, const S sz1,
+                                 const S sx2, const S sy2, const S sz2,
+                                 const S ss,
+                                 const S tx, const S ty, const S tz,
+                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
+
+  // scale the strength by 1/4, to account for the 4 calls below (1 flop)
+  const S strs = S(0.25) * ss;
+
+  // first source point (28 flops)
+  {
+    // prepare the source points (9 flops)
+    const S sx = (sx0 + sx1 + sx2) / S(3.0);
+    const S sy = (sy0 + sy1 + sy2) / S(3.0);
+    const S sz = (sz0 + sz1 + sz2) / S(3.0);
+
+    // accumulate the influence (19 flops)
+    (void) kernel_0s_0p (sx, sy, sz, (S)0.0,
+                         strs,
+                         tx, ty, tz,
+                         tu, tv, tw);
+  }
+
+  // second source point (31)
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
     const S sz = (S(4.0)*sz0 + sz1 + sz2) / S(6.0);
     (void) kernel_0s_0p (sx, sy, sz, (S)0.0,
-                        strx,
-                        tx, ty, tz,
-                        tu, tv, tw);
+                         strs,
+                         tx, ty, tz,
+                         tu, tv, tw);
   }
 
-  // third source point (40)
+  // third source point (31)
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
     const S sz = (sz0 + S(4.0)*sz1 + sz2) / S(6.0);
     (void) kernel_0s_0p (sx, sy, sz, (S)0.0,
-                        strx,
-                        tx, ty, tz,
-                        tu, tv, tw);
+                         strs,
+                         tx, ty, tz,
+                         tu, tv, tw);
   }
 
-  // final source point (40)
+  // final source point (31)
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
     const S sz = (sz0 + sz1 + S(4.0)*sz2) / S(6.0);
     (void) kernel_0s_0p (sx, sy, sz, (S)0.0,
-                        strx,
-                        tx, ty, tz,
-                        tu, tv, tw);
+                         strs,
+                         tx, ty, tz,
+                         tu, tv, tw);
   }
 }
 
@@ -339,12 +428,12 @@ static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
 //   168 flops
 //
 template <class S, class A>
-static inline void kernel_2_0b (const S sx0, const S sy0, const S sz0,
-                                const S sx1, const S sy1, const S sz1,
-                                const S sx2, const S sy2, const S sz2,
-                                const S ssx, const S ssy, const S ssz,
-                                const S tx, const S ty, const S tz, const S tr,
-                                A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
+static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
+                                 const S sx1, const S sy1, const S sz1,
+                                 const S sx2, const S sy2, const S sz2,
+                                 const S ssx, const S ssy, const S ssz,
+                                 const S tx, const S ty, const S tz, const S tr,
+                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ssx;
@@ -407,15 +496,15 @@ static inline void kernel_2_0b (const S sx0, const S sy0, const S sz0,
 //   308 flops
 //
 template <class S, class A>
-static inline void kernel_2_0bg (const S sx0, const S sy0, const S sz0,
-                                 const S sx1, const S sy1, const S sz1,
-                                 const S sx2, const S sy2, const S sz2,
-                                 const S ssx, const S ssy, const S ssz,
-                                 const S tx, const S ty, const S tz, const S tr,
-                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
-                                 A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
-                                 A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
-                                 A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
+static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
+                                  const S sx1, const S sy1, const S sz1,
+                                  const S sx2, const S sy2, const S sz2,
+                                  const S ssx, const S ssy, const S ssz,
+                                  const S tx, const S ty, const S tz, const S tr,
+                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
+                                  A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
+                                  A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
+                                  A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ssx;
@@ -482,15 +571,15 @@ static inline void kernel_2_0bg (const S sx0, const S sy0, const S sz0,
 //   300 flops
 //
 template <class S, class A>
-static inline void kernel_2_0pg (const S sx0, const S sy0, const S sz0,
-                                 const S sx1, const S sy1, const S sz1,
-                                 const S sx2, const S sy2, const S sz2,
-                                 const S ssx, const S ssy, const S ssz,
-                                 const S tx, const S ty, const S tz,
-                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
-                                 A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
-                                 A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
-                                 A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
+static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
+                                  const S sx1, const S sy1, const S sz1,
+                                  const S sx2, const S sy2, const S sz2,
+                                  const S ssx, const S ssy, const S ssz,
+                                  const S tx, const S ty, const S tz,
+                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
+                                  A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
+                                  A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
+                                  A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ssx;

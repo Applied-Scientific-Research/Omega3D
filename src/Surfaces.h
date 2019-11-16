@@ -228,9 +228,9 @@ public:
   Vector<S>&                          get_src_str()       { return *ps[2]; }
 
   // and (reactive only) boundary conditions
-  const Vector<S>&                     get_tang1_bcs() const { return *bc[0]; }
-  const Vector<S>&                     get_tang2_bcs() const { return *bc[1]; }
-  const Vector<S>&                     get_norm_bcs()  const { return *bc[2]; }
+  const Vector<S>&                  get_tang1_bcs() const { return *bc[0]; }
+  const Vector<S>&                  get_tang2_bcs() const { return *bc[1]; }
+  const Vector<S>&                   get_norm_bcs() const { return *bc[2]; }
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
@@ -247,7 +247,7 @@ public:
 
     // pop off the "unknown" rotation rate and save it
     if (is_augmented()) {
-      assert(false && "Augmentation not supported! Surfaces.h:221");
+      assert(false && "Augmentation not supported! Surfaces.h:250");
       //solved_omega = _in.back();
       //std::cout << "    solved rotation rate is " << solved_omega << std::endl;
       //omega_error = solved_omega - this->B->get_rotvel();
@@ -909,6 +909,7 @@ public:
       if (this->E == reactive) {
         for (size_t j=0; j<3; ++j) px[idx+3+j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
       }
+      // IGNORE SOURCE SHEET STRENGTHS
       // and the core size
       px[idx+6] = _vdelta;
       //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2];
