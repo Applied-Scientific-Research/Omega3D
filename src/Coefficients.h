@@ -267,6 +267,9 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
         // recompute for other target vector
         coeffs[jptr[0]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]) * sarea;
+
+        // recompute for normal
+        if (targ_has_src) coeffs[jptr[0]++] = (resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx]) * sarea;
       }
 
       // now, along x2 direction (another 168+20 flops)
@@ -281,9 +284,25 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
         const size_t idx = i*StoreVec::size() + ii;
         coeffs[jptr[1]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]) * sarea;
         coeffs[jptr[1]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]) * sarea;
+        if (targ_has_src) coeffs[jptr[1]++] = (resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx]) * sarea;
       }
 
-      // HACK - we are assuming vortex/tangential only!
+      // finally the influence of a unit-strength source sheet
+      if (src_has_src) {
+        resultu = 0.0; resultv = 0.0; resultw = 0.0;
+        kernel_2s_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
+                                        sx1, sy1, sz1,
+                                        sx2, sy2, sz2,
+                                        StoreVec(1.0),
+                                        txi, tyi, tzi,
+                                        &resultu, &resultv, &resultw);
+        for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
+          const size_t idx = i*StoreVec::size() + ii;
+          coeffs[jptr[2]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]) * sarea;
+          coeffs[jptr[2]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]) * sarea;
+          if (targ_has_src) coeffs[jptr[2]++] = (resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx]) * sarea;
+        }
+      }
     }
 #else	// no Vc
 
