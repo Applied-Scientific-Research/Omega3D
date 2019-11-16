@@ -37,7 +37,7 @@ static inline void kernel_0v_0b (const S sx, const S sy, const S sz,
                                 const S ssx, const S ssy, const S ssz,
                                 const S tx, const S ty, const S tz,
                                 const S tr,
-                                A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
+                                A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
   // 30 flops
   const S dx = tx - sx;
   const S dy = ty - sy;
@@ -62,7 +62,7 @@ static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
                                  const S sr,
                                  const S ssx, const S ssy, const S ssz,
                                  const S tx, const S ty, const S tz,
-                                 A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
+                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
   // 28 flops
   const S dx = tx - sx;
   const S dy = ty - sy;
@@ -87,7 +87,7 @@ static inline void kernel_0s_0p (const S sx, const S sy, const S sz,
                                  const S sr,
                                  const S ss,
                                  const S tx, const S ty, const S tz,
-                                 A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
+                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
   // 19 flops
   const S dx = tx - sx;
   const S dy = ty - sy;
@@ -110,10 +110,10 @@ static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
                                  const S ssx, const S ssy, const S ssz,
                                  const S tx, const S ty, const S tz,
                                  const S tr,
-                                 A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw,
-                                 A* __restrict__ tux, A* __restrict__ tvx, A* __restrict__ twx,
-                                 A* __restrict__ tuy, A* __restrict__ tvy, A* __restrict__ twy,
-                                 A* __restrict__ tuz, A* __restrict__ tvz, A* __restrict__ twz) {
+                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
+                                 A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
+                                 A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
+                                 A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
   // 30 flops
   const S dx = tx - sx;
   const S dy = ty - sy;
@@ -159,10 +159,10 @@ static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
                                   const S sr,
                                   const S ssx, const S ssy, const S ssz,
                                   const S tx, const S ty, const S tz,
-                                  A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw,
-                                  A* __restrict__ tux, A* __restrict__ tvx, A* __restrict__ twx,
-                                  A* __restrict__ tuy, A* __restrict__ tvy, A* __restrict__ twy,
-                                  A* __restrict__ tuz, A* __restrict__ tvz, A* __restrict__ twz) {
+                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
+                                  A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
+                                  A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
+                                  A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
   // 30 flops
   const S dx = tx - sx;
   const S dy = ty - sy;
@@ -215,7 +215,7 @@ static inline void kernel_2_0p (const S sx0, const S sy0, const S sz0,
                                 const S sx2, const S sy2, const S sz2,
                                 const S ssx, const S ssy, const S ssz,
                                 const S tx, const S ty, const S tz,
-                                A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
+                                A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ssx;
@@ -278,7 +278,7 @@ static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
                                 const S sx2, const S sy2, const S sz2,
                                 const S ss,
                                 const S tx, const S ty, const S tz,
-                                A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
+                                A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ss;
@@ -344,7 +344,7 @@ static inline void kernel_2_0b (const S sx0, const S sy0, const S sz0,
                                 const S sx2, const S sy2, const S sz2,
                                 const S ssx, const S ssy, const S ssz,
                                 const S tx, const S ty, const S tz, const S tr,
-                                A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw) {
+                                A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ssx;
@@ -412,10 +412,10 @@ static inline void kernel_2_0bg (const S sx0, const S sy0, const S sz0,
                                  const S sx2, const S sy2, const S sz2,
                                  const S ssx, const S ssy, const S ssz,
                                  const S tx, const S ty, const S tz, const S tr,
-                                 A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw,
-                                 A* __restrict__ tux, A* __restrict__ tvx, A* __restrict__ twx,
-                                 A* __restrict__ tuy, A* __restrict__ tvy, A* __restrict__ twy,
-                                 A* __restrict__ tuz, A* __restrict__ tvz, A* __restrict__ twz) {
+                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
+                                 A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
+                                 A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
+                                 A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ssx;
@@ -487,10 +487,10 @@ static inline void kernel_2_0pg (const S sx0, const S sy0, const S sz0,
                                  const S sx2, const S sy2, const S sz2,
                                  const S ssx, const S ssy, const S ssz,
                                  const S tx, const S ty, const S tz,
-                                 A* __restrict__ tu, A* __restrict__ tv, A* __restrict__ tw,
-                                 A* __restrict__ tux, A* __restrict__ tvx, A* __restrict__ twx,
-                                 A* __restrict__ tuy, A* __restrict__ tvy, A* __restrict__ twy,
-                                 A* __restrict__ tuz, A* __restrict__ tvz, A* __restrict__ twz) {
+                                 A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
+                                 A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
+                                 A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
+                                 A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
 
   // scale the strength by 1/4, to account for the 4 calls below (3 flops)
   const S strx = S(0.25) * ssx;
