@@ -68,7 +68,8 @@ public:
 
     // always initialize the ps panel strength optionals
     if (this->E != inert) {
-      for (size_t d=0; d<num_unknowns_per_panel(); ++d) {
+      //for (size_t d=0; d<num_unknowns_per_panel(); ++d) {
+      for (size_t d=0; d<3; ++d) {
         Vector<S> new_s;
         ps[d] = std::move(new_s);
        }
@@ -247,7 +248,7 @@ public:
 
     // pop off the "unknown" rotation rate and save it
     if (is_augmented()) {
-      assert(false && "Augmentation not supported! Surfaces.h:250");
+      assert(false && "Augmentation not supported!");
       //solved_omega = _in.back();
       //std::cout << "    solved rotation rate is " << solved_omega << std::endl;
       //omega_error = solved_omega - this->B->get_rotvel();
@@ -259,7 +260,7 @@ public:
     //assert(ioffset == 0 && "Offset is not zero");
 
     // copy the BEM-solved strengths into the panel-strength data structures
-    if (have_src_str()) {
+    if (source_str_is_unknown and have_src_str()) {
       assert(_in.size() == get_npanels()*3 && "Set strength array size does not match");
       // vortex and source terms
       for (size_t i=0; i<get_npanels(); ++i) {
