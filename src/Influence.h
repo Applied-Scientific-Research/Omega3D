@@ -240,7 +240,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
         // NOTE: .vectorAt(i) gets the vector at scalar position i
         //       .vector(i) gets the i'th vector!!!
-        kernel_0v_0vg<StoreVec,AccumVec>(
+        kernel_0v_0bg<StoreVec,AccumVec>(
                           sxv.vector(j), syv.vector(j), szv.vector(j), srv.vector(j),
                           ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                           txv, tyv, tzv, trv,
@@ -276,7 +276,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       A accumwz = 0.0;
       // loop over source particles
       for (size_t j=0; j<src.get_n(); ++j) {
-        kernel_0v_0vg<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],
+        kernel_0v_0bg<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],
                           ss[0][j], ss[1][j], ss[2][j],
                           tx[0][i], tx[1][i], tx[2][i], tr[i],
                           &accumu,  &accumv,  &accumw,
@@ -316,7 +316,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       AccumVec accumv = 0.0;
       AccumVec accumw = 0.0;
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
-        kernel_0v_0v<StoreVec,AccumVec>(
+        kernel_0v_0b<StoreVec,AccumVec>(
                          sxv[j], syv[j], szv[j], srv[j],
                          ssxv[j], ssyv[j], sszv[j],
                          txv, tyv, tzv, trv,
@@ -330,7 +330,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       A accumv = 0.0;
       A accumw = 0.0;
       for (size_t j=0; j<src.get_n(); ++j) {
-        kernel_0v_0v<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],
+        kernel_0v_0b<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],
                          ss[0][j], ss[1][j], ss[2][j],
                          tx[0][i], tx[1][i], tx[2][i], tr[i],
                          &accumu, &accumv, &accumw);
@@ -551,7 +551,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
             // NOTE: .vectorAt(i) gets the vector at scalar position i
             //       .vector(i) gets the i'th vector!!!
-            kernel_2_0vg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+            kernel_2_0bg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
                                             sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
                                             sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
                                             ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
@@ -595,7 +595,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
             const size_t jp0 = si[3*j];
             const size_t jp1 = si[3*j+1];
             const size_t jp2 = si[3*j+2];
-            kernel_2_0vg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+            kernel_2_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                               sx[0][jp1], sx[1][jp1], sx[2][jp1],
                               sx[0][jp2], sx[1][jp2], sx[2][jp2],
                               ss[0][j], ss[1][j], ss[2][j],
@@ -638,7 +638,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
             const size_t jp0 = si[3*j];
             const size_t jp1 = si[3*j+1];
             const size_t jp2 = si[3*j+2];
-            kernel_2_0v<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+            kernel_2_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                              sx[0][jp1], sx[1][jp1], sx[2][jp1],
                              sx[0][jp2], sx[1][jp2], sx[2][jp2],
                              ss[0][j], ss[1][j], ss[2][j],

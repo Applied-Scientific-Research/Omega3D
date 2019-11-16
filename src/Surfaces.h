@@ -68,9 +68,7 @@ public:
 
     // always initialize the ps panel strength optionals
     if (this->E != inert) {
-      // HACK - do not init source strengths for now
-      //for (size_t d=0; d<3; ++d) {
-      for (size_t d=0; d<2; ++d) {
+      for (size_t d=0; d<num_unknowns_per_panel(); ++d) {
         Vector<S> new_s;
         ps[d] = std::move(new_s);
        }
@@ -236,6 +234,7 @@ public:
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
+  const bool src_is_unknown() const { return source_str_is_unknown; }
   const Int num_unknowns_per_panel() const { return (source_str_is_unknown ? 3 : 2); }
   const Int get_first_row() const { return istart; }
   const Int get_num_rows()  const { return (get_npanels()*num_unknowns_per_panel() + (is_augmented() ? 3 : 0)); }

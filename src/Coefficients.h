@@ -160,8 +160,12 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   const size_t ntarg = targ.get_npanels();
 
   // and how many rows and cols does that mean?
-  const size_t oldncols =  nsrc * src.num_unknowns_per_panel();
-  const size_t oldnrows = ntarg * targ.num_unknowns_per_panel();
+  const bool src_has_src  = src.src_is_unknown();
+  const bool targ_has_src = targ.src_is_unknown();
+  const size_t snunk = src.num_unknowns_per_panel();
+  const size_t tnunk = targ.num_unknowns_per_panel();
+  const size_t oldncols =  nsrc * snunk;
+  const size_t oldnrows = ntarg * tnunk;
   const size_t nunk = targ.num_unknowns_per_panel();
   assert(targ.num_unknowns_per_panel() == src.num_unknowns_per_panel() && "nunk are not the same");
 
@@ -176,6 +180,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   const std::vector<Int>&                  ti = targ.get_idx();
   const std::array<Vector<S>,Dimensions>& tb1 = targ.get_x1();
   const std::array<Vector<S>,Dimensions>& tb2 = targ.get_x2();
+  const std::array<Vector<S>,Dimensions>&  tn = targ.get_norm();
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
@@ -195,8 +200,8 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
     // we are looping over sources first, so we're computing the next nunk *columns* in the A matrix
 
     // store separate pointers for each of the nunk columns
-    size_t jptr[nunk];
-    for (size_t i=0; i<nunk; ++i) jptr[i] = (j*nunk + i) * (ntarg*nunk);
+    size_t jptr[snunk];
+    for (size_t i=0; i<snunk; ++i) jptr[i] = (j*snunk + i) * (ntarg*tnunk);
 
     // source triangular panel stays the same
     const Int sfirst  = si[3*j];
@@ -323,6 +328,10 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       // recompute for other target vector
       coeffs[jptr[0]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
 
+      // recompute for normal
+      if (targ_has_src) coeffs[jptr[0]++] = (resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i]) * sarea;
+
+
       // now, along x2 direction (another 168+20 flops)
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
       kernel_2_0p<S,S>(sx0, sy0, sz0,
@@ -333,8 +342,24 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                        &resultu, &resultv, &resultw);
       coeffs[jptr[1]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
       coeffs[jptr[1]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
+      if (targ_has_src) coeffs[jptr[1]++] = (resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i]) * sarea;
 
-      // HACK - we are assuming vortex/tangential only!
+
+      // finally the influence of a unit-strength source sheet
+      if (src_has_src) {
+        resultu = 0.0; resultv = 0.0; resultw = 0.0;
+
+        kernel_2s_0p<S,S>(sx0, sy0, sz0,
+                          sx1, sy1, sz1,
+                          sx2, sy2, sz2,
+                          (S)1.0,
+                          txi, tyi, tzi,
+                          &resultu, &resultv, &resultw);
+
+        coeffs[jptr[2]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
+        coeffs[jptr[2]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
+        if (targ_has_src) coeffs[jptr[2]++] = (resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i]) * sarea;
+      }
     }
 #endif
 
@@ -345,10 +370,21 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       // and set to 0 or pi
       coeffs[dptr]   = 0.0;
       coeffs[dptr+1] = 2.0*M_PI;
+      if (targ_has_src) coeffs[dptr+2] = 0.0;
+
       // next column
       dptr += ntarg*nunk;
       coeffs[dptr]   = -2.0*M_PI;
       coeffs[dptr+1] = 0.0;
+      if (targ_has_src) coeffs[dptr+2] = 0.0;
+
+      // last (source) column
+      if (src_has_src) {
+        dptr += ntarg*nunk;
+        coeffs[dptr]   = 0.0;
+        coeffs[dptr+1] = 0.0;
+        if (targ_has_src) coeffs[dptr+2] = 2.0*M_PI;
+      }
     }
   }
   flops += (float)nsrc*(float)ntarg*382.0;
