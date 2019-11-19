@@ -33,7 +33,6 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
   if (_jin.count("geometry") != 1) return;
 
   const std::string ftype = _jin["geometry"];
-  std::cout << "  found " << ftype << std::endl;
 
   // if it's a recognized keyword, generate the geometry
   if      (ftype == "sphere") { _flist.emplace_back(std::make_unique<Ovoid>(_bp)); }
@@ -43,6 +42,8 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
 
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
+
+  std::cout << "  found " << _flist.back()->to_string() << std::endl;
 }
 
 
@@ -151,7 +152,7 @@ Ovoid::to_json() const {
   mesh["geometry"] = "sphere";
   mesh["translation"] = {m_x, m_y, m_z};
   mesh["scale"] = {m_sx, m_sy, m_sz};
-  //mesh["external"] = m_external;
+  mesh["external"] = m_external;
   return mesh;
 }
 
@@ -247,6 +248,132 @@ SolidRect::to_json() const {
   mesh["geometry"] = "rect";
   mesh["translation"] = {m_x, m_y, m_z};
   mesh["scale"] = {m_sx, m_sy, m_sz};
+  mesh["external"] = m_external;
+  return mesh;
+}
+
+
+//
+// Create a triangulated quad of a solid boundary
+//
+ElementPacket<float>
+BoundaryQuad::init_elements(const float _ips) const {
+
+  if (not this->is_enabled()) return ElementPacket<float>();
+
+  // how many panels?
+  const float side1 = 0.5 * (std::sqrt(std::pow(m_x1-m_x,2)  + std::pow(m_y1-m_y,2)  + std::pow(m_z1-m_z,2))
+                            +std::sqrt(std::pow(m_x3-m_x2,2) + std::pow(m_y3-m_y2,2) + std::pow(m_z3-m_z2,2)));
+  const float side2 = 0.5 * (std::sqrt(std::pow(m_x2-m_x1,2) + std::pow(m_y2-m_y1,2) + std::pow(m_z2-m_z1,2))
+                            +std::sqrt(std::pow(m_x-m_x3,2)  + std::pow(m_y-m_y3,2)  + std::pow(m_z-m_z3,2)));
+  const size_t num1 = std::max(1, (int)(side1 / _ips));
+  const size_t num2 = std::max(1, (int)(side2 / _ips));
+  const size_t num_panels = 2 * num1 * num2;
+
+  std::cout << "Creating quad with " << num_panels << " panels" << std::endl;
+  std::cout << "  " << to_string() << std::endl;
+
+  // created once
+  std::vector<float>   x(3*(num1+1)*(num2+1));
+  std::vector<Int>   idx(num_panels*3);
+  std::vector<float> val(num_panels*3);
+
+  // when quad nodes appear in CCW order, the viewer is "outside" the object (inside the fluid)
+  // so go CW around the body
+  size_t icnt = 0;
+  for (size_t i=0; i<num1+1; ++i) {
+    const float s = (float)i / (float)num1;
+    for (size_t j=0; j<num2+1; ++j) {
+      const float t = (float)j / (float)num2;
+      const float w0 = (1.0-s)*(1.0-t);
+      const float w1 =      s *(1.0-t);
+      const float w2 =      s *     t ;
+      const float w3 = (1.0-s)*     t ;
+      x[icnt++] = w0*m_x + w1*m_x1 + w2*m_x2 + w3*m_x3;
+      x[icnt++] = w0*m_y + w1*m_y1 + w2*m_y2 + w3*m_y3;
+      x[icnt++] = w0*m_z + w1*m_z1 + w2*m_z2 + w3*m_z3;
+    }
+  }
+
+  // outside is to the left walking from one point to the next
+  icnt = 0;
+  for (size_t i=0; i<num1; ++i) {
+    const size_t idx1 = (num2+1) * i;
+    const size_t idx2 = (num2+1) * (i+1);
+    for (size_t j=0; j<num2; ++j) {
+      // make the first of 2 tris
+      idx[3*icnt]   = idx1 + j + 0;
+      idx[3*icnt+1] = idx2 + j + 1;
+      idx[3*icnt+2] = idx2 + j + 0;
+      icnt++;
+      // do the other triangle
+      idx[3*icnt]   = idx1 + j + 0;
+      idx[3*icnt+1] = idx1 + j + 1;
+      idx[3*icnt+2] = idx2 + j + 1;
+      icnt++;
+    }
+  }
+
+  // all triangles share the same boundary condition velocity (in global coords)
+  for (size_t i=0; i<num_panels; ++i) {
+    val[3*i+0] = m_bcx;
+    val[3*i+1] = m_bcy;
+    val[3*i+2] = m_bcz;
+  }
+
+  return ElementPacket<float>({x, idx, val});
+}
+
+void
+BoundaryQuad::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+BoundaryQuad::to_string() const {
+  std::stringstream ss;
+  ss << "quad at " << m_x << " " << m_y << " " << m_x;
+  if (std::abs(m_bcx)+std::abs(m_bcy)+std::abs(m_bcz) > std::numeric_limits<float>::epsilon()) {
+    ss << " with vel " << m_bcx << " " << m_bcy << " " << m_bcz;
+  }
+  return ss.str();
+}
+
+void
+BoundaryQuad::from_json(const nlohmann::json j) {
+  const std::vector<float> tr = j["startpt"];
+  m_x = tr[0];
+  m_y = tr[1];
+  m_z = tr[2];
+  const std::vector<float> p1 = j["pt1"];
+  m_x1 = p1[0];
+  m_y1 = p1[1];
+  m_z1 = p1[2];
+  const std::vector<float> p2 = j["pt2"];
+  m_x2 = p2[0];
+  m_y2 = p2[1];
+  m_z2 = p2[2];
+  const std::vector<float> p3 = j["pt3"];
+  m_x3 = p3[0];
+  m_y3 = p3[1];
+  m_z3 = p3[2];
+  const std::vector<float> bv = j["vel"];
+  m_bcx = bv[0];
+  m_bcy = bv[1];
+  m_bcz = bv[2];
+  m_external = true;//j.value("external", true);
+}
+
+nlohmann::json
+BoundaryQuad::to_json() const {
+  // make an object for the mesh
+  nlohmann::json mesh = nlohmann::json::object();
+  mesh["geometry"] = "segment";
+  mesh["startpt"] = {m_x, m_y, m_z};
+  mesh["p1"] = {m_x1, m_y1, m_z1};
+  mesh["p2"] = {m_x2, m_y2, m_z2};
+  mesh["p3"] = {m_x3, m_y3, m_z3};
+  mesh["vel"] = {m_bcx, m_bcy, m_bcz};
   //mesh["external"] = m_external;
   return mesh;
 }
@@ -334,7 +461,7 @@ ExteriorFromFile::to_json() const {
   mesh["geometry"] = m_infile;
   mesh["translation"] = {m_x, m_y, m_z};
   mesh["scale"] = {m_sx, m_sy, m_sz};
-  //mesh["external"] = m_external;
+  mesh["external"] = m_external;
   return mesh;
 }
 

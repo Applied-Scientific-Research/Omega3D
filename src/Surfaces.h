@@ -500,7 +500,7 @@ public:
     if (std::string("ground").compare(this->B->get_name()) == 0) return;
 
     // make sure we've calculated transformed center (we do this when we do volume)
-    assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
+    //assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
     // and we trust that we've transformed utc to tc
 
     // do this for all nodes - what about panels?
@@ -595,7 +595,7 @@ public:
     //    > std::numeric_limits<double>::epsilon()) return;
 
     // make sure we've calculated transformed center (we do this when we do volume)
-    assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
+    //assert(vol > 0.0 && "Have not calculated transformed center, or volume is negative");
     // and we trust that we've transformed utc to tc
 
     // have we made source strength vector yet? or is it the right size?
