@@ -755,9 +755,12 @@ public:
     // update only the new panels
     for (size_t i=nold; i<nold+nnew; ++i) {
       const std::array<S,3> oldbc = {{ (*bc[0])[i], (*bc[1])[i], (*bc[2])[i] }};
-      (*bc[0])[i] = t1[0][i]*oldbc[0] + t1[0][i]*oldbc[1] + t1[0][i]*oldbc[2];
-      (*bc[1])[i] = t2[0][i]*oldbc[0] + t2[0][i]*oldbc[1] + t2[0][i]*oldbc[2];
+      // normal velocity component is easy
       (*bc[2])[i] = nm[0][i]*oldbc[0] + nm[0][i]*oldbc[1] + nm[0][i]*oldbc[2];
+      // but for tangential we need to recognize that t1 is the direction of the circulation,
+      //   so the corresponding velocity is perpendicular to it!
+      (*bc[0])[i] = +(t2[0][i]*oldbc[0] + t2[0][i]*oldbc[1] + t2[0][i]*oldbc[2]);
+      (*bc[1])[i] = -(t1[0][i]*oldbc[0] + t1[0][i]*oldbc[1] + t1[0][i]*oldbc[2]);
 
       //std::cout << "elem near " << this->x[0][id0] << " " << this->x[1][id0] << " " << this->x[2][id0] << " has norm " << b[2][0][i] << " " << b[2][1][i] << " " << b[2][2][i] << std::endl;
     }

@@ -650,23 +650,23 @@ int main(int argc, char const *argv[]) {
           // generate the boundary
           bp = sim.get_pointer_to_body("ground");
           // top panel
-          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 0.,1.,0., 0.,1.,1., 1.,1.,1., 1.,1.,0., 1.,0.,0.));
+          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 0.,1.,0., 1.,1.,0., 1.,1.,1., 0.,1.,1., 1.,0.,0.));
           // front panel
-          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 0.,0.,0., 0.,1.,0., 1.,1.,0., 1.,0.,0., 0.,0.,0.));
+          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 0.,0.,0., 1.,0.,0., 1.,1.,0., 0.,1.,0., 0.,0.,0.));
           // right panel
-          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 1.,0.,0., 1.,1.,0., 1.,1.,1., 1.,0.,1., 0.,0.,0.));
+          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 1.,0.,0., 1.,0.,1., 1.,1.,1., 1.,1.,0., 0.,0.,0.));
           // back panel
-          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 1.,0.,1., 1.,1.,1., 0.,1.,1., 0.,0.,1., 0.,0.,0.));
+          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 1.,0.,1., 0.,0.,1., 0.,1.,1., 1.,1.,1., 0.,0.,0.));
           // left panel
-          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 0.,0.,1., 0.,1.,1., 0.,1.,0., 0.,0.,0., 0.,0.,0.));
+          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 0.,0.,1., 0.,0.,0., 0.,1.,0., 0.,1.,1., 0.,0.,0.));
           // bottom panel
-          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 0.,0.,0., 1.,0.,0., 1.,0.,1., 0.,0.,1., 0.,0.,0.));
+          bfeatures.emplace_back(std::make_unique<BoundaryQuad>(bp, 0.,0.,0., 0.,0.,1., 1.,0.,1., 1.,0.,0., 0.,0.,0.));
           is_viscous = true;
           sim.set_diffuse(true);
-          rparams.vcx = -0.5;
+          rparams.vcx = 0.0;
           rparams.vcy = 0.5;
           rparams.vcz = 0.0;
-          rparams.vsize = 2.0;
+          rparams.vsize = 1.0;
           rparams.circ_density = 0.004;
           // start it up
           sim_is_running = true;
