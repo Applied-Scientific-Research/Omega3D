@@ -37,6 +37,7 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
   // if it's a recognized keyword, generate the geometry
   if      (ftype == "sphere") { _flist.emplace_back(std::make_unique<Ovoid>(_bp)); }
   else if (ftype == "rect")   { _flist.emplace_back(std::make_unique<SolidRect>(_bp)); }
+  else if (ftype == "quad")   { _flist.emplace_back(std::make_unique<BoundaryQuad>(_bp)); }
   // otherwise it's a file to read
   else                        { _flist.emplace_back(std::make_unique<ExteriorFromFile>(_bp)); }
 
@@ -303,13 +304,13 @@ BoundaryQuad::init_elements(const float _ips) const {
     for (size_t j=0; j<num2; ++j) {
       // make the first of 2 tris
       idx[3*icnt]   = idx1 + j + 0;
-      idx[3*icnt+1] = idx2 + j + 1;
-      idx[3*icnt+2] = idx2 + j + 0;
+      idx[3*icnt+1] = idx2 + j + 0;
+      idx[3*icnt+2] = idx2 + j + 1;
       icnt++;
       // do the other triangle
       idx[3*icnt]   = idx1 + j + 0;
-      idx[3*icnt+1] = idx1 + j + 1;
-      idx[3*icnt+2] = idx2 + j + 1;
+      idx[3*icnt+1] = idx2 + j + 1;
+      idx[3*icnt+2] = idx1 + j + 1;
       icnt++;
     }
   }
@@ -345,15 +346,17 @@ BoundaryQuad::from_json(const nlohmann::json j) {
   m_x = tr[0];
   m_y = tr[1];
   m_z = tr[2];
-  const std::vector<float> p1 = j["pt1"];
+  //if (j["scale"].is_array()) {
+    //const std::vector<float> sc = j["scale"].get<std::vector<float>>();
+  const std::vector<float> p1 = j["p1"];
   m_x1 = p1[0];
   m_y1 = p1[1];
   m_z1 = p1[2];
-  const std::vector<float> p2 = j["pt2"];
+  const std::vector<float> p2 = j["p2"];
   m_x2 = p2[0];
   m_y2 = p2[1];
   m_z2 = p2[2];
-  const std::vector<float> p3 = j["pt3"];
+  const std::vector<float> p3 = j["p3"];
   m_x3 = p3[0];
   m_y3 = p3[1];
   m_z3 = p3[2];
@@ -368,7 +371,7 @@ nlohmann::json
 BoundaryQuad::to_json() const {
   // make an object for the mesh
   nlohmann::json mesh = nlohmann::json::object();
-  mesh["geometry"] = "segment";
+  mesh["geometry"] = "quad";
   mesh["startpt"] = {m_x, m_y, m_z};
   mesh["p1"] = {m_x1, m_y1, m_z1};
   mesh["p2"] = {m_x2, m_y2, m_z2};
