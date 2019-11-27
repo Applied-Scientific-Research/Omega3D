@@ -709,6 +709,13 @@ public:
       glBindVertexArray(0);
     }
   }
+
+  // Call compute shader to do one chunk of work
+  //void computeGL(std::vector<float>& _projmat,
+  //               RenderParams&       _rparams,
+  //               const float         _vdelta) {
+
+    //std::cout << "inside Points.drawGL" << std::endl;
 #endif
 
   std::string to_string() const {
