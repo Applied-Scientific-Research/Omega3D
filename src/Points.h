@@ -465,7 +465,7 @@ public:
 
   // helper function to clean up initGL
   void prepare_opengl_buffer(GLuint _prog, GLuint _idx, const GLchar* _name) {
-    glBindBuffer(GL_ARRAY_BUFFER, mgl->vbo[_idx]);
+    glBindBuffer(GL_ARRAY_BUFFER, _idx);
     const GLint position_attribute = glGetAttribLocation(_prog, _name);
     // Specify how the data for position can be accessed
     glVertexAttribPointer(position_attribute, 1, get_gl_type<S>, GL_FALSE, 0, 0);
@@ -500,9 +500,9 @@ public:
       mgl->spo[0] = create_draw_point_program();
 
       // Only send position arrays - no radius or strength
-      prepare_opengl_buffer(mgl->spo[0], 0, "px");
-      prepare_opengl_buffer(mgl->spo[0], 1, "py");
-      prepare_opengl_buffer(mgl->spo[0], 2, "posz");
+      prepare_opengl_buffer(mgl->spo[0], mgl->vbo[0], "px");
+      prepare_opengl_buffer(mgl->spo[0], mgl->vbo[1], "py");
+      prepare_opengl_buffer(mgl->spo[0], mgl->vbo[2], "posz");
 
       // and for the compute shaders!
 
@@ -552,13 +552,13 @@ public:
       mgl->spo[1] = create_draw_blob_program();
 
       // Now do the seven arrays
-      prepare_opengl_buffer(mgl->spo[1], 0, "px");
-      prepare_opengl_buffer(mgl->spo[1], 1, "py");
-      prepare_opengl_buffer(mgl->spo[1], 2, "posz");
-      prepare_opengl_buffer(mgl->spo[1], 3, "sx");
-      prepare_opengl_buffer(mgl->spo[1], 4, "sy");
-      prepare_opengl_buffer(mgl->spo[1], 5, "sz");
-      prepare_opengl_buffer(mgl->spo[1], 6, "r");
+      prepare_opengl_buffer(mgl->spo[1], mgl->vbo[0], "px");
+      prepare_opengl_buffer(mgl->spo[1], mgl->vbo[1], "py");
+      prepare_opengl_buffer(mgl->spo[1], mgl->vbo[2], "posz");
+      prepare_opengl_buffer(mgl->spo[1], mgl->vbo[3], "sx");
+      prepare_opengl_buffer(mgl->spo[1], mgl->vbo[4], "sy");
+      prepare_opengl_buffer(mgl->spo[1], mgl->vbo[5], "sz");
+      prepare_opengl_buffer(mgl->spo[1], mgl->vbo[6], "r");
 
       // and for the compute shaders!
 
@@ -757,15 +757,15 @@ public:
     } else { // this->E is active or reactive
 
       // Load and create the blob-drawing shader program
-      //cgl->spo[0] = create_ptptvelgrad_program();
+      cgl->spo[0] = create_ptptvelgrad_program();
 
       // Now do the six arrays
-      prepare_opengl_buffer(cgl->spo[0], 0, "sx");	// source position and radius
-      prepare_opengl_buffer(cgl->spo[0], 1, "ss");	// source strength
-      prepare_opengl_buffer(cgl->spo[0], 2, "tx");	// target position and radius
-      prepare_opengl_buffer(cgl->spo[0], 3, "t1");	// target vel and 1 grad
-      prepare_opengl_buffer(cgl->spo[0], 4, "t2");	// target 4 grads
-      prepare_opengl_buffer(cgl->spo[0], 5, "t3");	// target 4 grads
+      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[0], "sx");	// source position and radius
+      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[1], "ss");	// source strength
+      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[2], "tx");	// target position and radius
+      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[3], "t1");	// target vel and 1 grad
+      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[4], "t2");	// target 4 grads
+      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[5], "t3");	// target 4 grads
 
       // and for the compute shaders!
 
@@ -801,9 +801,9 @@ public:
       cs_sx.resize(4*nlen);
       for (size_t i=0; i<nlen; ++i) {
         // the positions
-        cs_sx[4*i+0] = this->x[i][0];
-        cs_sx[4*i+1] = this->x[i][1];
-        cs_sx[4*i+2] = this->x[i][2];
+        cs_sx[4*i+0] = this->x[0][i];
+        cs_sx[4*i+1] = this->x[1][i];
+        cs_sx[4*i+2] = this->x[2][i];
         cs_sx[4*i+3] = this->r[i];
       }
       glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[0]);
@@ -827,9 +827,9 @@ public:
           cs_ss.resize(4*nlen);
           for (size_t i=0; i<nlen; ++i) {
             // the positions
-            cs_ss[4*i+0] = (*this->s)[i][0];
-            cs_ss[4*i+1] = (*this->s)[i][1];
-            cs_ss[4*i+2] = (*this->s)[i][2];
+            cs_ss[4*i+0] = (*this->s)[0][i];
+            cs_ss[4*i+1] = (*this->s)[1][i];
+            cs_ss[4*i+2] = (*this->s)[2][i];
             cs_ss[4*i+3] = (S)0.0;
           }
           glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[1]);

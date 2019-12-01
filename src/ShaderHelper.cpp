@@ -40,6 +40,10 @@ const std::string panel_frag_shader_source =
 #include "shaders/flattriangle.frag"
 ;
 
+const std::string ptpt_velgrad_shader_source =
+#include "shaders/ptptvelgrad.comp"
+;
+
 
 // Compile a shader
 GLuint load_and_compile_shader(const std::string shader_src, GLenum shaderType) {
@@ -135,4 +139,25 @@ GLuint create_draw_surface_tri_prog() {
 
   return shaderProgram;
 }
+
+
+// Create a compute program from one shader
+GLuint create_ptptvelgrad_program() {
+  // Load and compile the vertex and fragment shaders
+  GLuint computeShader = load_and_compile_shader(ptpt_velgrad_shader_source, GL_COMPUTE_SHADER);
+
+  // Attach the above shader to a program
+  GLuint shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, computeShader);
+
+  // Flag the shaders for deletion
+  glDeleteShader(computeShader);
+
+  // Link and use the program
+  glLinkProgram(shaderProgram);
+  glUseProgram(shaderProgram);
+
+  return shaderProgram;
+}
+
 

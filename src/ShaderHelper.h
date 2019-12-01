@@ -28,3 +28,4 @@ GLuint create_draw_point_program();
 GLuint create_draw_surface_tri_prog();
 
 // Create a compute program from one shader
+GLuint create_ptptvelgrad_program();
