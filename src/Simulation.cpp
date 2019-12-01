@@ -220,21 +220,6 @@ Simulation::to_json() const {
 // OpenGL-specific code
 //
 
-void Simulation::initGL(std::vector<float>& _projmat,
-                        float*              _poscolor,
-                        float*              _negcolor,
-                        float*              _defcolor) {
-  for (auto &coll : vort) {
-    std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
-  }
-  for (auto &coll : bdry) {
-    std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
-  }
-  for (auto &coll : fldpt) {
-    std::visit([=, &_projmat](auto& elem) { elem.initGL(_projmat, _poscolor, _negcolor, _defcolor); }, coll);
-  }
-}
-
 void Simulation::updateGL() {
   for (auto &coll : vort) {
     std::visit([=](auto& elem) { elem.updateGL(); }, coll);
@@ -263,6 +248,19 @@ void Simulation::drawGL(std::vector<float>& _projmat,
     }
   }
 }
+
+void Simulation::computeGL() {
+  for (auto &coll : vort) {
+    std::visit([=](auto& elem) { elem.computeGL(); }, coll);
+  }
+  //for (auto &coll : bdry) {
+  //  std::visit([=](auto& elem) { elem.computeGL(); }, coll);
+  //}
+  //for (auto &coll : fldpt) {
+  //  std::visit([=](auto& elem) { elem.computeGL(); }, coll);
+  //}
+}
+
 #endif
 
 bool Simulation::is_initialized() { return sim_is_initialized; }

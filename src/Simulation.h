@@ -146,10 +146,12 @@ public:
   nlohmann::json to_json() const;
 
 #ifdef USE_GL
-  // graphics pass-through calls
-  void initGL(std::vector<float>&, float*, float*, float*);
+  // graphics pass-through call
   void updateGL();
   void drawGL(std::vector<float>&, RenderParams&);
+
+  // compute pass-through call
+  void computeGL();
 #endif
 
 private:

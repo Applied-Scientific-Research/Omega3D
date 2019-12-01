@@ -1572,6 +1572,9 @@ int main(int argc, char const *argv[]) {
       ImGui::ShowTestWindow(&show_test_window);
     }
 
+    // use compute shaders to advance the simulation
+    sim.computeGL();
+
     // draw the simulation: panels and particles
     compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
     sim.drawGL(gl_projection, rparams);

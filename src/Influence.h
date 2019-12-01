@@ -34,6 +34,13 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   auto start = std::chrono::system_clock::now();
 
   // is this where we dispatch the OpenGL compute shader?
+  if (&src == &targ) {
+    // only operate when src and targ are the same!
+    // tell the graphics thread to begin computing
+    targ.trigger_compute();
+    // then hold here until its done (10 draw frames)
+    while (targ.is_compute_still_working()) {}
+  }
 
   // get references to use locally
   const std::array<Vector<S>,Dimensions>&     sx = src.get_pos();

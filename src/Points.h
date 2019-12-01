@@ -710,12 +710,184 @@ public:
     }
   }
 
-  // Call compute shader to do one chunk of work
-  //void computeGL(std::vector<float>& _projmat,
-  //               RenderParams&       _rparams,
-  //               const float         _vdelta) {
+  //
+  // now the compute shader code
+  //
 
-    //std::cout << "inside Points.drawGL" << std::endl;
+  // InfluenceVisitor calls this when its ready to compute
+  void trigger_compute() {
+    cgl->cstate.store(begin_compute);
+  }
+
+  bool is_compute_still_working() {
+    return (cgl->cstate.load() != no_compute);
+  }
+
+  // this gets done once - load the shaders, set up the vao
+  void initGLcs() {
+    //std::cout << "inside Points.initGLcs with E=" << this->E << " and M=" << this->M << std::endl;
+
+    // generate the opengl state object with space for 6 vbos and 1 shader program
+    cgl = std::make_shared<GlState>(6,1);
+
+    // Allocate space for the 6 arrays of float4, but don't upload data from CPU to GPU yet
+    cs_sx.resize(4*this->n);
+    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[0]);
+    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
+    cs_ss.resize(4*this->n);
+    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[1]);
+    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
+    cs_tx.resize(4*this->n);
+    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[2]);
+    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
+    cs_t1.resize(4*this->n);
+    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[3]);
+    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
+    cs_t2.resize(4*this->n);
+    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[4]);
+    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
+    cs_t3.resize(4*this->n);
+    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[5]);
+    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
+
+    // here is where we split on element type: active/reactive vs. inert
+    if (this->E == inert) {
+      // not supported yet
+
+    } else { // this->E is active or reactive
+
+      // Load and create the blob-drawing shader program
+      //cgl->spo[0] = create_ptptvelgrad_program();
+
+      // Now do the six arrays
+      prepare_opengl_buffer(cgl->spo[0], 0, "sx");	// source position and radius
+      prepare_opengl_buffer(cgl->spo[0], 1, "ss");	// source strength
+      prepare_opengl_buffer(cgl->spo[0], 2, "tx");	// target position and radius
+      prepare_opengl_buffer(cgl->spo[0], 3, "t1");	// target vel and 1 grad
+      prepare_opengl_buffer(cgl->spo[0], 4, "t2");	// target 4 grads
+      prepare_opengl_buffer(cgl->spo[0], 5, "t3");	// target 4 grads
+
+      // and for the compute shaders!
+
+      // locate where the colors and color scales go
+      cgl->source_offset_attr = glGetUniformLocation(cgl->spo[0], "isrc");
+      cgl->source_count_attr  = glGetUniformLocation(cgl->spo[0], "nsrc");
+      cgl->target_offset_attr = glGetUniformLocation(cgl->spo[0], "itarg");
+      cgl->target_count_attr  = glGetUniformLocation(cgl->spo[0], "ntarg");
+
+      // send the current values
+      glUniform1i(cgl->source_offset_attr, (const GLint)0);
+      glUniform1i(cgl->source_count_attr,  (const GLint)0);
+      glUniform1i(cgl->target_offset_attr, (const GLint)0);
+      glUniform1i(cgl->target_count_attr,  (const GLint)0);
+
+    } // end this->E is active or reactive
+
+  }
+
+  // this gets done every time we update the arrays
+  void updateGLcs() {
+    //std::cout << "inside Points.updateGLcs" << std::endl;
+
+    // has this been init'd yet?
+    if (glIsVertexArray(cgl->vao) == GL_FALSE) return;
+
+    const size_t nlen = this->x[0].size();
+    const size_t vlen = 4*nlen*sizeof(S);
+    if (nlen > 0) {
+      glBindVertexArray(cgl->vao);
+
+      // assemble position data
+      cs_sx.resize(4*nlen);
+      for (size_t i=0; i<nlen; ++i) {
+        // the positions
+        cs_sx[4*i+0] = this->x[i][0];
+        cs_sx[4*i+1] = this->x[i][1];
+        cs_sx[4*i+2] = this->x[i][2];
+        cs_sx[4*i+3] = this->r[i];
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[0]);
+      glBufferData(GL_ARRAY_BUFFER, vlen, cs_sx.data(), GL_DYNAMIC_DRAW);
+
+      // and target data (same as source)
+      cs_tx.resize(4*nlen);
+      std::copy(cs_sx.begin(), cs_sx.end(), cs_tx.begin());
+      glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[2]);
+      glBufferData(GL_ARRAY_BUFFER, vlen, cs_tx.data(), GL_DYNAMIC_DRAW);
+
+      // here is where we split on element type: active/reactive vs. inert
+      if (this->E == inert) {
+
+        // no strengths or radii needed or present
+
+      } else { // this->E is active or reactive
+
+        // the strengths
+        if (this->s) {
+          cs_ss.resize(4*nlen);
+          for (size_t i=0; i<nlen; ++i) {
+            // the positions
+            cs_ss[4*i+0] = (*this->s)[i][0];
+            cs_ss[4*i+1] = (*this->s)[i][1];
+            cs_ss[4*i+2] = (*this->s)[i][2];
+            cs_ss[4*i+3] = (S)0.0;
+          }
+          glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[1]);
+          glBufferData(GL_ARRAY_BUFFER, vlen, cs_ss.data(), GL_DYNAMIC_DRAW);
+        }
+      }
+
+      glBindVertexArray(0);
+
+      // must tell draw call how many elements are there
+      cgl->num_uploaded = this->x[0].size();
+    }
+
+    cgl->num_uploaded = 0;
+  }
+
+  // and return the data back to the CPU
+  void retrieveGLcs() {
+    //std::cout << "inside Points.retrieveGLcs" << std::endl;
+  }
+
+  // Call compute shader to do one chunk of work
+  void computeGL() {
+    //std::cout << "inside Points.computeGL" << std::endl;
+
+    // has this been init'd yet?
+    if (not cgl) {
+      initGLcs();
+    }
+    //std::cout << "inside Points.computeGL, count is now " << cgl->num_uploaded << std::endl;
+
+    // check for access to lock, if access, continue
+    if (cgl->cstate.load() == no_compute) return;
+
+    // if computation is ready and not running, get it ready
+    if (cgl->cstate.load() == begin_compute) {
+      updateGLcs();
+      cgl->cstate.store(computing);
+    }
+
+    // call the computation
+    if (cgl->cstate.load() == computing) {
+      cgl->num_uploaded++;
+      //std::cout << "inside Points.computeGL, count is now " << cgl->num_uploaded << std::endl;
+
+      // if we hit 10, reset and release lock
+      if (cgl->num_uploaded > 0) {
+        cgl->cstate.store(compute_done);
+      }
+    }
+
+    if (cgl->cstate.load() == compute_done) {
+      // return the results
+      retrieveGLcs();
+      // and indicate that we are finished
+      cgl->cstate.store(no_compute);
+    }
+  }
 #endif
 
   std::string to_string() const {
@@ -734,7 +906,9 @@ protected:
 
 private:
 #ifdef USE_GL
-  std::shared_ptr<GlState> mgl;
+  std::shared_ptr<GlState> mgl;		// for drawing only
+  std::shared_ptr<GlState> cgl;		// for compute only
+  std::vector<S> cs_sx, cs_ss, cs_tx, cs_t1, cs_t2, cs_t3;
 #endif
   float max_strength;
 };

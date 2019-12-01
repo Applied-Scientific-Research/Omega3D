@@ -7,11 +7,14 @@
 
 #pragma once
 
+#include "ComputeState.h"
+
 #include "glad.h"
 
 #include <iostream>
 #include <vector>
 #include <cassert>
+#include <atomic>
 
 
 // 1-D elements
@@ -33,6 +36,8 @@ public:
 
     // finally the shader program array
     spo.resize(_nspo);
+
+    cstate.store(no_compute);
   }
 
   // must specifically destroy buffers
@@ -67,9 +72,15 @@ public:
   // we probably don't need this
   GLsizei num_uploaded;
 
-  // some number of attributes
+  // testing the interthread coordination idea
+  std::atomic<compute_state_t> cstate;
+
+  // drawing attributes
   GLint projmat_attribute, projmat_attribute_bl, projmat_attribute_pt, quad_attribute_bl, quad_attribute_pt;
   GLint def_color_attribute, pos_color_attribute, neg_color_attribute, str_scale_attribute, unif_rad_attribute;
   GLint rad_scale_attribute;
+
+  // compute attributes
+  GLint source_offset_attr, source_count_attr, target_offset_attr, target_count_attr;
 };
 
