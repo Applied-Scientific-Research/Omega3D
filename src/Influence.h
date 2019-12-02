@@ -36,10 +36,18 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   // is this where we dispatch the OpenGL compute shader?
   if (&src == &targ) {
     // only operate when src and targ are the same!
+
     // tell the graphics thread to begin computing
     targ.trigger_compute();
-    // then hold here until its done (10 draw frames)
+
+    // then hold here until its done
     while (targ.is_compute_still_working()) {}
+
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    float flops = (float)targ.get_n() * (12.0 + 63.0*(float)src.get_n());
+    const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
+    printf("    ptptvelgrad shader: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
   }
 
   // get references to use locally
@@ -354,6 +362,11 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   // end conditional over whether targets are field points (with no core radius)
   //
   }
+
+    // report on a few
+    for (size_t i=0; i<10; ++i) {
+      std::cout << "    vel " << i << " is " << tu[0][i] << " " << tu[1][i] << " " << tu[2][i] << std::endl;
+    }
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
