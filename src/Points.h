@@ -731,24 +731,6 @@ public:
     cgl = std::make_shared<GlState>(6,1);
 
     // Allocate space for the 6 arrays of float4, but don't upload data from CPU to GPU yet
-    cs_sx.resize(4*this->n);
-    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[0]);
-    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
-    cs_ss.resize(4*this->n);
-    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[1]);
-    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
-    cs_tx.resize(4*this->n);
-    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[2]);
-    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
-    cs_t1.resize(4*this->n);
-    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[3]);
-    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
-    cs_t2.resize(4*this->n);
-    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[4]);
-    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
-    cs_t3.resize(4*this->n);
-    glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[5]);
-    glBufferData(GL_ARRAY_BUFFER, 0, cs_sx.data(), GL_STATIC_DRAW);
 
     // here is where we split on element type: active/reactive vs. inert
     if (this->E == inert) {
@@ -760,26 +742,32 @@ public:
       cgl->spo[0] = create_ptptvelgrad_program();
 
       // Now do the six arrays
-      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[0], "sx");	// source position and radius
-      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[1], "ss");	// source strength
-      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[2], "tx");	// target position and radius
-      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[3], "t1");	// target vel and 1 grad
-      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[4], "t2");	// target 4 grads
-      prepare_opengl_buffer(cgl->spo[0], cgl->vbo[5], "t3");	// target 4 grads
+      //prepare_opengl_buffer(cgl->spo[0], cgl->vbo[0], "sx");	// source position and radius
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[0]);
+      //const GLint position_attribute = glGetAttribLocation(_prog, "sx");
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, cgl->vbo[0]);
 
-      // and for the compute shaders!
+      //prepare_opengl_buffer(cgl->spo[0], cgl->vbo[1], "ss");	// source strength
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[1]);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, cgl->vbo[1]);
+      //prepare_opengl_buffer(cgl->spo[0], cgl->vbo[2], "tx");	// target position and radius
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[2]);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, cgl->vbo[2]);
+      //prepare_opengl_buffer(cgl->spo[0], cgl->vbo[3], "t1");	// target vel and 1 grad
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[3]);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, cgl->vbo[3]);
+      //prepare_opengl_buffer(cgl->spo[0], cgl->vbo[4], "t2");	// target 4 grads
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[4]);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, cgl->vbo[4]);
+      //prepare_opengl_buffer(cgl->spo[0], cgl->vbo[5], "t3");	// target 4 grads
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[5]);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, cgl->vbo[5]);
 
-      // locate where the colors and color scales go
+      // locate where the offsets and counts go
       cgl->source_offset_attr = glGetUniformLocation(cgl->spo[0], "isrc");
       cgl->source_count_attr  = glGetUniformLocation(cgl->spo[0], "nsrc");
       cgl->target_offset_attr = glGetUniformLocation(cgl->spo[0], "itarg");
       cgl->target_count_attr  = glGetUniformLocation(cgl->spo[0], "ntarg");
-
-      // send the current values
-      glUniform1i(cgl->source_offset_attr, (const GLint)0);
-      glUniform1i(cgl->source_count_attr,  (const GLint)0);
-      glUniform1i(cgl->target_offset_attr, (const GLint)0);
-      glUniform1i(cgl->target_count_attr,  (const GLint)0);
 
     } // end this->E is active or reactive
 
@@ -794,8 +782,17 @@ public:
 
     const size_t nlen = this->x[0].size();
     const size_t vlen = 4*nlen*sizeof(S);
+    std::cout << "inside Points.updateGLcs with n= " << nlen << std::endl;
+
     if (nlen > 0) {
       glBindVertexArray(cgl->vao);
+      glUseProgram(cgl->spo[0]);
+
+      // send the current values
+      glUniform1i(cgl->source_offset_attr, (const GLint)0);
+      glUniform1i(cgl->source_count_attr,  (const GLint)nlen);
+      glUniform1i(cgl->target_offset_attr, (const GLint)0);
+      glUniform1i(cgl->target_count_attr,  (const GLint)nlen);
 
       // assemble position data
       cs_sx.resize(4*nlen);
@@ -806,14 +803,14 @@ public:
         cs_sx[4*i+2] = this->x[2][i];
         cs_sx[4*i+3] = this->r[i];
       }
-      glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[0]);
-      glBufferData(GL_ARRAY_BUFFER, vlen, cs_sx.data(), GL_DYNAMIC_DRAW);
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[0]);
+      glBufferData(GL_SHADER_STORAGE_BUFFER, vlen, cs_sx.data(), GL_DYNAMIC_DRAW);
 
       // and target data (same as source)
       cs_tx.resize(4*nlen);
       std::copy(cs_sx.begin(), cs_sx.end(), cs_tx.begin());
-      glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[2]);
-      glBufferData(GL_ARRAY_BUFFER, vlen, cs_tx.data(), GL_DYNAMIC_DRAW);
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[2]);
+      glBufferData(GL_SHADER_STORAGE_BUFFER, vlen, cs_tx.data(), GL_DYNAMIC_DRAW);
 
       // here is where we split on element type: active/reactive vs. inert
       if (this->E == inert) {
@@ -832,23 +829,60 @@ public:
             cs_ss[4*i+2] = (*this->s)[2][i];
             cs_ss[4*i+3] = (S)0.0;
           }
-          glBindBuffer(GL_ARRAY_BUFFER, cgl->vbo[1]);
-          glBufferData(GL_ARRAY_BUFFER, vlen, cs_ss.data(), GL_DYNAMIC_DRAW);
+          glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[1]);
+          glBufferData(GL_SHADER_STORAGE_BUFFER, vlen, cs_ss.data(), GL_DYNAMIC_DRAW);
         }
       }
+
+      // and allocate space for the results
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[3]);
+      glBufferData(GL_SHADER_STORAGE_BUFFER, vlen, nullptr, GL_DYNAMIC_DRAW);
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[4]);
+      glBufferData(GL_SHADER_STORAGE_BUFFER, vlen, nullptr, GL_DYNAMIC_DRAW);
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[5]);
+      glBufferData(GL_SHADER_STORAGE_BUFFER, vlen, nullptr, GL_DYNAMIC_DRAW);
 
       glBindVertexArray(0);
 
       // must tell draw call how many elements are there
-      cgl->num_uploaded = this->x[0].size();
+      cgl->num_uploaded = nlen;
     }
-
-    cgl->num_uploaded = 0;
   }
 
   // and return the data back to the CPU
   void retrieveGLcs() {
-    //std::cout << "inside Points.retrieveGLcs" << std::endl;
+    std::cout << "inside Points.retrieveGLcs" << std::endl;
+    glBindVertexArray(cgl->vao);
+    glUseProgram(cgl->spo[0]);
+
+    // retrieve the results
+    const size_t nlen = cgl->num_uploaded;
+    const size_t vlen = 4*nlen*sizeof(S);
+    cs_t1.resize(4*nlen);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[3]);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, vlen, cs_t1.data());
+    cs_t2.resize(4*nlen);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[4]);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, vlen, cs_t2.data());
+    cs_t3.resize(4*nlen);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[5]);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, vlen, cs_t3.data());
+
+    // rejigger into the arrays
+    //const S factor = 0.25/M_PI;
+    for (size_t i=0; i<(size_t)cgl->num_uploaded; ++i) {
+      //this->u[0][i] = factor*cs_t1[4*i+0];
+      //this->u[1][i] = factor*cs_t1[4*i+1];
+      //this->u[2][i] = factor*cs_t1[4*i+2];
+      //this->x[0][i] = cs_t1[4*i+3];
+    }
+
+    // report on a few
+    for (size_t i=0; i<10; ++i) {
+      std::cout << "    vel " << i << " is " << cs_t1[4*i+0] << " " << cs_t1[4*i+1] << " " << cs_t1[4*i+2] << std::endl;
+    }
+
+    glBindVertexArray(0);
   }
 
   // Call compute shader to do one chunk of work
@@ -872,13 +906,21 @@ public:
 
     // call the computation
     if (cgl->cstate.load() == computing) {
-      cgl->num_uploaded++;
-      //std::cout << "inside Points.computeGL, count is now " << cgl->num_uploaded << std::endl;
+      std::cout << "inside Points.computeGL, count is now " << cgl->num_uploaded << std::endl;
+
+      // do the computation here!
+      glBindVertexArray(cgl->vao);
+      glUseProgram(cgl->spo[0]);
+      size_t nTargGroups = (cgl->num_uploaded + 128 - 1) / 128;
+      std::cout << "  nTargGroups is " << nTargGroups << std::endl;
+      glDispatchCompute( nTargGroups, 1, 1 );
+      glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+      glBindVertexArray(0);
 
       // if we hit 10, reset and release lock
-      if (cgl->num_uploaded > 0) {
+      //if (cgl->num_uploaded > 0) {
         cgl->cstate.store(compute_done);
-      }
+      //}
     }
 
     if (cgl->cstate.load() == compute_done) {
