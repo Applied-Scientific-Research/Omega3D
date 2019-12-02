@@ -24,7 +24,7 @@ public:
 
     assert(_nvbo>=0 && "Invalid number of VBOs requested");
     assert(_nspo>=0 && "Invalid number of shader program objects requested");
-    std::cout << "  new GlState with " << _nvbo << " buffers and " << _nspo << " shader programs" << std::endl;
+    std::cout << "new GlState with " << _nvbo << " buffers and " << _nspo << " shader programs" << std::endl;
 
     // generate the vao
     glGenVertexArrays(1, &vao);

@@ -33,34 +33,6 @@ template <class S, class A>
 void points_affect_points (Points<S> const& src, Points<S>& targ) {
   auto start = std::chrono::system_clock::now();
 
-  // is this where we dispatch the OpenGL compute shader?
-  // check to see if we should use opengl compute AND gcs exists
-  if (src.have_gcs()) std::cout << "SRC.GCS exists" << std::endl;
-  if (targ.have_gcs()) std::cout << "TARG.GCS exists" << std::endl;
-
-  // for now, only self-affects self works
-  //if (&src == &targ) {
-  if (src.have_gcs() and targ.have_gcs()) {
-    // only operate when src and targ are the same!
-
-    // fill in gcs's idea of sources and targets
-
-    // then tell the graphics thread to begin computing
-    targ.trigger_compute();
-
-    // then hold here until its done
-    while (targ.is_compute_still_working()) {}
-
-    // retrieve the results from the gcs vector
-
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    float flops = (float)targ.get_n() * (12.0 + 63.0*(float)src.get_n());
-    const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
-    printf("    ptptvelgrad shader: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
-
-    //return;
-  }
 
   // get references to use locally
   const std::array<Vector<S>,Dimensions>&     sx = src.get_pos();
@@ -74,6 +46,77 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 #ifdef USE_OPENGL_COMPUTE
   // do all that stuff here
 #endif
+
+  // dispatch the OpenGL compute shader
+
+  // check to see if we should use opengl compute AND gcs exists
+  if (src.have_gcs()) std::cout << "SRC.GCS exists" << std::endl;
+  if (targ.have_gcs()) std::cout << "TARG.GCS exists" << std::endl;
+
+  // both must have global compute state or else use CPU version
+  if (src.have_gcs() and targ.have_gcs()) {
+
+    // and atomic must be ready to accept computation
+    if (not targ.is_compute_still_working()) {
+
+      auto gcs = targ.get_gcs();
+
+      // fill in gcs's idea of sources
+      // the positions
+      gcs->hsx.resize(4*src.get_n());
+      for (size_t i=0; i<src.get_n(); ++i) {
+        gcs->hsx[4*i+0] = sx[0][i];
+        gcs->hsx[4*i+1] = sx[1][i];
+        gcs->hsx[4*i+2] = sx[2][i];
+        gcs->hsx[4*i+3] = sr[i];
+      }
+      // the strengths
+      gcs->hss.resize(4*src.get_n());
+      for (size_t i=0; i<src.get_n(); ++i) {
+        gcs->hss[4*i+0] = ss[0][i];
+        gcs->hss[4*i+1] = ss[1][i];
+        gcs->hss[4*i+2] = ss[2][i];
+        gcs->hss[4*i+3] = 0.0;
+      }
+
+      // fill in gcs's idea of targets
+      gcs->htx.resize(4*targ.get_n());
+      for (size_t i=0; i<targ.get_n(); ++i) {
+        gcs->htx[4*i+0] = tx[0][i];
+        gcs->htx[4*i+1] = tx[1][i];
+        gcs->htx[4*i+2] = tx[2][i];
+        gcs->htx[4*i+3] = 0.0;
+      }
+      if (not targ.is_inert()) {
+        const Vector<S>& tr = targ.get_rad();
+        for (size_t i=0; i<targ.get_n(); ++i) gcs->htx[4*i+3] = tr[i];
+      }
+
+      // fill in gcs's space for results
+      gcs->hr1.resize(4*targ.get_n());
+      gcs->hr2.resize(4*targ.get_n());
+      gcs->hr3.resize(4*targ.get_n());
+
+      // then tell the graphics thread to begin computing
+      targ.trigger_compute();
+
+      // then hold here until its done
+      while (targ.is_compute_still_working()) {}
+
+      // retrieve the results from the gcs vector
+      for (size_t i=0; i<10; ++i) {
+        std::cout << "    vel " << i << " is " << gcs->hr1[4*i+0] << " " << gcs->hr1[4*i+1] << " " << gcs->hr1[4*i+2] << std::endl;
+      }
+
+      auto end = std::chrono::system_clock::now();
+      std::chrono::duration<double> elapsed_seconds = end-start;
+      float flops = (float)targ.get_n() * (12.0 + 63.0*(float)src.get_n());
+      const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
+      printf("    ptptvelgrad shader: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
+
+      //return;
+    }
+  }
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)

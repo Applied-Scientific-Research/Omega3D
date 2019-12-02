@@ -270,6 +270,71 @@ void Simulation::initGLcs() {
   cgl->target_count_attr  = glGetUniformLocation(cgl->spo[0], "ntarg");
 }
 
+// upload the new data arrays to the GPU
+void Simulation::updateGLcs() {
+
+  if (not cgl) {
+    initGLcs();
+  }
+
+  if (glIsVertexArray(cgl->vao) == GL_FALSE) {
+    initGLcs();
+  }
+
+  cgl->nsrc  = cgl->hsx.size()/4;
+  cgl->ntarg = cgl->htx.size()/4;
+  const GLsizeiptr szsrc = cgl->hsx.size() * sizeof(STORE);
+  const GLsizeiptr sztrg = cgl->htx.size() * sizeof(STORE);
+
+  if (cgl->ntarg > 0) {
+    glBindVertexArray(cgl->vao);
+    glUseProgram(cgl->spo[0]);
+
+    // send the current values
+    glUniform1i(cgl->source_offset_attr, (const GLint)0);
+    glUniform1i(cgl->source_count_attr,  (const GLint)cgl->nsrc);
+    glUniform1i(cgl->target_offset_attr, (const GLint)0);
+    glUniform1i(cgl->target_count_attr,  (const GLint)cgl->ntarg);
+
+    // send the arrays
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[0]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, szsrc, cgl->hsx.data(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[1]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, szsrc, cgl->hss.data(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[2]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sztrg, cgl->htx.data(), GL_DYNAMIC_DRAW);
+
+    // and allocate space for the results
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[3]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sztrg, nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[4]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sztrg, nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[5]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sztrg, nullptr, GL_DYNAMIC_DRAW);
+
+    glBindVertexArray(0);
+  }
+}
+
+// download the result data arrays from the GPU
+void Simulation::retrieveGLcs() {
+
+  // bind and prepare
+  glBindVertexArray(cgl->vao);
+  glUseProgram(cgl->spo[0]);
+
+  // get the three results arrays
+  const GLsizeiptr szres = cgl->hr1.size() * sizeof(STORE);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[3]);
+  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, szres, cgl->hr1.data());
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[4]);
+  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, szres, cgl->hr2.data());
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[5]);
+  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, szres, cgl->hr3.data());
+
+  glBindVertexArray(0);
+}
+
 void Simulation::computeGL() {
 
   if (not cgl) {
@@ -287,7 +352,23 @@ void Simulation::computeGL() {
   // if computation is ready and not running, get it ready
   if (cgl->cstate.load() == begin_compute) {
     std::cout << "BEGIN COMPUTE" << std::endl;
-    //updateGLcs();
+
+    // upload the compacted arrays to the GPU
+    updateGLcs();
+
+    // do the computation here!
+    glBindVertexArray(cgl->vao);
+    glUseProgram(cgl->spo[0]);
+    size_t nTargGroups = (cgl->ntarg + 128 - 1) / 128;
+    std::cout << "  nTargGroups is " << nTargGroups << std::endl;
+    glDispatchCompute( nTargGroups, 1, 1 );
+    glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+    glBindVertexArray(0);
+
+    // download the compacted arrays from the GPU
+    retrieveGLcs();
+
+    // tell the other thread that we're done
     //cgl->cstate.store(computing);
     cgl->cstate.store(no_compute);
   }

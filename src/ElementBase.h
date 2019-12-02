@@ -319,6 +319,11 @@ public:
     return (gcs->cstate.load() != no_compute);
   }
 
+  std::shared_ptr<GlComputeState<S>> get_gcs() {
+    assert(gcs && "Global compute state object does not exist");
+    return gcs;
+  }
+
 #endif
 
 protected:

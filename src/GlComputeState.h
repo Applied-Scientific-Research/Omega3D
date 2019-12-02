@@ -26,7 +26,7 @@ public:
 
     assert(_nvbo>=0 && "Invalid number of VBOs requested");
     assert(_nspo>=0 && "Invalid number of shader program objects requested");
-    std::cout << "  new GlComputeState with " << _nvbo << " buffers and " << _nspo << " shader programs" << std::endl;
+    std::cout << "new GlComputeState with " << _nvbo << " buffers and " << _nspo << " shader programs" << std::endl;
 
     // generate the vao
     glGenVertexArrays(1, &vao);
@@ -72,7 +72,7 @@ public:
   std::vector<GLuint> spo;
 
   // must remember how many are uploaded
-  GLsizei num_src, num_targ;
+  GLint nsrc, ntarg;
 
   // interthread coordination state
   std::atomic<compute_state_t> cstate;

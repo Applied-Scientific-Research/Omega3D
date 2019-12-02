@@ -153,6 +153,8 @@ public:
 
   // compute shader calls (does not pass through to Collections)
   void initGLcs();
+  void updateGLcs();
+  void retrieveGLcs();
   void computeGL();
 #endif
 
