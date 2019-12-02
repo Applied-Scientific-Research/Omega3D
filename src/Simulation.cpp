@@ -284,13 +284,13 @@ void Simulation::computeGL() {
   // check for access to lock, if access, continue
   if (cgl->cstate.load() == no_compute) return;
 
-    // if computation is ready and not running, get it ready
-    if (cgl->cstate.load() == begin_compute) {
-      std::cout << "BEGIN COMPUTE" << std::endl;
-      //updateGLcs();
-      //cgl->cstate.store(computing);
-      cgl->cstate.store(no_compute);
-    }
+  // if computation is ready and not running, get it ready
+  if (cgl->cstate.load() == begin_compute) {
+    std::cout << "BEGIN COMPUTE" << std::endl;
+    //updateGLcs();
+    //cgl->cstate.store(computing);
+    cgl->cstate.store(no_compute);
+  }
 
   //for (auto &coll : vort) {
   //  std::visit([=](auto& elem) { elem.computeGL(); }, coll);

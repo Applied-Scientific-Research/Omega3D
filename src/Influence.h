@@ -43,17 +43,23 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   if (src.have_gcs() and targ.have_gcs()) {
     // only operate when src and targ are the same!
 
-    // tell the graphics thread to begin computing
+    // fill in gcs's idea of sources and targets
+
+    // then tell the graphics thread to begin computing
     targ.trigger_compute();
 
     // then hold here until its done
     while (targ.is_compute_still_working()) {}
+
+    // retrieve the results from the gcs vector
 
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
     float flops = (float)targ.get_n() * (12.0 + 63.0*(float)src.get_n());
     const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
     printf("    ptptvelgrad shader: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
+
+    //return;
   }
 
   // get references to use locally
@@ -64,6 +70,10 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   const std::array<Vector<S>,Dimensions>&     tx = targ.get_pos();
   std::array<Vector<S>,Dimensions>&           tu = targ.get_vel();
   std::optional<std::array<Vector<S>,9>>& opttug = targ.get_velgrad();
+
+#ifdef USE_OPENGL_COMPUTE
+  // do all that stuff here
+#endif
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
