@@ -249,10 +249,52 @@ void Simulation::drawGL(std::vector<float>& _projmat,
   }
 }
 
-void Simulation::computeGL() {
-  for (auto &coll : vort) {
-    std::visit([=](auto& elem) { elem.computeGL(); }, coll);
+void Simulation::initGLcs() {
+
+  // generate the opengl state object with space for 6 vbos and 1 shader program
+  cgl = std::make_shared<GlComputeState<STORE>>(6,1);
+
+  // Load and create the blob-drawing shader program
+  cgl->spo[0] = create_ptptvelgrad_program();
+
+  // Identify and bind
+  for (GLint i=0; i<6; ++i) {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[i]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, cgl->vbo[i]);
   }
+
+  // locate where the offsets and counts go
+  cgl->source_offset_attr = glGetUniformLocation(cgl->spo[0], "isrc");
+  cgl->source_count_attr  = glGetUniformLocation(cgl->spo[0], "nsrc");
+  cgl->target_offset_attr = glGetUniformLocation(cgl->spo[0], "itarg");
+  cgl->target_count_attr  = glGetUniformLocation(cgl->spo[0], "ntarg");
+}
+
+void Simulation::computeGL() {
+
+  if (not cgl) {
+    initGLcs();
+  }
+
+  // tell every Collection that this is the compute state
+  for (auto &coll : vort) {
+    std::visit([=](auto& elem) { elem.set_opengl_compute_state(cgl); }, coll);
+  }
+
+  // check for access to lock, if access, continue
+  if (cgl->cstate.load() == no_compute) return;
+
+    // if computation is ready and not running, get it ready
+    if (cgl->cstate.load() == begin_compute) {
+      std::cout << "BEGIN COMPUTE" << std::endl;
+      //updateGLcs();
+      //cgl->cstate.store(computing);
+      cgl->cstate.store(no_compute);
+    }
+
+  //for (auto &coll : vort) {
+  //  std::visit([=](auto& elem) { elem.computeGL(); }, coll);
+  //}
   //for (auto &coll : bdry) {
   //  std::visit([=](auto& elem) { elem.computeGL(); }, coll);
   //}

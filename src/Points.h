@@ -715,13 +715,13 @@ public:
   //
 
   // InfluenceVisitor calls this when its ready to compute
-  void trigger_compute() {
-    cgl->cstate.store(begin_compute);
-  }
+  //void trigger_compute() {
+  //  cgl->cstate.store(begin_compute);
+  //}
 
-  bool is_compute_still_working() {
-    return (cgl->cstate.load() != no_compute);
-  }
+  //bool is_compute_still_working() {
+  //  return (cgl->cstate.load() != no_compute);
+  //}
 
   // this gets done once - load the shaders, set up the vao
   void initGLcs() {

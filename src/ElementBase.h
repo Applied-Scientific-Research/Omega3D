@@ -10,6 +10,7 @@
 #include "VectorHelper.h"
 #include "Omega3D.h"
 #include "Body.h"
+#include "GlComputeState.h"
 
 #include <Eigen/Geometry>
 
@@ -298,6 +299,28 @@ public:
     return mystr;
   }
 
+#ifdef USE_GL
+  //void set_opengl_compute_state(GlComputeState<S>* _newgcsp) {
+  void set_opengl_compute_state(std::shared_ptr<GlComputeState<S>> _newgcsp) {
+    gcs = _newgcsp;
+  }
+
+  bool have_gcs() const {
+    return (bool)gcs;
+  }
+
+  // InfluenceVisitor calls this when its ready to compute
+  void trigger_compute() {
+    assert(gcs && "Global compute state object does not exist");
+    gcs->cstate.store(begin_compute);
+  }
+
+  bool is_compute_still_working() {
+    return (gcs->cstate.load() != no_compute);
+  }
+
+#endif
+
 protected:
   // if you add anything here, you need to wipe out all build files and run cmake again!
 
@@ -321,5 +344,9 @@ protected:
 
   // for objects moving with a body
   std::optional<std::array<Vector<S>,Dimensions>> ux;   // untransformed position of nodes
+
+#ifdef USE_GL
+  std::shared_ptr<GlComputeState<S>> gcs;		// global compute state
+#endif
 };
 

@@ -10,6 +10,7 @@
 #include "Omega3D.h"
 #include "Body.h"
 #include "Collection.h"
+#include "GlComputeState.h"
 #include "BEM.h"
 #include "Convection.h"
 #include "Diffusion.h"
@@ -150,7 +151,8 @@ public:
   void updateGL();
   void drawGL(std::vector<float>&, RenderParams&);
 
-  // compute pass-through call
+  // compute shader calls (does not pass through to Collections)
+  void initGLcs();
   void computeGL();
 #endif
 
@@ -192,6 +194,9 @@ private:
 
   // status file
   StatusFile sf;
+
+  // OpenGL compute state
+  std::shared_ptr<GlComputeState<STORE>> cgl;
 
   // state
   std::string description;

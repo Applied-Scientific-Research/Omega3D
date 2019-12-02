@@ -34,7 +34,13 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   auto start = std::chrono::system_clock::now();
 
   // is this where we dispatch the OpenGL compute shader?
-  if (&src == &targ) {
+  // check to see if we should use opengl compute AND gcs exists
+  if (src.have_gcs()) std::cout << "SRC.GCS exists" << std::endl;
+  if (targ.have_gcs()) std::cout << "TARG.GCS exists" << std::endl;
+
+  // for now, only self-affects self works
+  //if (&src == &targ) {
+  if (src.have_gcs() and targ.have_gcs()) {
     // only operate when src and targ are the same!
 
     // tell the graphics thread to begin computing
