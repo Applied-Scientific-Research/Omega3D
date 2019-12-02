@@ -60,14 +60,14 @@ GLuint load_and_compile_shader(const std::string shader_src, GLenum shaderType) 
   GLint test;
   glGetShaderiv(shader, GL_COMPILE_STATUS, &test);
   if (!test) {
-    std::cerr << "Shader compilation failed with this message:" << std::endl;
+    std::cerr << "  Shader compilation failed with this message:" << std::endl;
     std::vector<char> compilation_log(512);
     glGetShaderInfoLog(shader, compilation_log.size(), nullptr, &compilation_log[0]);
     std::cerr << &compilation_log[0] << std::endl;
     glfwTerminate();
     exit(-1);
   } else {
-    std::cerr << "Shader compilation successful" << std::endl;
+    std::cerr << "  Shader compilation successful" << std::endl;
   }
   return shader;
 }
