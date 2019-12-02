@@ -31,7 +31,7 @@ void main() {
        barrier();
        for (int i=0; i<gl_WorkGroupSize.x && stile+i<nsrc; ++i) {
            vec3 str = tmpstr[i].xyz;
-           vec3 diff = tmppos[i].xyz - targpos.xyz;
+           vec3 diff = targpos.xyz - tmppos[i].xyz;
            float r2 = diff.x*diff.x + diff.y*diff.y + diff.z*diff.z + tmppos[i].w*tmppos[i].w + targpos.w*targpos.w;
            float r3 = 1.f / (r2*sqrt(r2));
            float dxxw = diff.z*str.y - diff.y*str.z;
