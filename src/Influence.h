@@ -104,7 +104,29 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       while (targ.is_compute_still_working()) {}
 
       // retrieve the results from the gcs vector
-      for (size_t i=0; i<10; ++i) {
+      for (size_t i=0; i<targ.get_n(); ++i) {
+        tu[0][i] = gcs->hr1[4*i+0];
+        tu[1][i] = gcs->hr1[4*i+1];
+        tu[2][i] = gcs->hr1[4*i+2];
+      }
+      if (opttug) {
+        std::array<Vector<S>,9>& tug = *opttug;
+        for (size_t i=0; i<targ.get_n(); ++i) {
+          tug[0][i] = gcs->hr1[4*i+3];
+          tug[1][i] = gcs->hr2[4*i+0];
+          tug[2][i] = gcs->hr2[4*i+1];
+          tug[3][i] = gcs->hr2[4*i+2];
+          tug[4][i] = gcs->hr2[4*i+3];
+          tug[5][i] = gcs->hr3[4*i+0];
+          tug[6][i] = gcs->hr3[4*i+1];
+          tug[7][i] = gcs->hr3[4*i+2];
+          tug[8][i] = gcs->hr3[4*i+3];
+        }
+      }
+
+      // report on a few
+      //for (size_t i=0; i<10; ++i) {
+      for (size_t i=targ.get_n()-1; i>targ.get_n()-10; --i) {
         std::cout << "    vel " << i << " is " << gcs->hr1[4*i+0] << " " << gcs->hr1[4*i+1] << " " << gcs->hr1[4*i+2] << std::endl;
       }
 
@@ -114,7 +136,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
       printf("    ptptvelgrad shader: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
 
-      //return;
+      return;
     }
   }
 
@@ -423,7 +445,8 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   }
 
     // report on a few
-    for (size_t i=0; i<10; ++i) {
+    //for (size_t i=0; i<10; ++i) {
+    for (size_t i=targ.get_n()-1; i>targ.get_n()-10; --i) {
       std::cout << "    vel " << i << " is " << tu[0][i] << " " << tu[1][i] << " " << tu[2][i] << std::endl;
     }
 
