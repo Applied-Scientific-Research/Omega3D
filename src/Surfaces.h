@@ -1190,55 +1190,6 @@ public:
       glBindVertexArray(0);
     }
   }
-
-  //
-  // now the compute shader code
-  //
-
-  // InfluenceVisitor calls this when its ready to compute
-  //void trigger_compute() {
-  //  cgl->cstate.store(begin_compute);
-  //}
-
-  //bool is_compute_still_working() {
-  //  return (cgl->cstate.load() != no_compute);
-  //}
-
-  // this gets done once - load the shaders, set up the vao
-  void initGLcs() {
-    std::cout << "inside Surfaces.initGLcs with E=" << this->E << " and M=" << this->M << std::endl;
-
-    // generate the opengl state object with space for 7 vbos and 2 shader programs
-    cgl = std::make_shared<GlState>(1,1);
-  }
-
-  // this gets done every time we update the arrays
-  void updateGLcs() {
-    std::cout << "inside Surfaces.updateGLcs" << std::endl;
-
-    // has this been init'd yet?
-    if (glIsVertexArray(cgl->vao) == GL_FALSE) return;
-  }
-
-  // and return the data back to the CPU
-  void retrieveGLcs() {
-    std::cout << "inside Surfaces.retrieveGLcs" << std::endl;
-  }
-
-  // Call compute shader to do one chunk of work
-  void computeGL() {
-    //std::cout << "inside Surfaces.computeGL" << std::endl;
-
-    // has this been init'd yet?
-    if (not cgl) {
-      initGLcs();
-    }
-
-    // call the computation - later
-
-    // return the results
-    //retrieveGLcs();
-  }
 #endif
 
   std::string to_string() const {
@@ -1276,7 +1227,6 @@ protected:
 private:
 #ifdef USE_GL
   std::shared_ptr<GlState> mgl;		// for drawing only
-  std::shared_ptr<GlState> cgl;		// for compute only
 #endif
   float max_strength;
 };
