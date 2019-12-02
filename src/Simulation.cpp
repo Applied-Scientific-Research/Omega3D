@@ -249,6 +249,10 @@ void Simulation::drawGL(std::vector<float>& _projmat,
   }
 }
 
+//
+// Compute shader code
+//
+
 void Simulation::initGLcs() {
 
   // generate the opengl state object with space for 6 vbos and 1 shader program
@@ -351,8 +355,6 @@ void Simulation::computeGL() {
 
   // if computation is ready and not running, get it ready
   if (cgl->cstate.load() == begin_compute) {
-    std::cout << "BEGIN COMPUTE" << std::endl;
-
     // upload the compacted arrays to the GPU
     updateGLcs();
 
@@ -360,7 +362,7 @@ void Simulation::computeGL() {
     glBindVertexArray(cgl->vao);
     glUseProgram(cgl->spo[0]);
     size_t nTargGroups = (cgl->ntarg + 128 - 1) / 128;
-    std::cout << "  nTargGroups is " << nTargGroups << std::endl;
+    //std::cout << "  nTargGroups is " << nTargGroups << std::endl;
     glDispatchCompute( nTargGroups, 1, 1 );
     glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
     glBindVertexArray(0);
@@ -372,16 +374,6 @@ void Simulation::computeGL() {
     //cgl->cstate.store(computing);
     cgl->cstate.store(no_compute);
   }
-
-  //for (auto &coll : vort) {
-  //  std::visit([=](auto& elem) { elem.computeGL(); }, coll);
-  //}
-  //for (auto &coll : bdry) {
-  //  std::visit([=](auto& elem) { elem.computeGL(); }, coll);
-  //}
-  //for (auto &coll : fldpt) {
-  //  std::visit([=](auto& elem) { elem.computeGL(); }, coll);
-  //}
 }
 
 #endif

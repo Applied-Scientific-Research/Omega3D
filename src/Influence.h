@@ -33,7 +33,6 @@ template <class S, class A>
 void points_affect_points (Points<S> const& src, Points<S>& targ) {
   auto start = std::chrono::system_clock::now();
 
-
   // get references to use locally
   const std::array<Vector<S>,Dimensions>&     sx = src.get_pos();
   const Vector<S>&                            sr = src.get_rad();
@@ -46,12 +45,6 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 #ifdef USE_OPENGL_COMPUTE
   // do all that stuff here
 #endif
-
-  // dispatch the OpenGL compute shader
-
-  // check to see if we should use opengl compute AND gcs exists
-  if (src.have_gcs()) std::cout << "SRC.GCS exists" << std::endl;
-  if (targ.have_gcs()) std::cout << "TARG.GCS exists" << std::endl;
 
   // both must have global compute state or else use CPU version
   if (src.have_gcs() and targ.have_gcs()) {
@@ -126,9 +119,9 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 
       // report on a few
       //for (size_t i=0; i<10; ++i) {
-      for (size_t i=targ.get_n()-1; i>targ.get_n()-10; --i) {
-        std::cout << "    vel " << i << " is " << gcs->hr1[4*i+0] << " " << gcs->hr1[4*i+1] << " " << gcs->hr1[4*i+2] << std::endl;
-      }
+      //for (size_t i=targ.get_n()-1; i>targ.get_n()-10; --i) {
+      //  std::cout << "    vel " << i << " is " << gcs->hr1[4*i+0] << " " << gcs->hr1[4*i+1] << " " << gcs->hr1[4*i+2] << std::endl;
+      //}
 
       auto end = std::chrono::system_clock::now();
       std::chrono::duration<double> elapsed_seconds = end-start;
@@ -443,12 +436,6 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   // end conditional over whether targets are field points (with no core radius)
   //
   }
-
-    // report on a few
-    //for (size_t i=0; i<10; ++i) {
-    for (size_t i=targ.get_n()-1; i>targ.get_n()-10; --i) {
-      std::cout << "    vel " << i << " is " << tu[0][i] << " " << tu[1][i] << " " << tu[2][i] << std::endl;
-    }
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
