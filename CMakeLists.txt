@@ -15,7 +15,7 @@ SET (BUILD_GUI TRUE CACHE BOOL "Build the GUI version")
 SET (BUILD_BATCH TRUE CACHE BOOL "Build the batch (no GUI) version")
 SET (USE_OMP FALSE CACHE BOOL "Use OpenMP multithreading")
 SET (USE_VC FALSE CACHE BOOL "Use Vc for vector arithmetic")
-#SET (USE_OGL_COMPUTE FALSE CACHE BOOL "Use OpenGL compute shaders")
+SET (USE_OGL_COMPUTE FALSE CACHE BOOL "Use OpenGL compute shaders")
 SET (USE_PLUGIN_AVRM FALSE CACHE BOOL "Enable adaptive VRM plugin")
 SET (USE_PLUGIN_SIMPLEX FALSE CACHE BOOL "Enable simplex solver plugin")
 #SET (USE_PLUGIN_FMM FALSE CACHE BOOL "Enable FMM summation plugin")
@@ -99,6 +99,9 @@ ELSEIF( APPLE )
   #SET( FRAMEWORK_LIBS glfw3 )
   FIND_LIBRARY( FRAMEWORK_LIBS NAMES glfw3 glfw libglfw PATHS /usr/local/lib)
 
+  # turn OFF compute shaders
+  SET( USE_OGL_COMPUTE FALSE )
+
   INCLUDE_DIRECTORIES ( "/usr/local/include" )
   INCLUDE_DIRECTORIES ( "/usr/local/include/eigen3" )
   #INCLUDE_DIRECTORIES ( "/usr/local/Cellar/eigen/3.3.4/include/eigen3" )
@@ -177,7 +180,11 @@ IF( USE_PLUGIN_SIMPLEX )
   # add simplex.h to HEADERS?
 ENDIF()
 # fmm summation
-
+# later
+# compute shaders
+IF( USE_OGL_COMPUTE AND NOT APPLE)
+  SET (CPREPROCDEFS ${CPREPROCDEFS} -DUSE_OGL_COMPUTE)
+ENDIF()
 
 ADD_DEFINITIONS (${CPREPROCDEFS})
 

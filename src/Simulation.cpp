@@ -248,7 +248,9 @@ void Simulation::drawGL(std::vector<float>& _projmat,
     }
   }
 }
+#endif
 
+#ifdef USE_OGL_COMPUTE
 //
 // Compute shader code
 //
@@ -364,7 +366,6 @@ void Simulation::computeGL() {
     cgl->cstate.store(no_compute);
   }
 }
-
 #endif
 
 bool Simulation::is_initialized() { return sim_is_initialized; }

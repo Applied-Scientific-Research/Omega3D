@@ -42,103 +42,88 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   std::array<Vector<S>,Dimensions>&           tu = targ.get_vel();
   std::optional<std::array<Vector<S>,9>>& opttug = targ.get_velgrad();
 
-#ifdef USE_OPENGL_COMPUTE
-  // do all that stuff here
-#endif
+#ifdef USE_OGL_COMPUTE
+  // atomic must be ready to accept computation
+  if (not targ.is_compute_still_working()) {
+    //std::cout << "starting work" << std::endl << std::flush;
 
-  // both must have global compute state or else use CPU version
-  //if (src.have_gcs() and targ.have_gcs()) {
+    auto gcs = targ.get_gcs();
 
-    // and atomic must be ready to accept computation
-    if (not targ.is_compute_still_working()) {
-      //std::cout << "starting work" << std::endl << std::flush;
-
-      auto gcs = targ.get_gcs();
-
-      //std::cout << "  in p_a_p, gcs count is " << gcs.use_count() << std::endl << std::flush;
-      //std::cout << "  in p_a_p, gcs address is " << (size_t)gcs.get() << std::endl << std::flush;
-
-      // fill in gcs's idea of sources
-      // the positions
-      gcs->hsx.resize(4*src.get_n());
-      for (size_t i=0; i<src.get_n(); ++i) {
-        gcs->hsx[4*i+0] = sx[0][i];
-        gcs->hsx[4*i+1] = sx[1][i];
-        gcs->hsx[4*i+2] = sx[2][i];
-        gcs->hsx[4*i+3] = sr[i];
-      }
-      // the strengths
-      gcs->hss.resize(4*src.get_n());
-      for (size_t i=0; i<src.get_n(); ++i) {
-        gcs->hss[4*i+0] = ss[0][i];
-        gcs->hss[4*i+1] = ss[1][i];
-        gcs->hss[4*i+2] = ss[2][i];
-        gcs->hss[4*i+3] = 0.0;
-      }
-
-      // fill in gcs's idea of targets
-      gcs->htx.resize(4*targ.get_n());
-      for (size_t i=0; i<targ.get_n(); ++i) {
-        gcs->htx[4*i+0] = tx[0][i];
-        gcs->htx[4*i+1] = tx[1][i];
-        gcs->htx[4*i+2] = tx[2][i];
-        gcs->htx[4*i+3] = 0.0;
-      }
-      if (not targ.is_inert()) {
-        const Vector<S>& tr = targ.get_rad();
-        for (size_t i=0; i<targ.get_n(); ++i) gcs->htx[4*i+3] = tr[i];
-      }
-
-      // fill in gcs's space for results
-      gcs->hr1.resize(4*targ.get_n());
-      gcs->hr2.resize(4*targ.get_n());
-      gcs->hr3.resize(4*targ.get_n());
-
-      // then tell the graphics thread to begin computing
-      targ.trigger_compute();
-
-      // then hold here until its done
-      while (targ.is_compute_still_working()) {
-        // check every millisecond
-        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
-      }
-
-      // retrieve the results from the gcs vector
-      for (size_t i=0; i<targ.get_n(); ++i) {
-        tu[0][i] = gcs->hr1[4*i+0];
-        tu[1][i] = gcs->hr1[4*i+1];
-        tu[2][i] = gcs->hr1[4*i+2];
-      }
-      if (opttug) {
-        std::array<Vector<S>,9>& tug = *opttug;
-        for (size_t i=0; i<targ.get_n(); ++i) {
-          tug[0][i] = gcs->hr1[4*i+3];
-          tug[1][i] = gcs->hr2[4*i+0];
-          tug[2][i] = gcs->hr2[4*i+1];
-          tug[3][i] = gcs->hr2[4*i+2];
-          tug[4][i] = gcs->hr2[4*i+3];
-          tug[5][i] = gcs->hr3[4*i+0];
-          tug[6][i] = gcs->hr3[4*i+1];
-          tug[7][i] = gcs->hr3[4*i+2];
-          tug[8][i] = gcs->hr3[4*i+3];
-        }
-      }
-
-      // report on a few
-      //for (size_t i=0; i<10; ++i) {
-      //for (size_t i=targ.get_n()-1; i>targ.get_n()-10; --i) {
-      //  std::cout << "    vel " << i << " is " << gcs->hr1[4*i+0] << " " << gcs->hr1[4*i+1] << " " << gcs->hr1[4*i+2] << std::endl;
-      //}
-
-      auto end = std::chrono::system_clock::now();
-      std::chrono::duration<double> elapsed_seconds = end-start;
-      float flops = (float)targ.get_n() * (12.0 + 63.0*(float)src.get_n());
-      const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
-      printf("    ptptvelgrad shader: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
-
-      return;
+    // fill in gcs's idea of sources
+    // the positions
+    gcs->hsx.resize(4*src.get_n());
+    for (size_t i=0; i<src.get_n(); ++i) {
+      gcs->hsx[4*i+0] = sx[0][i];
+      gcs->hsx[4*i+1] = sx[1][i];
+      gcs->hsx[4*i+2] = sx[2][i];
+      gcs->hsx[4*i+3] = sr[i];
     }
-  //}
+    // the strengths
+    gcs->hss.resize(4*src.get_n());
+    for (size_t i=0; i<src.get_n(); ++i) {
+      gcs->hss[4*i+0] = ss[0][i];
+      gcs->hss[4*i+1] = ss[1][i];
+      gcs->hss[4*i+2] = ss[2][i];
+      gcs->hss[4*i+3] = 0.0;
+    }
+
+    // fill in gcs's idea of targets
+    gcs->htx.resize(4*targ.get_n());
+    for (size_t i=0; i<targ.get_n(); ++i) {
+      gcs->htx[4*i+0] = tx[0][i];
+      gcs->htx[4*i+1] = tx[1][i];
+      gcs->htx[4*i+2] = tx[2][i];
+      gcs->htx[4*i+3] = 0.0;
+    }
+    if (not targ.is_inert()) {
+      const Vector<S>& tr = targ.get_rad();
+      for (size_t i=0; i<targ.get_n(); ++i) gcs->htx[4*i+3] = tr[i];
+    }
+
+    // fill in gcs's space for results
+    gcs->hr1.resize(4*targ.get_n());
+    gcs->hr2.resize(4*targ.get_n());
+    gcs->hr3.resize(4*targ.get_n());
+
+    // then tell the graphics thread to begin computing
+    targ.trigger_compute();
+
+    // then hold here until its done
+    while (targ.is_compute_still_working()) {
+      // check every millisecond
+      //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    // retrieve the results from the gcs vector
+    for (size_t i=0; i<targ.get_n(); ++i) {
+      tu[0][i] = gcs->hr1[4*i+0];
+      tu[1][i] = gcs->hr1[4*i+1];
+      tu[2][i] = gcs->hr1[4*i+2];
+    }
+    if (opttug) {
+      std::array<Vector<S>,9>& tug = *opttug;
+      for (size_t i=0; i<targ.get_n(); ++i) {
+        tug[0][i] = gcs->hr1[4*i+3];
+        tug[1][i] = gcs->hr2[4*i+0];
+        tug[2][i] = gcs->hr2[4*i+1];
+        tug[3][i] = gcs->hr2[4*i+2];
+        tug[4][i] = gcs->hr2[4*i+3];
+        tug[5][i] = gcs->hr3[4*i+0];
+        tug[6][i] = gcs->hr3[4*i+1];
+        tug[7][i] = gcs->hr3[4*i+2];
+        tug[8][i] = gcs->hr3[4*i+3];
+      }
+    }
+
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    float flops = (float)targ.get_n() * (12.0 + 63.0*(float)src.get_n());
+    const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
+    printf("    ptptvelgrad shader: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
+
+    return;
+  }
+#endif
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)

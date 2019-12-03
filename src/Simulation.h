@@ -213,7 +213,9 @@ private:
   bool step_is_finished;
   std::future<void> stepfuture;  // this future needs to be listed after the big four: diff, conv, ...
 
+#ifdef USE_OGL_COMPUTE
   // OpenGL compute state
   std::shared_ptr<GlComputeState<STORE>> cgl;
+#endif
 };
 

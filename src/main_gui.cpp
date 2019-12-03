@@ -203,10 +203,12 @@ int main(int argc, char const *argv[]) {
 
   // Set up primary OpenGL window
   glfwSetErrorCallback(error_callback);
-  if (!glfwInit())
-    return 1;
-  //glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  if (!glfwInit()) return 1;
+#ifdef USE_OGL_COMPUTE
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+#else
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+#endif
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #if __APPLE__
@@ -230,8 +232,10 @@ int main(int argc, char const *argv[]) {
 
   //glfwSetWindowCloseCallback(window, window_close_callback);
 
+#ifdef USE_OGL_COMPUTE
   // tell Simulation to generate the compute shader data structures
   sim.initGLcs();
+#endif
 
   // Get and set some IO functions
   ImGuiIO& io = ImGui::GetIO();
@@ -1576,8 +1580,10 @@ int main(int argc, char const *argv[]) {
       ImGui::ShowTestWindow(&show_test_window);
     }
 
+#ifdef USE_OGL_COMPUTE
     // use compute shaders to advance the simulation
     sim.computeGL();
+#endif
 
     // draw the simulation: panels and particles
     compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
