@@ -22,6 +22,7 @@
 #include <memory>
 #include <optional>
 #include <chrono>
+#include <thread>
 #include <cmath>
 #include <cassert>
 
@@ -91,7 +92,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
     // then hold here until its done
     while (targ.is_compute_still_working()) {
       // check every millisecond
-      //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     // retrieve the results from the gcs vector
