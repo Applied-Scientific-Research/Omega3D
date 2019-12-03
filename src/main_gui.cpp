@@ -205,7 +205,8 @@ int main(int argc, char const *argv[]) {
   glfwSetErrorCallback(error_callback);
   if (!glfwInit())
     return 1;
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  //glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #if __APPLE__
@@ -218,7 +219,7 @@ int main(int argc, char const *argv[]) {
   //gl3wInit();
 
   if (!gladLoadGL()) {
-    printf("Something went wrong!\n");
+    std::cout << "gladLoadGL failed " << std::endl;
     exit(-1);
   }
 
@@ -228,6 +229,9 @@ int main(int argc, char const *argv[]) {
   //glfwSetKeyCallback(keyboard_callback);
 
   //glfwSetWindowCloseCallback(window, window_close_callback);
+
+  // tell Simulation to generate the compute shader data structures
+  sim.initGLcs();
 
   // Get and set some IO functions
   ImGuiIO& io = ImGui::GetIO();

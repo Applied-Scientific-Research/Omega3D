@@ -277,13 +277,8 @@ void Simulation::initGLcs() {
 // upload the new data arrays to the GPU
 void Simulation::updateGLcs() {
 
-  if (not cgl) {
-    initGLcs();
-  }
-
-  if (glIsVertexArray(cgl->vao) == GL_FALSE) {
-    initGLcs();
-  }
+  assert(cgl && "No GlComputeState object has been made");
+  assert(glIsVertexArray(cgl->vao) != GL_FALSE && "GlComputeState VAO is not a VAO");
 
   cgl->nsrc  = cgl->hsx.size()/4;
   cgl->ntarg = cgl->htx.size()/4;
@@ -341,14 +336,7 @@ void Simulation::retrieveGLcs() {
 
 void Simulation::computeGL() {
 
-  if (not cgl) {
-    initGLcs();
-  }
-
-  // tell every Collection that this is the compute state
-  for (auto &coll : vort) {
-    std::visit([=](auto& elem) { elem.set_opengl_compute_state(cgl); }, coll);
-  }
+  assert(cgl && "No GlComputeState object has been made");
 
   // check for access to lock, if access, continue
   if (cgl->cstate.load() == no_compute) return;
@@ -365,6 +353,7 @@ void Simulation::computeGL() {
     //std::cout << "  nTargGroups is " << nTargGroups << std::endl;
     glDispatchCompute( nTargGroups, 1, 1 );
     glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+    //glFinish();
     glBindVertexArray(0);
 
     // download the compacted arrays from the GPU
@@ -777,6 +766,14 @@ void Simulation::add_particles(std::vector<float> _invec) {
     // make a new collection
     vort.push_back(Points<float>(_invec, active, lagrangian, nullptr));      // vortons
 
+#ifdef USE_GL
+    // tell it where the compute shader vao is
+    {
+      Points<float>& pts = std::get<Points<float>>(vort.back());
+      pts.set_opengl_compute_state(cgl);
+    }
+#endif
+
   } else {
     // THIS MUST USE A VISITOR
 
@@ -819,6 +816,14 @@ void Simulation::add_fldpts(std::vector<float> _invec, const bool _moves) {
   if (fldpt.size() == 0) {
     // make a new collection
     fldpt.push_back(Points<float>(_invec, inert, move_type, nullptr));
+
+#ifdef USE_GL
+    // tell it where the compute shader vao is
+    {
+      Points<float>& pts = std::get<Points<float>>(fldpt.back());
+      pts.set_opengl_compute_state(cgl);
+    }
+#endif
 
   } else {
     // THIS MUST USE A VISITOR
@@ -881,6 +886,14 @@ void Simulation::add_boundary(std::shared_ptr<Body> _bptr, ElementPacket<float> 
                                    _geom.idx,
                                    _geom.val,
                                    reactive, this_move_type, _bptr));
+#ifdef USE_GL
+    // tell it where the compute shader vao is
+    {
+      Surfaces<float>& surf = std::get<Surfaces<float>>(bdry.back());
+      surf.set_opengl_compute_state(cgl);
+    }
+#endif
+
   } else {
     // found a match
     auto& coll = bdry[imatch];

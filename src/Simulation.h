@@ -197,9 +197,6 @@ private:
   // status file
   StatusFile sf;
 
-  // OpenGL compute state
-  std::shared_ptr<GlComputeState<STORE>> cgl;
-
   // state
   std::string description;
   double time;
@@ -215,5 +212,8 @@ private:
   bool step_has_started;
   bool step_is_finished;
   std::future<void> stepfuture;  // this future needs to be listed after the big four: diff, conv, ...
+
+  // OpenGL compute state
+  std::shared_ptr<GlComputeState<STORE>> cgl;
 };
 
