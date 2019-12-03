@@ -323,7 +323,6 @@ public:
     assert(gcs && "Global compute state object does not exist");
     return gcs;
   }
-
 #endif
 
 protected:

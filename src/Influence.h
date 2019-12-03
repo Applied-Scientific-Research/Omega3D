@@ -47,12 +47,16 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 #endif
 
   // both must have global compute state or else use CPU version
-  if (src.have_gcs() and targ.have_gcs()) {
+  //if (src.have_gcs() and targ.have_gcs()) {
 
     // and atomic must be ready to accept computation
     if (not targ.is_compute_still_working()) {
+      //std::cout << "starting work" << std::endl << std::flush;
 
       auto gcs = targ.get_gcs();
+
+      //std::cout << "  in p_a_p, gcs count is " << gcs.use_count() << std::endl << std::flush;
+      //std::cout << "  in p_a_p, gcs address is " << (size_t)gcs.get() << std::endl << std::flush;
 
       // fill in gcs's idea of sources
       // the positions
@@ -94,7 +98,10 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       targ.trigger_compute();
 
       // then hold here until its done
-      while (targ.is_compute_still_working()) {}
+      while (targ.is_compute_still_working()) {
+        // check every millisecond
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
 
       // retrieve the results from the gcs vector
       for (size_t i=0; i<targ.get_n(); ++i) {
@@ -131,7 +138,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 
       return;
     }
-  }
+  //}
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
