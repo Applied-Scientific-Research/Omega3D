@@ -361,8 +361,8 @@ void Simulation::computeGL() {
 
     // estimate total work and number of slivers (2 TFlop/s and 60 fps)
     float total_work = 1.0 + (float)cgl->ntarg * (float)cgl->nsrc * 63.0;
-    GLuint num_slivers = 1 + (GLuint)(total_work / (150.e+9/30.0));
-    //GLuint num_slivers = 1 + (GLuint)(total_work / (2.e+12/60.0));
+    //GLuint num_slivers = 1 + (GLuint)(total_work / (150.e+9/30.0));
+    GLuint num_slivers = 1 + (GLuint)(total_work / (2.e+12/30.0));
     //GLuint num_slivers = 3;
     GLuint groups_per_sliver = (total_targ_grps + num_slivers - 1) / num_slivers;
 
