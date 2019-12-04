@@ -347,22 +347,43 @@ void Simulation::computeGL() {
   if (cgl->cstate.load() == begin_compute) {
     // upload the compacted arrays to the GPU
     updateGLcs();
+    cgl->cstate.store(computing);
+  }
+
+  if (cgl->cstate.load() == computing) {
+    // how large of a sliver to compute?
+    //static GLint targ_offset = 0;
+
+    //std::cout << "    sliver of " << 100 << " sources on " << 100 << " targets" << std::endl << std::flush;
 
     // do the computation here!
     glBindVertexArray(cgl->vao);
     glUseProgram(cgl->spo[0]);
+
+    // define compute sliver
+    //glUniform1i(cgl->target_offset_attr, (const GLint)0);
+    //glUniform1i(cgl->target_count_attr,  (const GLint)cgl->ntarg);
+
+    // calculate group count
     size_t nTargGroups = (cgl->ntarg + 128 - 1) / 128;
     //std::cout << "  nTargGroups is " << nTargGroups << std::endl;
+
+    // do the work
     glDispatchCompute( nTargGroups, 1, 1 );
     glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
-    //glFinish();
+    //glFinish();	// do we need this? probably not
     glBindVertexArray(0);
 
+    // only trigger the atomic once all slivers are complete
+    cgl->cstate.store(compute_done);
+  }
+
+  if (cgl->cstate.load() == compute_done) {
     // download the compacted arrays from the GPU
     retrieveGLcs();
+    //glFinish();	// do we need this? probably not
 
     // tell the other thread that we're done
-    //cgl->cstate.store(computing);
     cgl->cstate.store(no_compute);
   }
 }
