@@ -767,7 +767,7 @@ void Simulation::add_particles(std::vector<float> _invec) {
     // make a new collection
     vort.push_back(Points<float>(_invec, active, lagrangian, nullptr));      // vortons
 
-#ifdef USE_GL
+#ifdef USE_OGL_COMPUTE
     // tell it where the compute shader vao is
     {
       Points<float>& pts = std::get<Points<float>>(vort.back());
@@ -818,7 +818,7 @@ void Simulation::add_fldpts(std::vector<float> _invec, const bool _moves) {
     // make a new collection
     fldpt.push_back(Points<float>(_invec, inert, move_type, nullptr));
 
-#ifdef USE_GL
+#ifdef USE_OGL_COMPUTE
     // tell it where the compute shader vao is
     {
       Points<float>& pts = std::get<Points<float>>(fldpt.back());
@@ -887,7 +887,7 @@ void Simulation::add_boundary(std::shared_ptr<Body> _bptr, ElementPacket<float> 
                                    _geom.idx,
                                    _geom.val,
                                    reactive, this_move_type, _bptr));
-#ifdef USE_GL
+#ifdef USE_OGL_COMPUTE
     // tell it where the compute shader vao is
     {
       Surfaces<float>& surf = std::get<Surfaces<float>>(bdry.back());
