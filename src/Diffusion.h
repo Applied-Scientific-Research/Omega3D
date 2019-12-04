@@ -146,6 +146,16 @@ void Diffusion<S,A,I>::step(const double                _time,
       if (_vort.size() == 0) {
         // no collections yet? make a new collection
         _vort.push_back(Points<S>(new_pts, active, lagrangian, nullptr));      // vortons
+
+#ifdef USE_OGL_COMPUTE
+        {
+          // grab the compute state from the boundary and copy it to the new points
+          auto gcs = surf.get_gcs();
+          Points<S>& pts = std::get<Points<S>>(_vort.back());
+          pts.set_opengl_compute_state(gcs);
+        }
+#endif
+
       } else {
         // HACK - add all particles to first collection
         auto& coll = _vort.back();
