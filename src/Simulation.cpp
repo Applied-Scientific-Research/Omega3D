@@ -264,7 +264,7 @@ void Simulation::initGLcs() {
   cgl->spo[0] = create_ptptvelgrad_program();
 
   // Identify and bind
-  for (GLint i=0; i<6; ++i) {
+  for (GLuint i=0; i<6; ++i) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[i]);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, cgl->vbo[i]);
   }
@@ -292,10 +292,10 @@ void Simulation::updateGLcs() {
     glUseProgram(cgl->spo[0]);
 
     // send the current values
-    glUniform1i(cgl->source_offset_attr, (const GLint)0);
-    glUniform1i(cgl->source_count_attr,  (const GLint)cgl->nsrc);
-    glUniform1i(cgl->target_offset_attr, (const GLint)0);
-    glUniform1i(cgl->target_count_attr,  (const GLint)cgl->ntarg);
+    glUniform1ui(cgl->source_offset_attr, (const GLuint)0);
+    glUniform1ui(cgl->source_count_attr,  (const GLuint)cgl->nsrc);
+    glUniform1ui(cgl->target_offset_attr, (const GLuint)0);
+    glUniform1ui(cgl->target_count_attr,  (const GLuint)cgl->ntarg);
 
     // send the arrays
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[0]);
@@ -351,31 +351,60 @@ void Simulation::computeGL() {
   }
 
   if (cgl->cstate.load() == computing) {
-    // how large of a sliver to compute?
-    //static GLint targ_offset = 0;
+    // for now, sliver (block) only over targets
+    //static GLuint targ_offset = 0;
+    //GLuint targ_count = cgl->ntarg;
 
-    //std::cout << "    sliver of " << 100 << " sources on " << 100 << " targets" << std::endl << std::flush;
+    // calculate work group count
+    GLuint total_targ_grps = ((GLuint)cgl->ntarg + 128 - 1) / 128;
+    //std::cout << "  total_targ_grps is " << total_targ_grps << std::endl;
 
-    // do the computation here!
+    // estimate total work and number of slivers (2 TFlop/s and 60 fps)
+    float total_work = 1.0 + (float)cgl->ntarg * (float)cgl->nsrc * 63.0;
+    GLuint num_slivers = 1 + (GLuint)(total_work / (150.e+9/30.0));
+    //GLuint num_slivers = 1 + (GLuint)(total_work / (2.e+12/60.0));
+    //GLuint num_slivers = 3;
+    GLuint groups_per_sliver = (total_targ_grps + num_slivers - 1) / num_slivers;
+
+    // find offset and count for this sliver
+    static GLuint sliver_index = 0;
+    GLuint group_offset = sliver_index*groups_per_sliver;
+    GLuint targ_offset = 128*group_offset;
+    GLuint group_count = std::min(groups_per_sliver, total_targ_grps-group_offset);
+    GLuint targ_count = std::min(128*group_count, cgl->ntarg-targ_offset);
+
+    if (sliver_index == 0) std::cout << "    running sliver." << std::flush;
+    else std::cout << "." << std::flush;
+
+    //std::cout << "    sliver of " << group_count << " target groups offset by " << group_offset << std::endl << std::flush;
+    //std::cout << "           or " << cgl->nsrc << " sources on " << targ_count << " targets" << std::endl << std::flush;
+
+    // set up the compute shader program
     glBindVertexArray(cgl->vao);
     glUseProgram(cgl->spo[0]);
 
-    // define compute sliver
-    //glUniform1i(cgl->target_offset_attr, (const GLint)0);
-    //glUniform1i(cgl->target_count_attr,  (const GLint)cgl->ntarg);
-
-    // calculate group count
-    size_t nTargGroups = (cgl->ntarg + 128 - 1) / 128;
-    //std::cout << "  nTargGroups is " << nTargGroups << std::endl;
+    // set compute sliver
+    glUniform1ui(cgl->target_offset_attr, (const GLuint)targ_offset);
+    glUniform1ui(cgl->target_count_attr,  (const GLuint)targ_count);
 
     // do the work
-    glDispatchCompute( nTargGroups, 1, 1 );
+    glDispatchCompute( group_count, 1, 1 );
     glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
     //glFinish();	// do we need this? probably not
     glBindVertexArray(0);
 
+    // increment the offset
+    sliver_index++;
+
     // only trigger the atomic once all slivers are complete
-    cgl->cstate.store(compute_done);
+    if (sliver_index == num_slivers) {
+      // reset the offset for the next time
+      sliver_index = 0;
+      std::cout << std::endl << std::flush;
+
+      // atomically indicate completion
+      cgl->cstate.store(compute_done);
+    }
   }
 
   if (cgl->cstate.load() == compute_done) {

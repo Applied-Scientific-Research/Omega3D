@@ -72,7 +72,7 @@ public:
   std::vector<GLuint> spo;
 
   // must remember how many are uploaded
-  GLint nsrc, ntarg;
+  GLuint nsrc, ntarg;
 
   // interthread coordination state
   std::atomic<compute_state_t> cstate;
