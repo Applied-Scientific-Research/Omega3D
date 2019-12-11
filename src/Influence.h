@@ -796,7 +796,43 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
       }
 
       #ifdef USE_VC
-        assert(false && "Velocity influence on vortons with Vc is unsupported!");
+        #pragma omp parallel for
+        for (int32_t i=0; i<ntarg; ++i) {
+          const StoreVec txv(tx[0][i]);
+          const StoreVec tyv(tx[1][i]);
+          const StoreVec tzv(tx[2][i]);
+          const StoreVec trv(tr[i]);
+          AccumVec accumu(0.0);
+          AccumVec accumv(0.0);
+          AccumVec accumw(0.0);
+
+          if (havess) {
+            for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
+              // NOTE: .vectorAt(i) gets the vector at scalar position i
+              //       .vector(i) gets the i'th vector!!!
+              kernel_2vs_0b<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                               sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                               sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                               ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                               sssv.vector(j),
+                                               txv, tyv, tzv, trv,
+                                               &accumu, &accumv, &accumw);
+            }
+          } else {
+            for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
+              kernel_2v_0b<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                              sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                              sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                              ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                              txv, tyv, tzv, trv,
+                                              &accumu, &accumv, &accumw);
+            }
+          }
+
+          tu[0][i] += accumu.sum();
+          tu[1][i] += accumv.sum();
+          tu[2][i] += accumw.sum();
+        }
 
       #else  // no Vc
         #pragma omp parallel for
