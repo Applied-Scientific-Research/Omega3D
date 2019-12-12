@@ -452,12 +452,14 @@ std::vector<std::string> Simulation::write_vtk(const int _index) {
 
   // solve the BEM (before any VTK or status file output)
   //std::cout << "Updating element vels" << std::endl;
+#ifndef USE_OGL_COMPUTE
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
-  clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
+  //clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
   solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
   conv.find_vels(thisfs, vort, bdry, vort);
   conv.find_vels(thisfs, vort, bdry, fldpt);
   conv.find_vels(thisfs, vort, bdry, bdry);
+#endif
 
   // may eventually want to avoid clobbering by maintaining an internal count of the
   //   number of simulations run from this execution of the GUI
