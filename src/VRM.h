@@ -322,8 +322,9 @@ void VRM<ST,CT,MAXMOM>::diffuse_all(std::array<Vector<ST>,3>& pos,
   typedef typename Eigen::Matrix<ST, Eigen::Dynamic, 3> EigenMatType;
   typedef typename EigenMatType::Index EigenIndexType;
   typedef nanoflann::KDTreeEigenMatrixAdaptor< EigenMatType >  my_kd_tree_t;
-  my_kd_tree_t mat_index(xp, 20);
+  my_kd_tree_t mat_index(Dimensions, std::cref(xp));
   if (use_tree) mat_index.index->buildIndex();
+
   std::vector<std::pair<EigenIndexType,ST> > ret_matches;
   ret_matches.reserve(max_near);
   nanoflann::SearchParams params;
