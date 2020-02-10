@@ -1033,10 +1033,17 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
   flops += 10;
 
   // recurse or solve?
+#ifdef USE_VC
+  const bool wellseparated = Vc::all_of(dist > trisize*S(4.0));
+#else
+  const bool wellseparated = dist > trisize*S(4.0);
+#endif
   flops += 1;
-  if (dist > trisize*S(4.0) or lev == maxlev) {
+  if (wellseparated or lev == maxlev) {
 
     // run just one influence calculation
+    // desingularize, but only by a little bit
+    //(void) kernel_0vs_0p (sx, sy, sz, S(0.25)*trisize,
     (void) kernel_0vs_0p (sx, sy, sz, S(0.0),
                           ssx, ssy, ssz, ss,
                           tx, ty, tz,
