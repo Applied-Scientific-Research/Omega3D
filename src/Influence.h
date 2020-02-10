@@ -456,7 +456,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   std::optional<std::array<Vector<S>,9>>& opttug = targ.get_velgrad();
 
   const int32_t ntarg = targ.get_n();
-  float flops = (float)targ.get_n();
+  float flops = 0.0;
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
@@ -527,6 +527,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
 
       #ifdef USE_VC
         assert(false && "Velocity gradient influence on points with Vc is unsupported!");
+        flops = (float)ntarg * (12.0 + (havess ? 401. : 300.)*(float)src.get_npanels());
 
       #else  // no Vc
         // get the pointer from the optional
@@ -560,7 +561,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               //                    &accumux, &accumvx, &accumwx,
               //                    &accumuy, &accumvy, &accumwy,
               //                    &accumuz, &accumvz, &accumwz);
-              rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                    ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
@@ -585,7 +586,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               //                   &accumux, &accumvx, &accumwx,
               //                   &accumuy, &accumvy, &accumwy,
               //                   &accumuz, &accumvz, &accumwz);
-              rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                    ss[0][j], ss[1][j], ss[2][j], S(0.0),
@@ -609,10 +610,9 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tug[6][i] += accumuz;
           tug[7][i] += accumvz;
           tug[8][i] += accumwz;
+          flops += 12;
         }
       #endif // no Vc
-
-      flops *= 12.0 + (havess ? 401. : 300.)*(float)src.get_npanels();
 
     } else { // velocity-only kernel -----------------------------------------------------------
       if (havess) {
@@ -658,7 +658,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tu[1][i] += accumv.sum();
           tu[2][i] += accumw.sum();
         }
-
+        flops = (float)ntarg * (3.0 + (havess ? 185. : 160.)*(float)src.get_npanels());
 
       #else  // no Vc
         #pragma omp parallel for
@@ -677,7 +677,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               //                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
               //                   tx[0][i], tx[1][i], tx[2][i],
               //                   &accumu, &accumv, &accumw);
-              rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
@@ -696,7 +696,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               //                  ss[0][j], ss[1][j], ss[2][j],
               //                  tx[0][i], tx[1][i], tx[2][i],
               //                  &accumu, &accumv, &accumw);
-              rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                   ss[0][j], ss[1][j], ss[2][j], S(0.0),
@@ -708,10 +708,9 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tu[0][i] += accumu;
           tu[1][i] += accumv;
           tu[2][i] += accumw;
+          flops += 3;
         }
       #endif // no Vc
-
-      flops *= 3.0 + (havess ? 185. : 160.)*(float)src.get_npanels();
     }
 
   //
@@ -794,6 +793,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tug[7][i] += accumvz.sum();
           tug[8][i] += accumwz.sum();
         }
+        flops = (float)ntarg * (12.0 + (havess ? 409. : 308.)*(float)src.get_npanels());
 
       #else  // no Vc
         #pragma omp parallel for
@@ -824,7 +824,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               //                    &accumux, &accumvx, &accumwx,
               //                    &accumuy, &accumvy, &accumwy,
               //                    &accumuz, &accumvz, &accumwz);
-              rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                    ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
@@ -849,7 +849,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               //                   &accumux, &accumvx, &accumwx,
               //                   &accumuy, &accumvy, &accumwy,
               //                   &accumuz, &accumvz, &accumwz);
-              rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                    ss[0][j], ss[1][j], ss[2][j], S(0.0),
@@ -873,10 +873,10 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tug[6][i] += accumuz;
           tug[7][i] += accumvz;
           tug[8][i] += accumwz;
+          flops += 12;
         }
       #endif // no Vc
 
-      flops *= 12.0 + (havess ? 409. : 308.)*(float)src.get_npanels();
 
     } else { // velocity-only kernel -----------------------------------------------------------
       if (havess) {
@@ -923,6 +923,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tu[1][i] += accumv.sum();
           tu[2][i] += accumw.sum();
         }
+        flops = (float)ntarg * (3.0 + (havess ? 193. : 168.)*(float)src.get_npanels());
 
       #else  // no Vc
         #pragma omp parallel for
@@ -941,7 +942,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               //                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
               //                   tx[0][i], tx[1][i], tx[2][i], tr[i],
               //                   &accumu, &accumv, &accumw);
-              rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
@@ -960,7 +961,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               //                  ss[0][j], ss[1][j], ss[2][j],
               //                  tx[0][i], tx[1][i], tx[2][i], tr[i],
               //                  &accumu, &accumv, &accumw);
-              rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                   ss[0][j], ss[1][j], ss[2][j], S(0.0),
@@ -972,12 +973,10 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tu[0][i] += accumu;
           tu[1][i] += accumv;
           tu[2][i] += accumw;
+          flops += 3;
         }
       #endif // no Vc
-
-      flops *= 3.0 + (havess ? 193. : 168.)*(float)src.get_npanels();
     }
-
   }
 
   auto end = std::chrono::system_clock::now();
@@ -1004,8 +1003,9 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
   const std::array<Vector<S>,Dimensions>& tx = targ.get_pos();
   const std::vector<Int>&                 ti = targ.get_idx();
   std::array<Vector<S>,Dimensions>&       tu = targ.get_vel();
+  const Vector<S>&                        ta = targ.get_area();
 
-  float flops = (float)targ.get_npanels();
+  float flops = 0.0;
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
@@ -1060,6 +1060,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
     tu[1][i] -= accumv.sum();
     tu[2][i] -= accumw.sum();
   }
+  flops = (float)targ.get_npanels() * (3.0 + 160.0*(float)src.get_n());
 
 #else  // no Vc
   #pragma omp parallel for
@@ -1072,21 +1073,27 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
     const size_t ip2 = ti[3*i+2];
     for (size_t j=0; j<src.get_n(); ++j) {
       // note that this is the same kernel as panels_affect_points!
-      kernel_2v_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
-                        tx[0][ip1], tx[1][ip1], tx[2][ip1],
-                        tx[0][ip2], tx[1][ip2], tx[2][ip2],
-                        ss[0][j], ss[1][j], ss[2][j],
-                        sx[0][j], sx[1][j], sx[2][j],
-                        &accumu, &accumv, &accumw);
+      //kernel_2v_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
+      //                  tx[0][ip1], tx[1][ip1], tx[2][ip1],
+      //                  tx[0][ip2], tx[1][ip2], tx[2][ip2],
+      //                  ss[0][j], ss[1][j], ss[2][j],
+      //                  sx[0][j], sx[1][j], sx[2][j],
+      //                  &accumu, &accumv, &accumw);
+      flops += rkernel_2vs_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
+                                   tx[0][ip1], tx[1][ip1], tx[2][ip1],
+                                   tx[0][ip2], tx[1][ip2], tx[2][ip2],
+                                   ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                   sx[0][j], sx[1][j], sx[2][j],
+                                   ta[i], 0, 3,
+                                   &accumu, &accumv, &accumw);
     }
     // we use it backwards, so the resulting velocities are negative
     tu[0][i] -= accumu;
     tu[1][i] -= accumv;
     tu[2][i] -= accumw;
+    flops += 3;
   }
 #endif // no Vc
-
-  flops *= 3.0 + 160.0*(float)src.get_n();
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
