@@ -1004,6 +1004,180 @@ static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
   }
 }
 
+// panel-point influence, including subpaneling
+//   returns flops
+template <class S, class A>
+int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
+                    const S sx1, const S sy1, const S sz1,
+                    const S sx2, const S sy2, const S sz2,
+                    const S ssx, const S ssy, const S ssz, const S ss,
+                    const S tx, const S ty, const S tz,
+                    const S sa, const int lev, const int maxlev,
+                    A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
+
+  // accumulate flop count
+  int flops = 0;
+
+  // compute the sizes and distance
+  const S sx = (sx0 + sx1 + sx2) / S(3.0);
+  const S sy = (sy0 + sy1 + sy2) / S(3.0);
+  const S sz = (sz0 + sz1 + sz2) / S(3.0);
+  flops += 9;
+#ifdef USE_VC
+  const S trisize = Vc::sqrt(sa);
+  const S dist = Vc::sqrt(Vc::pow(tx-sx,2) + Vc::pow(ty-sy,2) + Vc::pow(tz-sz,2));
+#else
+  const S trisize = std::sqrt(sa);
+  const S dist = std::sqrt(std::pow(tx-sx,2) + std::pow(ty-sy,2) + std::pow(tz-sz,2));
+#endif
+  flops += 10;
+
+  // recurse or solve?
+  flops += 1;
+  if (dist > trisize*S(4.0) or lev == maxlev) {
+
+    // run just one influence calculation
+    (void) kernel_0vs_0p (sx, sy, sz, S(0.0),
+                          ssx, ssy, ssz, ss,
+                          tx, ty, tz,
+                          tu, tv, tw);
+
+    flops += 34;
+
+#ifdef USE_VC
+    flops *= 8;
+#endif
+
+  } else {
+
+    // split source into 4 subpanels and run 4 calls
+
+    // scale the strength by 1/4, to account for the 4 calls below
+    const S strx = S(0.25) * ssx;
+    const S stry = S(0.25) * ssy;
+    const S strz = S(0.25) * ssz;
+    const S strs = S(0.25) * ss;
+    const S sca = S(0.25) * sa;
+    flops += 5;
+
+    // find the 6 nodes of the source and target triangles
+    const S scx[6] = {sx0, S(0.5)*(sx0+sx1), sx1, S(0.5)*(sx0+sx2), S(0.5)*(sx1+sx2), sx2};
+    const S scy[6] = {sy0, S(0.5)*(sy0+sy1), sy1, S(0.5)*(sy0+sy2), S(0.5)*(sy1+sy2), sy2};
+    const S scz[6] = {sz0, S(0.5)*(sz0+sz1), sz1, S(0.5)*(sz0+sz2), S(0.5)*(sz1+sz2), sz2};
+    flops += 18;
+#ifdef USE_VC
+    flops *= 8;
+#endif
+
+    // the index pointers to the child triangles
+    const int id[4][3] = {{0,1,3}, {1,2,4}, {1,4,3}, {3,4,5}};
+
+    for (int i=0; i<4; ++i) {
+
+      // accumulate the influence
+      flops += rkernel_2vs_0p (scx[id[i][0]], scy[id[i][0]], scz[id[i][0]],
+                               scx[id[i][1]], scy[id[i][1]], scz[id[i][1]],
+                               scx[id[i][2]], scy[id[i][2]], scz[id[i][2]],
+                               strx, stry, strz, strs,
+                               tx, ty, tz,
+                               sca, lev+1, maxlev,
+                               tu, tv, tw);
+    }
+  }
+
+  return flops;
+}
+
+
+// panel-point influence with gradients, including subpaneling
+//   returns flops
+template <class S, class A>
+int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
+                     const S sx1, const S sy1, const S sz1,
+                     const S sx2, const S sy2, const S sz2,
+                     const S ssx, const S ssy, const S ssz, const S ss,
+                     const S tx, const S ty, const S tz,
+                     const S sa, const int lev, const int maxlev,
+                     A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw,
+                     A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
+                     A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
+                     A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
+
+  // accumulate flop count
+  int flops = 0;
+
+  // compute the sizes and distance
+  const S sx = (sx0 + sx1 + sx2) / S(3.0);
+  const S sy = (sy0 + sy1 + sy2) / S(3.0);
+  const S sz = (sz0 + sz1 + sz2) / S(3.0);
+  flops += 9;
+#ifdef USE_VC
+  const S trisize = Vc::sqrt(sa);
+  const S dist = Vc::sqrt(Vc::pow(tx-sx,2) + Vc::pow(ty-sy,2) + Vc::pow(tz-sz,2));
+#else
+  const S trisize = std::sqrt(sa);
+  const S dist = std::sqrt(std::pow(tx-sx,2) + std::pow(ty-sy,2) + std::pow(tz-sz,2));
+#endif
+  flops += 10;
+
+  // recurse or solve?
+  flops += 1;
+  if (dist > trisize*S(4.0) or lev == maxlev) {
+
+    // run just one influence calculation
+    (void) kernel_0vs_0pg (sx, sy, sz, S(0.0),
+                           ssx, ssy, ssz, ss,
+                           tx, ty, tz,
+                           tu, tv, tw,
+                           tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
+
+    flops += 100;
+
+#ifdef USE_VC
+    flops *= 8;
+#endif
+
+  } else {
+
+    // split source into 4 subpanels and run 4 calls
+
+    // scale the strength by 1/4, to account for the 4 calls below
+    const S strx = S(0.25) * ssx;
+    const S stry = S(0.25) * ssy;
+    const S strz = S(0.25) * ssz;
+    const S strs = S(0.25) * ss;
+    const S sca = S(0.25) * sa;
+    flops += 5;
+
+    // find the 6 nodes of the source and target triangles
+    const S scx[6] = {sx0, S(0.5)*(sx0+sx1), sx1, S(0.5)*(sx0+sx2), S(0.5)*(sx1+sx2), sx2};
+    const S scy[6] = {sy0, S(0.5)*(sy0+sy1), sy1, S(0.5)*(sy0+sy2), S(0.5)*(sy1+sy2), sy2};
+    const S scz[6] = {sz0, S(0.5)*(sz0+sz1), sz1, S(0.5)*(sz0+sz2), S(0.5)*(sz1+sz2), sz2};
+    flops += 18;
+#ifdef USE_VC
+    flops *= 8;
+#endif
+
+    // the index pointers to the child triangles
+    const int id[4][3] = {{0,1,3}, {1,2,4}, {1,4,3}, {3,4,5}};
+
+    for (int i=0; i<4; ++i) {
+
+      // accumulate the influence
+      flops += rkernel_2vs_0pg (scx[id[i][0]], scy[id[i][0]], scz[id[i][0]],
+                                scx[id[i][1]], scy[id[i][1]], scz[id[i][1]],
+                                scx[id[i][2]], scy[id[i][2]], scz[id[i][2]],
+                                strx, stry, strz, strs,
+                                tx, ty, tz,
+                                sca, lev+1, maxlev,
+                                tu, tv, tw,
+                                tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
+    }
+  }
+
+  return flops;
+}
+
 
 // panel-panel interaction, allowing subpaneling
 //   return value is flops count

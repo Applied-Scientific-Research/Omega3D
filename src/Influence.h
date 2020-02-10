@@ -551,30 +551,50 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              kernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                  ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
-                                  tx[0][i], tx[1][i], tx[2][i],
-                                  &accumu, &accumv, &accumw,
-                                  &accumux, &accumvx, &accumwx,
-                                  &accumuy, &accumvy, &accumwy,
-                                  &accumuz, &accumvz, &accumwz);
+              //kernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              //                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
+              //                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
+              //                    ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+              //                    tx[0][i], tx[1][i], tx[2][i],
+              //                    &accumu, &accumv, &accumw,
+              //                    &accumux, &accumvx, &accumwx,
+              //                    &accumuy, &accumvy, &accumwy,
+              //                    &accumuz, &accumvz, &accumwz);
+              rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                   tx[0][i], tx[1][i], tx[2][i],
+                                   sa[j], 0, 3,
+                                   &accumu, &accumv, &accumw,
+                                   &accumux, &accumvx, &accumwx,
+                                   &accumuy, &accumvy, &accumwy,
+                                   &accumuz, &accumvz, &accumwz);
             }
           } else {
             for (size_t j=0; j<src.get_npanels(); ++j) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              kernel_2v_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                                 sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                                 sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                 ss[0][j], ss[1][j], ss[2][j],
-                                 tx[0][i], tx[1][i], tx[2][i],
-                                 &accumu, &accumv, &accumw,
-                                 &accumux, &accumvx, &accumwx,
-                                 &accumuy, &accumvy, &accumwy,
-                                 &accumuz, &accumvz, &accumwz);
+              //kernel_2v_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              //                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
+              //                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
+              //                   ss[0][j], ss[1][j], ss[2][j],
+              //                   tx[0][i], tx[1][i], tx[2][i],
+              //                   &accumu, &accumv, &accumw,
+              //                   &accumux, &accumvx, &accumwx,
+              //                   &accumuy, &accumvy, &accumwy,
+              //                   &accumuz, &accumvz, &accumwz);
+              rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                   ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                   tx[0][i], tx[1][i], tx[2][i],
+                                   sa[j], 0, 3,
+                                   &accumu, &accumv, &accumw,
+                                   &accumux, &accumvx, &accumwx,
+                                   &accumuy, &accumvy, &accumwy,
+                                   &accumuz, &accumvz, &accumwz);
             }
           }
           tu[0][i] += accumu;
@@ -651,24 +671,38 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              kernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                                 sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                                 sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                 ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
-                                 tx[0][i], tx[1][i], tx[2][i],
-                                 &accumu, &accumv, &accumw);
+              //kernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              //                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
+              //                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
+              //                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+              //                   tx[0][i], tx[1][i], tx[2][i],
+              //                   &accumu, &accumv, &accumw);
+              rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                  ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                  tx[0][i], tx[1][i], tx[2][i],
+                                  sa[j], 0, 3,
+                                  &accumu, &accumv, &accumw);
             }
           } else {
             for (size_t j=0; j<src.get_npanels(); ++j) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              kernel_2v_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                                sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                                sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                ss[0][j], ss[1][j], ss[2][j],
-                                tx[0][i], tx[1][i], tx[2][i],
-                                &accumu, &accumv, &accumw);
+              //kernel_2v_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              //                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
+              //                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
+              //                  ss[0][j], ss[1][j], ss[2][j],
+              //                  tx[0][i], tx[1][i], tx[2][i],
+              //                  &accumu, &accumv, &accumw);
+              rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                  ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                  tx[0][i], tx[1][i], tx[2][i],
+                                  sa[j], 0, 3,
+                                  &accumu, &accumv, &accumw);
             }
           }
           tu[0][i] += accumu;
@@ -781,30 +815,50 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              kernel_2vs_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                  ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
-                                  tx[0][i], tx[1][i], tx[2][i], tr[i],
-                                  &accumu, &accumv, &accumw,
-                                  &accumux, &accumvx, &accumwx,
-                                  &accumuy, &accumvy, &accumwy,
-                                  &accumuz, &accumvz, &accumwz);
+              //kernel_2vs_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              //                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
+              //                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
+              //                    ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+              //                    tx[0][i], tx[1][i], tx[2][i], tr[i],
+              //                    &accumu, &accumv, &accumw,
+              //                    &accumux, &accumvx, &accumwx,
+              //                    &accumuy, &accumvy, &accumwy,
+              //                    &accumuz, &accumvz, &accumwz);
+              rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                   tx[0][i], tx[1][i], tx[2][i],
+                                   sa[j], 0, 3,
+                                   &accumu, &accumv, &accumw,
+                                   &accumux, &accumvx, &accumwx,
+                                   &accumuy, &accumvy, &accumwy,
+                                   &accumuz, &accumvz, &accumwz);
             }
           } else {
             for (size_t j=0; j<src.get_npanels(); ++j) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              kernel_2v_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                                 sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                                 sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                 ss[0][j], ss[1][j], ss[2][j],
-                                 tx[0][i], tx[1][i], tx[2][i], tr[i],
-                                 &accumu, &accumv, &accumw,
-                                 &accumux, &accumvx, &accumwx,
-                                 &accumuy, &accumvy, &accumwy,
-                                 &accumuz, &accumvz, &accumwz);
+              //kernel_2v_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              //                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
+              //                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
+              //                   ss[0][j], ss[1][j], ss[2][j],
+              //                   tx[0][i], tx[1][i], tx[2][i], tr[i],
+              //                   &accumu, &accumv, &accumw,
+              //                   &accumux, &accumvx, &accumwx,
+              //                   &accumuy, &accumvy, &accumwy,
+              //                   &accumuz, &accumvz, &accumwz);
+              rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                   ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                   tx[0][i], tx[1][i], tx[2][i],
+                                   sa[j], 0, 3,
+                                   &accumu, &accumv, &accumw,
+                                   &accumux, &accumvx, &accumwx,
+                                   &accumuy, &accumvy, &accumwy,
+                                   &accumuz, &accumvz, &accumwz);
             }
           }
           tu[0][i] += accumu;
@@ -881,24 +935,38 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              kernel_2vs_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                                 sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                                 sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                 ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
-                                 tx[0][i], tx[1][i], tx[2][i], tr[i],
-                                 &accumu, &accumv, &accumw);
+              //kernel_2vs_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              //                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
+              //                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
+              //                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+              //                   tx[0][i], tx[1][i], tx[2][i], tr[i],
+              //                   &accumu, &accumv, &accumw);
+              rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                  ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                  tx[0][i], tx[1][i], tx[2][i],
+                                  sa[j], 0, 3,
+                                  &accumu, &accumv, &accumw);
             }
           } else {
             for (size_t j=0; j<src.get_npanels(); ++j) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              kernel_2v_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-                                sx[0][jp1], sx[1][jp1], sx[2][jp1],
-                                sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                ss[0][j], ss[1][j], ss[2][j],
-                                tx[0][i], tx[1][i], tx[2][i], tr[i],
-                                &accumu, &accumv, &accumw);
+              //kernel_2v_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+              //                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
+              //                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
+              //                  ss[0][j], ss[1][j], ss[2][j],
+              //                  tx[0][i], tx[1][i], tx[2][i], tr[i],
+              //                  &accumu, &accumv, &accumw);
+              rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
+                                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
+                                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
+                                  ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                  tx[0][i], tx[1][i], tx[2][i],
+                                  sa[j], 0, 3,
+                                  &accumu, &accumv, &accumw);
             }
           }
           tu[0][i] += accumu;
