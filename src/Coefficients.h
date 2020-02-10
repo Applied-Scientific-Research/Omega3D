@@ -181,6 +181,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
   const std::array<Vector<S>,Dimensions>& tb1 = targ.get_x1();
   const std::array<Vector<S>,Dimensions>& tb2 = targ.get_x2();
   const std::array<Vector<S>,Dimensions>&  tn = targ.get_norm();
+  const Vector<S>&                         ta = targ.get_area();
 
 #ifdef USE_VC
   // define vector types for Vc (still only S==A supported here)
@@ -324,22 +325,20 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       const Int tsecond = ti[3*i+1];
       const Int tthird  = ti[3*i+2];
 
-      // collocation point for panel i (6 flops here)
-      const S txi = (tx[0][tfirst] + tx[0][tsecond] + tx[0][tthird]) / 3.0;
-      const S tyi = (tx[1][tfirst] + tx[1][tsecond] + tx[1][tthird]) / 3.0;
-      const S tzi = (tx[2][tfirst] + tx[2][tsecond] + tx[2][tthird]) / 3.0;
-
       // influence of panel j with unit vortex sheet strength on center of panel i
       S resultu, resultv, resultw;
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
       // first, strength along panel-centric x1 vector
-      kernel_2v_0p<S,S>(sx0, sy0, sz0,
-                        sx1, sy1, sz1,
-                        sx2, sy2, sz2,
-                        sb1[0][j], sb1[1][j], sb1[2][j],
-                        txi, tyi, tzi,
-                        &resultu, &resultv, &resultw);
+      flops += rkernel_2vs_2p<S,S> (sx0, sy0, sz0,
+                                    sx1, sy1, sz1,
+                                    sx2, sy2, sz2,
+                                    sb1[0][j], sb1[1][j], sb1[2][j], S(0.0),
+                                    tx[0][tfirst], tx[1][tfirst], tx[2][tfirst],
+                                    tx[0][tsecond], tx[1][tsecond], tx[2][tsecond],
+                                    tx[0][tthird], tx[1][tthird], tx[2][tthird],
+                                    sarea, ta[i], 0, 3,
+                                    &resultu, &resultv, &resultw);
 
       // dot product with tangent vector, applying normalization here
       coeffs[jptr[0]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
@@ -353,12 +352,15 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
       // now, along x2 direction (another 168+20 flops)
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
-      kernel_2v_0p<S,S>(sx0, sy0, sz0,
-                        sx1, sy1, sz1,
-                        sx2, sy2, sz2,
-                        sb2[0][j], sb2[1][j], sb2[2][j],
-                        txi, tyi, tzi,
-                        &resultu, &resultv, &resultw);
+      flops += rkernel_2vs_2p<S,S> (sx0, sy0, sz0,
+                                    sx1, sy1, sz1,
+                                    sx2, sy2, sz2,
+                                    sb2[0][j], sb2[1][j], sb2[2][j], S(0.0),
+                                    tx[0][tfirst], tx[1][tfirst], tx[2][tfirst],
+                                    tx[0][tsecond], tx[1][tsecond], tx[2][tsecond],
+                                    tx[0][tthird], tx[1][tthird], tx[2][tthird],
+                                    sarea, ta[i], 0, 3,
+                                    &resultu, &resultv, &resultw);
       coeffs[jptr[1]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
       coeffs[jptr[1]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
       if (targ_has_src) coeffs[jptr[1]++] = (resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i]) * sarea;
@@ -368,12 +370,15 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       if (src_has_src) {
         resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
-        kernel_2s_0p<S,S>(sx0, sy0, sz0,
-                          sx1, sy1, sz1,
-                          sx2, sy2, sz2,
-                          (S)1.0,
-                          txi, tyi, tzi,
-                          &resultu, &resultv, &resultw);
+        flops += rkernel_2vs_2p<S,S> (sx0, sy0, sz0,
+                                      sx1, sy1, sz1,
+                                      sx2, sy2, sz2,
+                                      (S)0.0, (S)0.0, (S)0.0, (S)1.0,
+                                      tx[0][tfirst], tx[1][tfirst], tx[2][tfirst],
+                                      tx[0][tsecond], tx[1][tsecond], tx[2][tsecond],
+                                      tx[0][tthird], tx[1][tthird], tx[2][tthird],
+                                      sarea, ta[i], 0, 3,
+                                      &resultu, &resultv, &resultw);
 
         coeffs[jptr[2]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
         coeffs[jptr[2]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
@@ -406,7 +411,10 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       }
     }
   }
+
+#ifdef USE_VC
   flops += (float)nsrc*(float)ntarg*382.0;
+#endif
 
   // scale all influences by the constant
   const S fac = 1.0 / (4.0 * M_PI);
