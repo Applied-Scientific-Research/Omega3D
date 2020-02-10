@@ -59,6 +59,8 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
+* Use subpaneling for both BEM matrix and panel-particle evaluations
+* Get compute shader evaluation to work when called within vtu-writing
 * Get BEM working for moving bodies
 * Allow general rectangles - use the ips to scale panel sizes
 * Use Eigen's Quaternion to represent rotations internally, but load them in as axis-angle
