@@ -1005,6 +1005,7 @@ static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
 }
 
 // panel-point influence, including subpaneling
+//   initial input strength is a sheet strength, all recursive calls are absolute
 //   returns flops
 template <class S, class A>
 int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
@@ -1017,6 +1018,19 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
 
   // accumulate flop count
   int flops = 0;
+
+  // convert from sheet strength into absolute strength - only once
+  S strx = ssx;
+  S stry = ssy;
+  S strz = ssz;
+  S strs = ss;
+  if (lev == 0) {
+    strx *= sa;
+    stry *= sa;
+    strz *= sa;
+    strs *= sa;
+    flops += 4;
+  }
 
   // compute the sizes and distance
   const S sx = (sx0 + sx1 + sx2) / S(3.0);
@@ -1045,7 +1059,7 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
     // desingularize, but only by a little bit
     //(void) kernel_0vs_0p (sx, sy, sz, S(0.25)*trisize,
     (void) kernel_0vs_0p (sx, sy, sz, S(0.0),
-                          ssx, ssy, ssz, ss,
+                          strx, stry, strz, strs,
                           tx, ty, tz,
                           tu, tv, tw);
 
@@ -1060,10 +1074,11 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
     // split source into 4 subpanels and run 4 calls
 
     // scale the strength by 1/4, to account for the 4 calls below
-    const S strx = S(0.25) * ssx;
-    const S stry = S(0.25) * ssy;
-    const S strz = S(0.25) * ssz;
-    const S strs = S(0.25) * ss;
+    strx *= S(0.25);
+    stry *= S(0.25);
+    strz *= S(0.25);
+    strs *= S(0.25);
+    // and scale the area by 1/4
     const S sca = S(0.25) * sa;
     flops += 5;
 
@@ -1113,6 +1128,19 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
   // accumulate flop count
   int flops = 0;
 
+  // convert from sheet strength into absolute strength - only once
+  S strx = ssx;
+  S stry = ssy;
+  S strz = ssz;
+  S strs = ss;
+  if (lev == 0) {
+    strx *= sa;
+    stry *= sa;
+    strz *= sa;
+    strs *= sa;
+    flops += 4;
+  }
+
   // compute the sizes and distance
   const S sx = (sx0 + sx1 + sx2) / S(3.0);
   const S sy = (sy0 + sy1 + sy2) / S(3.0);
@@ -1133,7 +1161,7 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
 
     // run just one influence calculation
     (void) kernel_0vs_0pg (sx, sy, sz, S(0.0),
-                           ssx, ssy, ssz, ss,
+                           strx, stry, strz, strs,
                            tx, ty, tz,
                            tu, tv, tw,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
@@ -1149,10 +1177,11 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
     // split source into 4 subpanels and run 4 calls
 
     // scale the strength by 1/4, to account for the 4 calls below
-    const S strx = S(0.25) * ssx;
-    const S stry = S(0.25) * ssy;
-    const S strz = S(0.25) * ssz;
-    const S strs = S(0.25) * ss;
+    strx *= S(0.25);
+    stry *= S(0.25);
+    strz *= S(0.25);
+    strs *= S(0.25);
+    // and scale the area by 1/4
     const S sca = S(0.25) * sa;
     flops += 5;
 
@@ -1187,6 +1216,7 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
 
 
 // panel-panel interaction, allowing subpaneling
+//   strengths are assumed to be sheet strengths
 //   return value is flops count
 template <class S, class A>
 int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
@@ -1201,6 +1231,18 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
 
   // accumulate flop count
   int flops = 0;
+
+  // convert from sheet strength into absolute strength - only once
+  S strx = ssx;
+  S stry = ssy;
+  S strz = ssz;
+  S strs = ss;
+  if (lev == 0) {
+    strx *= sa;
+    stry *= sa;
+    strz *= sa;
+    strs *= sa;
+  }
 
   // compute the sizes and distance
   const S sx = (sx0 + sx1 + sx2) / S(3.0);
@@ -1225,7 +1267,7 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
 
     // run just one influence calculation
     (void) kernel_0vs_0p (sx, sy, sz, S(0.0),
-                          ssx, ssy, ssz, ss,
+                          strx, stry, strz, strs,
                           tx, ty, tz,
                           tu, tv, tw);
 
@@ -1239,11 +1281,12 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
 
     // split source and target into 4 each and run 16 calls
 
-    // scale the strength by 1/4, to account for the 4 calls below
-    const S strx = S(0.0625) * ssx;
-    const S stry = S(0.0625) * ssy;
-    const S strz = S(0.0625) * ssz;
-    const S strs = S(0.0625) * ss;
+    // scale the strength by 1/16, to account for reduced strength and reduced target area
+    strx *= S(0.0625);
+    stry *= S(0.0625);
+    strz *= S(0.0625);
+    strs *= S(0.0625);
+    // scale the area by 1/4
     const S sca = S(0.25) * sa;
     const S tca = S(0.25) * ta;
     flops += 6;

@@ -325,7 +325,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
       const Int tsecond = ti[3*i+1];
       const Int tthird  = ti[3*i+2];
 
-      // influence of panel j with unit vortex sheet strength on center of panel i
+      // influence of panel j with unit vortex sheet strength on entirety of panel i
       S resultu, resultv, resultw;
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
@@ -341,13 +341,13 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                     &resultu, &resultv, &resultw);
 
       // dot product with tangent vector, applying normalization here
-      coeffs[jptr[0]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
+      coeffs[jptr[0]++] = resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i];
 
       // recompute for other target vector
-      coeffs[jptr[0]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
+      coeffs[jptr[0]++] = resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i];
 
       // recompute for normal
-      if (targ_has_src) coeffs[jptr[0]++] = (resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i]) * sarea;
+      if (targ_has_src) coeffs[jptr[0]++] = resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i];
 
 
       // now, along x2 direction (another 168+20 flops)
@@ -361,9 +361,9 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                     tx[0][tthird], tx[1][tthird], tx[2][tthird],
                                     sarea, ta[i], 0, 3,
                                     &resultu, &resultv, &resultw);
-      coeffs[jptr[1]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
-      coeffs[jptr[1]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
-      if (targ_has_src) coeffs[jptr[1]++] = (resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i]) * sarea;
+      coeffs[jptr[1]++] = resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i];
+      coeffs[jptr[1]++] = resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i];
+      if (targ_has_src) coeffs[jptr[1]++] = resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i];
 
 
       // finally the influence of a unit-strength source sheet
@@ -380,9 +380,9 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                       sarea, ta[i], 0, 3,
                                       &resultu, &resultv, &resultw);
 
-        coeffs[jptr[2]++] = (resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i]) * sarea;
-        coeffs[jptr[2]++] = (resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i]) * sarea;
-        if (targ_has_src) coeffs[jptr[2]++] = (resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i]) * sarea;
+        coeffs[jptr[2]++] = resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i];
+        coeffs[jptr[2]++] = resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i];
+        if (targ_has_src) coeffs[jptr[2]++] = resultu*tn[0][i] + resultv*tn[1][i] + resultw*tn[2][i];
       }
     }
 #endif

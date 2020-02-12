@@ -511,7 +511,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   //   target radii or no target radii
   //   grads or no grads
   //   Vc or no Vc
-  // NEED TO SCALE sss by area
 
   //
   // targets are field points, with no core radius ===============================================
@@ -564,7 +563,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                   ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], sss[j],
                                    tx[0][i], tx[1][i], tx[2][i],
                                    sa[j], 0, 3,
                                    &accumu, &accumv, &accumw,
@@ -589,7 +588,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                   ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                   ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], S(0.0),
                                    tx[0][i], tx[1][i], tx[2][i],
                                    sa[j], 0, 3,
                                    &accumu, &accumv, &accumw,
@@ -680,7 +679,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                  ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                  ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], sss[j],
                                   tx[0][i], tx[1][i], tx[2][i],
                                   sa[j], 0, 3,
                                   &accumu, &accumv, &accumw);
@@ -699,7 +698,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                  ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                  ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], S(0.0),
                                   tx[0][i], tx[1][i], tx[2][i],
                                   sa[j], 0, 3,
                                   &accumu, &accumv, &accumw);
@@ -827,7 +826,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                   ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], sss[j],
                                    tx[0][i], tx[1][i], tx[2][i],
                                    sa[j], 0, 3,
                                    &accumu, &accumv, &accumw,
@@ -852,7 +851,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                   ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                   ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], S(0.0),
                                    tx[0][i], tx[1][i], tx[2][i],
                                    sa[j], 0, 3,
                                    &accumu, &accumv, &accumw,
@@ -945,7 +944,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                  ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
+                                  ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], sss[j],
                                   tx[0][i], tx[1][i], tx[2][i],
                                   sa[j], 0, 3,
                                   &accumu, &accumv, &accumw);
@@ -964,7 +963,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
-                                  ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                  ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], S(0.0),
                                   tx[0][i], tx[1][i], tx[2][i],
                                   sa[j], 0, 3,
                                   &accumu, &accumv, &accumw);
@@ -1082,7 +1081,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
       flops += rkernel_2vs_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
                                    tx[0][ip1], tx[1][ip1], tx[2][ip1],
                                    tx[0][ip2], tx[1][ip2], tx[2][ip2],
-                                   ss[0][j], ss[1][j], ss[2][j], S(0.0),
+                                   ss[0][j]/ta[i], ss[1][j]/ta[i], ss[2][j]/ta[i], S(0.0),
                                    sx[0][j], sx[1][j], sx[2][j],
                                    ta[i], 0, 3,
                                    &accumu, &accumv, &accumw);
