@@ -118,7 +118,7 @@ void write_DataArray (tinyxml2::XMLPrinter& _p,
                       bool _compress = false,
                       bool _asbase64 = false) {
 
-  // interleave the two vectors into a new one
+  // interleave the three vectors into a new one
   Vector<S> newvec;
   newvec.resize(3 * _data[0].size());
   for (size_t i=0; i<_data[0].size(); ++i) {
@@ -131,6 +131,27 @@ void write_DataArray (tinyxml2::XMLPrinter& _p,
   write_DataArray<S>(_p, newvec, _compress, _asbase64);
 }
 
+//
+// pull vorticity out of velocity gradient and write to vtk file
+//
+template <class S>
+void write_DataArray (tinyxml2::XMLPrinter& _p,
+                      std::array<Vector<S>,9> const & _data,
+                      bool _compress = false,
+                      bool _asbase64 = false) {
+
+  // interleave the three vectors into a new one
+  Vector<S> newvec;
+  newvec.resize(3 * _data[0].size());
+  for (size_t i=0; i<_data[0].size(); ++i) {
+    newvec[3*i+0] = _data[5][i] - _data[7][i];
+    newvec[3*i+1] = _data[6][i] - _data[2][i];
+    newvec[3*i+2] = _data[1][i] - _data[3][i];
+  }
+
+  // pass it on to write
+  write_DataArray<S>(_p, newvec, _compress, _asbase64);
+}
 
 
 //
@@ -154,10 +175,12 @@ std::string write_vtu_points(Points<S> const& pts, const size_t file_idx, const 
 
   bool has_radii = true;
   bool has_strengths = true;
+  bool has_vorticity = pts.get_velgrad();
   std::string prefix = "part_";
   if (pts.is_inert()) {
     has_strengths = false;
     has_radii = false;
+    //has_vorticity = false;
     prefix = "fldpt_";
   }
 
@@ -246,6 +269,7 @@ std::string write_vtu_points(Points<S> const& pts, const size_t file_idx, const 
   vector_list.append("velocity,");
   if (has_strengths) vector_list.append("circulation,");
   if (has_radii) scalar_list.append("radius,");
+  if (has_vorticity) vector_list.append("vorticity,");
 
   if (vector_list.size()>1) {
     vector_list.pop_back();
@@ -270,6 +294,16 @@ std::string write_vtu_points(Points<S> const& pts, const size_t file_idx, const 
     printer.PushAttribute( "Name", "radius" );
     printer.PushAttribute( "type", "Float32" );
     write_DataArray (printer, pts.get_rad(), compress, asbase64);
+    printer.CloseElement();	// DataArray
+  }
+
+  if (has_vorticity) {
+    printer.OpenElement( "DataArray" );
+    printer.PushAttribute( "NumberOfComponents", "3" );
+    printer.PushAttribute( "Name", "vorticity" );
+    printer.PushAttribute( "type", "Float32" );
+    const std::array<Vector<S>,9>& tug = *(pts.get_velgrad());
+    write_DataArray (printer, tug, compress, asbase64);
     printer.CloseElement();	// DataArray
   }
 
