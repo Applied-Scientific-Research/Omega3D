@@ -730,7 +730,7 @@ void Simulation::dump_stats_to_status() {
     std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
     // push away particles inside or too close to the body
-    clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
+    //clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
     // solve the BEM (before any VTK or status file output)
     solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
 
