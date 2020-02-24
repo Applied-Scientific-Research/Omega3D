@@ -2,8 +2,8 @@
  * main_gui.cpp - Driver code for Omega3D + ImGui + Vc vortex particle method
  *                and boundary element method solver, GUI version
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #include "FlowFeature.h"
@@ -767,7 +767,7 @@ int main(int argc, char const *argv[]) {
       ShowHelpMarker("If checked, simulation will add particles to solve diffusion equation; if unchecked, simulation will run fast, but quickly lose accuracy.");
 
       if (sim.is_initialized() and is_viscous) {
-        ImGui::Text("** While running, Time step and Reynolds number move together **");
+        ImGui::Text("** Until a reset, Time step and Reynolds number move together **");
       }
 
       // set input widget width for this and the next few
@@ -775,7 +775,7 @@ int main(int argc, char const *argv[]) {
 
       ImGui::SliderFloat("Time step", sim.addr_dt(), 0.001f, 0.1f, "%.4f", 2.0f);
       ImGui::SameLine();
-      ShowHelpMarker("Adjust how far into the future each step must simulate. Smaller means better accuracy, larger is faster.");
+      ShowHelpMarker("Adjust how far into the future each step must simulate. Smaller means better accuracy but slower, larger means lower accuracy but faster.");
 
       if (is_viscous) {
         sim.set_diffuse(true);
@@ -796,7 +796,7 @@ int main(int argc, char const *argv[]) {
           }
         }
 
-        ImGui::Text("Particle spacing %g", sim.get_ips());
+        ImGui::Text("Particle spacing for these settings is %g", sim.get_ips());
 
       } else {
         static float my_ips = 0.03141;
@@ -807,9 +807,9 @@ int main(int argc, char const *argv[]) {
         sim.set_re_for_ips(my_ips);
         my_ips = sim.get_ips();
       }
-      ImGui::InputFloat3("Freestream speed", sim.addr_fs());
+      ImGui::InputFloat3("Flow vector", sim.addr_fs());
       ImGui::SameLine();
-      ShowHelpMarker("Freestream is a uniform wind blowing everything along this vector.");
+      ShowHelpMarker("Also called freestream, this is a uniform wind blowing along this vector.");
 
       ImGui::PopItemWidth();
 
@@ -839,106 +839,12 @@ int main(int argc, char const *argv[]) {
 
     ImGui::Spacing();
     //if (ImGui::CollapsingHeader("Flow structures", ImGuiTreeNodeFlags_DefaultOpen)) {
-    if (ImGui::CollapsingHeader("Flow structures")) {
+    if (ImGui::CollapsingHeader("Startup structures")) {
 
-      ImGui::Spacing();
-      int buttonIDs = 10;
-
-      // list existing flow features here
-      int del_this_item = -1;
-      for (int i=0; i<(int)ffeatures.size(); ++i) {
-
-        if (ffeatures[i]->is_enabled()) {
-          ImGui::PushID(++buttonIDs);
-          if (ImGui::SmallButton("deactivate")) ffeatures[i]->disable();
-          ImGui::PopID();
-          ImGui::SameLine();
-          ImGui::Text("%s", ffeatures[i]->to_string().c_str());
-        } else {
-          ImGui::PushID(++buttonIDs);
-          if (ImGui::SmallButton("activate")) ffeatures[i]->enable();
-          ImGui::PopID();
-          ImGui::SameLine();
-          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", ffeatures[i]->to_string().c_str());
-        }
-
-        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
-        ImGui::SameLine();
-        ImGui::PushID(++buttonIDs);
-        if (ImGui::SmallButton("remove")) del_this_item = i;
-        ImGui::PopID();
-
-        //ImGui::SameLine();
-        //ImGui::PushID(++buttonIDs);
-        //if (ImGui::SmallButton("edit", ImVec2(60,0))) del_this_item = 0;
-        //ImGui::PopID();
-      }
-      if (del_this_item > -1) {
-        std::cout << "Asked to delete flow feature " << del_this_item << std::endl;
-        ffeatures.erase(ffeatures.begin()+del_this_item);
+      if (ffeatures.size() + bfeatures.size() == 0) {
+        ImGui::Text("Add flow or boundry features (like vortex blobs and solid objects) here, then click RUN.");
       }
 
-      // list existing boundary features here
-      int del_this_bdry = -1;
-      for (int i=0; i<(int)bfeatures.size(); ++i) {
-
-        if (bfeatures[i]->is_enabled()) {
-          ImGui::PushID(++buttonIDs);
-          if (ImGui::SmallButton("deactivate")) bfeatures[i]->disable();
-          ImGui::PopID();
-          ImGui::SameLine();
-          ImGui::Text("%s", bfeatures[i]->to_string().c_str());
-        } else {
-          ImGui::PushID(++buttonIDs);
-          if (ImGui::SmallButton("activate")) bfeatures[i]->enable();
-          ImGui::PopID();
-          ImGui::SameLine();
-          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", bfeatures[i]->to_string().c_str());
-        }
-
-        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
-        ImGui::SameLine();
-        ImGui::PushID(++buttonIDs);
-        if (ImGui::SmallButton("remove")) del_this_bdry = i;
-        ImGui::PopID();
-      }
-      if (del_this_bdry > -1) {
-        std::cout << "Asked to delete boundary feature " << del_this_bdry << std::endl;
-        bfeatures.erase(bfeatures.begin()+del_this_bdry);
-      }
-
-      // list existing measurement features here
-      int del_this_measure = -1;
-      for (int i=0; i<(int)mfeatures.size(); ++i) {
-
-        if (mfeatures[i]->is_enabled()) {
-          ImGui::PushID(++buttonIDs);
-          if (ImGui::SmallButton("deactivate")) mfeatures[i]->disable();
-          ImGui::PopID();
-          ImGui::SameLine();
-          ImGui::Text("%s", mfeatures[i]->to_string().c_str());
-        } else {
-          ImGui::PushID(++buttonIDs);
-          if (ImGui::SmallButton("activate")) mfeatures[i]->enable();
-          ImGui::PopID();
-          ImGui::SameLine();
-          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", mfeatures[i]->to_string().c_str());
-        }
-
-        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
-        ImGui::SameLine();
-        ImGui::PushID(++buttonIDs);
-        if (ImGui::SmallButton("remove")) del_this_measure = i;
-        ImGui::PopID();
-      }
-      if (del_this_measure > -1) {
-        std::cout << "Asked to delete measurement feature " << del_this_measure << std::endl;
-        mfeatures.erase(mfeatures.begin()+del_this_measure);
-      }
-
-      if (ffeatures.size() + bfeatures.size() + mfeatures.size() == 0) {
-        ImGui::Text("none");
-      }
 
       ImGui::Spacing();
 
@@ -1330,18 +1236,109 @@ int main(int argc, char const *argv[]) {
         ImGui::EndPopup();
       }
 
+
+      ImGui::Spacing();
+      int buttonIDs = 10;
+
+      // list existing flow features here
+      int del_this_item = -1;
+      for (int i=0; i<(int)ffeatures.size(); ++i) {
+
+        ImGui::PushID(++buttonIDs);
+        ImGui::Checkbox("", ffeatures[i]->addr_enabled());
+        ImGui::PopID();
+        if (ffeatures[i]->is_enabled()) {
+          ImGui::SameLine();
+          ImGui::Text("%s", ffeatures[i]->to_string().c_str());
+        } else {
+          ImGui::SameLine();
+          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", ffeatures[i]->to_string().c_str());
+        }
+
+        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+        ImGui::SameLine();
+        ImGui::PushID(++buttonIDs);
+        if (ImGui::SmallButton("remove")) del_this_item = i;
+        ImGui::PopID();
+
+        //ImGui::SameLine();
+        //ImGui::PushID(++buttonIDs);
+        //if (ImGui::SmallButton("edit", ImVec2(60,0))) edit_this_item = i;
+        //ImGui::PopID();
+      }
+      if (del_this_item > -1) {
+        std::cout << "Asked to delete flow feature " << del_this_item << std::endl;
+        ffeatures.erase(ffeatures.begin()+del_this_item);
+      }
+
+      // list existing boundary features here
+      int del_this_bdry = -1;
+      for (int i=0; i<(int)bfeatures.size(); ++i) {
+
+        ImGui::PushID(++buttonIDs);
+        ImGui::Checkbox("", bfeatures[i]->addr_enabled());
+        ImGui::PopID();
+        if (bfeatures[i]->is_enabled()) {
+          ImGui::SameLine();
+          ImGui::Text("%s", bfeatures[i]->to_string().c_str());
+        } else {
+          ImGui::SameLine();
+          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", bfeatures[i]->to_string().c_str());
+        }
+
+        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+        ImGui::SameLine();
+        ImGui::PushID(++buttonIDs);
+        if (ImGui::SmallButton("remove")) del_this_bdry = i;
+        ImGui::PopID();
+      }
+      if (del_this_bdry > -1) {
+        std::cout << "Asked to delete boundary feature " << del_this_bdry << std::endl;
+        bfeatures.erase(bfeatures.begin()+del_this_bdry);
+      }
+
+      // list existing measurement features here
+      int del_this_measure = -1;
+      for (int i=0; i<(int)mfeatures.size(); ++i) {
+
+        ImGui::PushID(++buttonIDs);
+        ImGui::Checkbox("", mfeatures[i]->addr_enabled());
+        ImGui::PopID();
+        if (mfeatures[i]->is_enabled()) {
+          ImGui::SameLine();
+          ImGui::Text("%s", mfeatures[i]->to_string().c_str());
+        } else {
+          ImGui::SameLine();
+          ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", mfeatures[i]->to_string().c_str());
+        }
+
+        // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+        ImGui::SameLine();
+        ImGui::PushID(++buttonIDs);
+        if (ImGui::SmallButton("remove")) del_this_measure = i;
+        ImGui::PopID();
+      }
+      if (del_this_measure > -1) {
+        std::cout << "Asked to delete measurement feature " << del_this_measure << std::endl;
+        mfeatures.erase(mfeatures.begin()+del_this_measure);
+      }
+
+      //if (ffeatures.size() + bfeatures.size() + mfeatures.size() == 0) {
+      //  ImGui::Text("none");
+      //}
+
     } // end structure entry
 
 
     // Rendering parameters, under a header
     ImGui::Spacing();
-    if (ImGui::CollapsingHeader("Rendering parameters")) {
+    if (ImGui::CollapsingHeader("Rendering controls")) {
       ImGui::ColorEdit3("positive circulation", rparams.pos_circ_color);
       ImGui::ColorEdit3("negative circulation", rparams.neg_circ_color);
       ImGui::ColorEdit3("feature color",        rparams.default_color);
       ImGui::ColorEdit3("background color",     rparams.clear_color);
       //ImGui::Checkbox("show origin", &show_origin);
-      ImGui::SliderFloat("vorticity density", &(rparams.circ_density), 0.0001f, 1.0f, "%.4f", 4.0f);
+      ImGui::SliderFloat("particle brightness", &(rparams.circ_density), 0.0001f, 1.0f, "%.4f", 4.0f);
       ImGui::SliderFloat("particle scale", &(rparams.vorton_scale), 0.01f, 1.5f, "%.2f", 2.0f);
 
       if (ImGui::Button("Recenter")) {
@@ -1377,6 +1374,8 @@ int main(int argc, char const *argv[]) {
       // bool toggle for NNLS vs. Simplex
       bool use_simplex = sim.get_vrm_simplex();
       ImGui::Checkbox("VRM uses Simplex solver", &use_simplex);
+      ImGui::SameLine();
+      ShowHelpMarker("Use the proprietary Simplex solver for overdetermined systems. If unchecked, the Vorticity Redistribution Method uses a Non-Negative Least Squares solver from Eigen.");
       sim.set_vrm_simplex(use_simplex);
 #endif
 
@@ -1384,6 +1383,8 @@ int main(int argc, char const *argv[]) {
       // show the toggle for AMR
       bool use_amr = sim.get_amr();
       ImGui::Checkbox("Allow adaptive resolution", &use_amr);
+      ImGui::SameLine();
+      ShowHelpMarker("Particle sizes will adapt as required to maintain resolution during the diffusion calculation. If unchecked, all particles will stay the same size.");
       sim.set_amr(use_amr);
 
       ImGui::PushItemWidth(-270);
