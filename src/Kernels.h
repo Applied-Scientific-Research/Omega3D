@@ -1,11 +1,13 @@
 /*
  * Kernels.h - Non-class inner kernels for influence calculations
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
+
+#define USE_EXPONENTIAL_KERNEL
 
 #ifdef _WIN32
 #define __restrict__ __restrict
@@ -16,6 +18,159 @@
 #endif
 
 #include <cmath>
+
+//
+// core functions - Rosenhead-Moore
+//
+
+// this is always 7 flops
+template <class S>
+static inline S core_rm (const S distsq, const S sr, const S tr) {
+  const S r2 = distsq + sr*sr + tr*tr;
+#ifdef USE_VC
+  return Vc::reciprocal(r2*Vc::sqrt(r2));
+#else
+  return S(1.0) / (r2*std::sqrt(r2));
+#endif
+}
+
+// this is always 5 flops
+template <class S>
+static inline S core_rm (const S distsq, const S sr) {
+  const S r2 = distsq + sr*sr;
+#ifdef USE_VC
+  return Vc::reciprocal(r2*Vc::sqrt(r2));
+#else
+  return S(1.0) / (r2*std::sqrt(r2));
+#endif
+}
+
+// core functions - Rosenhead-Moore with gradients
+
+// this is always 9 flops
+template <class S>
+static inline void core_rm (const S distsq, const S sr, const S tr,
+                            S* const __restrict__ r3, S* const __restrict__ bbb) {
+  const S r2 = distsq + sr*sr + tr*tr;
+#ifdef USE_VC
+  *r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
+  *bbb = S(-3.0) * (*r3) * Vc::reciprocal(r2);
+#else
+  *r3 = S(1.0) / (r2*std::sqrt(r2));
+  *bbb = S(-3.0) * (*r3) / r2;
+#endif
+}
+
+// this is always 7 flops
+template <class S>
+static inline void core_rm (const S distsq, const S sr,
+                            S* const __restrict__ r3, S* const __restrict__ bbb) {
+  const S r2 = distsq + sr*sr;
+#ifdef USE_VC
+  *r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
+  *bbb = S(-3.0) * (*r3) * Vc::reciprocal(r2);
+#else
+  *r3 = S(1.0) / (r2*std::sqrt(r2));
+  *bbb = S(-3.0) * (*r3) / r2;
+#endif
+}
+
+// core functions - compact exponential
+
+// this probably averages out to 12 flops
+template <class S>
+static inline S core_exp (const S distsq, const S sr, const S tr) {
+  const S dist = std::sqrt(distsq);
+  const S ood3 = S(1.0) / (distsq * dist);
+  const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
+  const S reld3 = corefac / ood3;
+  if (reld3 > S(16.0)) {
+    return ood3;
+  } else if (reld3 < S(0.001)) {
+    return corefac;
+  } else {
+    return ood3 * (S(1.0) - std::exp(-reld3));
+  }
+}
+
+// this probably averages out to 9 flops
+template <class S>
+static inline S core_exp (const S distsq, const S sr) {
+  const S dist = std::sqrt(distsq);
+  const S ood3 = S(1.0) / (distsq * dist);
+  const S corefac = S(1.0) / std::pow(sr,3);
+  const S reld3 = corefac / ood3;
+  // 7 flops to here
+  if (reld3 > S(16.0)) {
+    return ood3;
+    // 1 flop (comparison)
+  } else if (reld3 < S(0.001)) {
+    return corefac;
+    // 2 flops
+  } else {
+    return ood3 * (S(1.0) - std::exp(-reld3));
+    // 3 flops
+  }
+}
+
+// core functions - compact exponential with gradients
+
+// call this one 14 flops average
+template <class S>
+static inline void core_exp (const S distsq, const S sr, const S tr,
+                             S* const __restrict__ r3, S* const __restrict__ bbb) {
+
+  const S dist = std::sqrt(distsq);
+  const S d3 = distsq * dist;
+  const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
+  const S reld3 = d3 * corefac;
+  // 9 flops to here
+  if (reld3 > S(16.0)) {
+    *r3 = S(1.0) / d3;
+    *bbb = S(-3.0) * d3 / distsq;
+    // this is 4 flops and is most likely
+  } else if (reld3 < S(0.001)) {
+    *r3 = corefac;
+    *bbb = S(-1.5) * dist * corefac * corefac;
+    // this is 5 flops
+  } else {
+    const S expreld3 = std::exp(-reld3);
+    *r3 = (S(1.0) - expreld3) / d3;
+    *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
+    // this is 9 flops
+  }
+}
+
+// call this one 11 flops average
+template <class S>
+static inline void core_exp (const S distsq, const S sr,
+                             S* const __restrict__ r3, S* const __restrict__ bbb) {
+
+  const S dist = std::sqrt(distsq);
+  const S d3 = distsq * dist;
+  const S corefac = S(1.0) / std::pow(sr,3);
+  const S reld3 = d3 * corefac;
+  // 6 flops to here
+  if (reld3 > S(16.0)) {
+    *r3 = S(1.0) / d3;
+    *bbb = S(-3.0) * d3 / distsq;
+    // this is 4 flops and is most likely
+  } else if (reld3 < S(0.001)) {
+    *r3 = corefac;
+    *bbb = S(-1.5) * dist * corefac * corefac;
+    // this is 5 flops
+  } else {
+    const S expreld3 = std::exp(-reld3);
+    *r3 = (S(1.0) - expreld3) / d3;
+    *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
+    // this is 9 flops
+  }
+}
+
+//
+// core functions - consider a Vatistas n=2 core here (see notes 2020-02-24 or Leishman p.588)
+//                  or the Wincklemans-Leonard core (see Ghoniem paper)
+//
 
 //
 // velocity influence functions
@@ -38,15 +193,14 @@ static inline void kernel_0v_0b (const S sx, const S sy, const S sz,
                                  const S tx, const S ty, const S tz,
                                  const S tr,
                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
-  // 30 flops
+  // 23+(7|12) flops
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
-#ifdef USE_VC
-  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#ifdef USE_EXPONENTIAL_KERNEL
+  const S r2 = core_exp<S>(dx*dx + dy*dy + dz*dz, sr, tr);
 #else
-  r2 = 1.0 / (r2*std::sqrt(r2));
+  const S r2 = core_rm<S>(dx*dx + dy*dy + dz*dz, sr, tr);
 #endif
   const S dxxw = dz*ssy - dy*ssz;
   const S dyxw = dx*ssz - dz*ssx;
@@ -64,15 +218,14 @@ static inline void kernel_0vs_0b (const S sx, const S sy, const S sz,
                                  const S tx, const S ty, const S tz,
                                  const S tr,
                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
-  // 36 flops
+  // 29+(7|12) flops
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
-#ifdef USE_VC
-  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#ifdef USE_EXPONENTIAL_KERNEL
+  const S r2 = core_exp<S>(dx*dx + dy*dy + dz*dz, sr, tr);
 #else
-  r2 = 1.0 / (r2*std::sqrt(r2));
+  const S r2 = core_rm<S>(dx*dx + dy*dy + dz*dz, sr, tr);
 #endif
   const S dxxw = dz*ssy - dy*ssz + dx*ss;
   const S dyxw = dx*ssz - dz*ssx + dy*ss;
@@ -89,15 +242,14 @@ static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
                                  const S ssx, const S ssy, const S ssz,
                                  const S tx, const S ty, const S tz,
                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
-  // 28 flops
+  // 23+(5|9) flops
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  S r2 = dx*dx + dy*dy + dz*dz + sr*sr;
-#ifdef USE_VC
-  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#ifdef USE_EXPONENTIAL_KERNEL
+  const S r2 = core_exp<S>(dx*dx + dy*dy + dz*dz, sr);
 #else
-  r2 = 1.0 / (r2*std::sqrt(r2));
+  const S r2 = core_rm<S>(dx*dx + dy*dy + dz*dz, sr);
 #endif
   const S dxxw = dz*ssy - dy*ssz;
   const S dyxw = dx*ssz - dz*ssx;
@@ -114,15 +266,14 @@ static inline void kernel_0vs_0p (const S sx, const S sy, const S sz,
                                   const S ssx, const S ssy, const S ssz, const S ss,
                                   const S tx, const S ty, const S tz,
                                   A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
-  // 34 flops
+  // 29+(5|9) flops
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  S r2 = dx*dx + dy*dy + dz*dz + sr*sr;
-#ifdef USE_VC
-  r2 = Vc::reciprocal(r2*Vc::sqrt(r2));
+#ifdef USE_EXPONENTIAL_KERNEL
+  const S r2 = core_exp<S>(dx*dx + dy*dy + dz*dz, sr);
 #else
-  r2 = 1.0 / (r2*std::sqrt(r2));
+  const S r2 = core_rm<S>(dx*dx + dy*dy + dz*dz, sr);
 #endif
   const S dxxw = dz*ssy - dy*ssz + dx*ss;
   const S dyxw = dx*ssz - dz*ssx + dy*ss;
@@ -139,22 +290,22 @@ static inline void kernel_0s_0p (const S sx, const S sy, const S sz,
                                  const S ss,
                                  const S tx, const S ty, const S tz,
                                  A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
-  // 19 flops
+  // 14+(5|9) flops
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  S r2 = dx*dx + dy*dy + dz*dz + sr*sr;
-#ifdef USE_VC
-  r2 = (S)ss * Vc::reciprocal(r2*Vc::sqrt(r2));
+#ifdef USE_EXPONENTIAL_KERNEL
+  const S r2 = ss * core_exp<S>(dx*dx + dy*dy + dz*dz, sr);
 #else
-  r2 = ss / (r2*std::sqrt(r2));
+  const S r2 = ss * core_rm<S>(dx*dx + dy*dy + dz*dz, sr);
 #endif
   *tu += r2 * dx;
   *tv += r2 * dy;
   *tw += r2 * dz;
 }
 
-// thick-cored particle on thick-cored point, with gradients - 65 flops total
+// thick-cored particle on thick-cored point, with gradients
+//   54+(9|14) flops total
 template <class S, class A>
 static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
                                   const S sr,
@@ -165,15 +316,15 @@ static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
                                   A* const __restrict__ tux, A* const __restrict__ tvx, A* const __restrict__ twx,
                                   A* const __restrict__ tuy, A* const __restrict__ tvy, A* const __restrict__ twy,
                                   A* const __restrict__ tuz, A* const __restrict__ tvz, A* const __restrict__ twz) {
-  // 30 flops
+  // 21 flops
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  const S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
-#ifdef USE_VC
-  const S r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
+  S r3, bbb;
+#ifdef USE_EXPONENTIAL_KERNEL
+  (void) core_exp<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
 #else
-  const S r3 = 1.0 / (r2*std::sqrt(r2));
+  (void) core_rm<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
 #endif
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
@@ -183,12 +334,6 @@ static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
   *tw += r3 * dzxw;
 
   // accumulate velocity gradients
-#ifdef USE_VC
-  //const S bbb = -3.f * r3 * Vc::reciprocal(r2);
-  const S bbb = S(-3.0) * r3 * Vc::reciprocal(r2);
-#else
-  const S bbb = -3.0 * r3 / r2;
-#endif
   // continuing with grads - this section is 33 flops
   dxxw *= bbb;
   dyxw *= bbb;
@@ -205,7 +350,7 @@ static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
 }
 
 // same, but for vortex+source strengths
-//   90 flops total
+//   79+(9|14) flops total
 template <class S, class A>
 static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
                                    const S sr,
@@ -220,11 +365,11 @@ static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  const S r2 = dx*dx + dy*dy + dz*dz + sr*sr + tr*tr;
-#ifdef USE_VC
-  const S r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
+  S r3, bbb;
+#ifdef USE_EXPONENTIAL_KERNEL
+  (void) core_exp<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
 #else
-  const S r3 = 1.0 / (r2*std::sqrt(r2));
+  (void) core_rm<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
 #endif
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
@@ -234,12 +379,6 @@ static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
   *tw += r3 * (dzxw + dz*ss);
 
   // accumulate velocity gradients
-#ifdef USE_VC
-  //const S bbb = -3.f * r3 * Vc::reciprocal(r2);
-  const S bbb = S(-3.0) * r3 * Vc::reciprocal(r2);
-#else
-  const S bbb = -3.0 * r3 / r2;
-#endif
   // continuing with grads - this section is 33 flops
   dxxw *= bbb;
   dyxw *= bbb;
@@ -270,7 +409,7 @@ static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
 }
 
 // thick-cored particle on singular point, with gradients
-//   63 flops total
+//   54+(7|11) flops total
 template <class S, class A>
 static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
                                   const S sr,
@@ -284,11 +423,11 @@ static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  const S r2 = dx*dx + dy*dy + dz*dz + sr*sr;
-#ifdef USE_VC
-  const S r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
+  S r3, bbb;
+#ifdef USE_EXPONENTIAL_KERNEL
+  (void) core_exp<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
 #else
-  const S r3 = 1.0 / (r2*std::sqrt(r2));
+  (void) core_rm<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
 #endif
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
@@ -298,12 +437,6 @@ static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
   *tw += r3 * dzxw;
 
   // accumulate velocity gradients
-#ifdef USE_VC
-  //const S bbb = -3.f * r3 * Vc::reciprocal(r2);
-  const S bbb = S(-3.0) * r3 * Vc::reciprocal(r2);
-#else
-  const S bbb = -3.0 * r3 / r2;
-#endif
   // continuing with grads - this section is 33 flops
   dxxw *= bbb;
   dyxw *= bbb;
@@ -320,7 +453,7 @@ static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
 }
 
 // same, but for vortex+source strengths
-//   88 flops total
+//   79+(7|11) flops total
 template <class S, class A>
 static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
                                    const S sr,
@@ -334,11 +467,11 @@ static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-  const S r2 = dx*dx + dy*dy + dz*dz + sr*sr;
-#ifdef USE_VC
-  const S r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
+  S r3, bbb;
+#ifdef USE_EXPONENTIAL_KERNEL
+  (void) core_exp<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
 #else
-  const S r3 = 1.0 / (r2*std::sqrt(r2));
+  (void) core_rm<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
 #endif
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
@@ -348,12 +481,6 @@ static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
   *tw += r3 * (dzxw + dz*ss);
 
   // accumulate velocity gradients
-#ifdef USE_VC
-  //const S bbb = -3.f * r3 * Vc::reciprocal(r2);
-  const S bbb = S(-3.0) * r3 * Vc::reciprocal(r2);
-#else
-  const S bbb = -3.0 * r3 / r2;
-#endif
   // continuing with grads - this section is 33 flops
   dxxw *= bbb;
   dyxw *= bbb;
@@ -388,7 +515,7 @@ static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
 // influence of 3d linear constant-strength *vortex* panel on target point
 //   ignoring the 1/4pi factor, which will be multiplied later
 // uses four singular integration points on the source side
-//   160 flops
+//   140+(20|36) flops
 //
 template <class S, class A>
 static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
@@ -403,21 +530,21 @@ static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
   const S stry = S(0.25) * ssy;
   const S strz = S(0.25) * ssz;
 
-  // first source point (37 flops)
+  // first source point (32+(5|9) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (28 flops)
+    // accumulate the influence (23+(5|9) flops)
     (void) kernel_0v_0p (sx, sy, sz, (S)0.0,
                         strx, stry, strz,
                         tx, ty, tz,
                         tu, tv, tw);
   }
 
-  // second source point (40)
+  // second source point (35+(5|9))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -428,7 +555,7 @@ static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
                         tu, tv, tw);
   }
 
-  // third source point (40)
+  // third source point (35+(5|9))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -439,7 +566,7 @@ static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
                         tu, tv, tw);
   }
 
-  // final source point (40)
+  // final source point (35+(5|9))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -452,7 +579,7 @@ static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
 }
 
 // same for vortex+source terms
-//   185 flops
+//   165+(20|36) flops
 template <class S, class A>
 static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -467,21 +594,21 @@ static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
   const S strz = S(0.25) * ssz;
   const S strs = S(0.25) * ss;
 
-  // first source point (43 flops)
+  // first source point (38+(5|9) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (34 flops)
+    // accumulate the influence (29+(5|9) flops)
     (void) kernel_0vs_0p (sx, sy, sz, (S)0.0,
                           strx, stry, strz, strs,
                           tx, ty, tz,
                           tu, tv, tw);
   }
 
-  // second source point (46)
+  // second source point (41+(5|9))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -492,7 +619,7 @@ static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
                           tu, tv, tw);
   }
 
-  // third source point (46)
+  // third source point (41+(5|9))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -503,7 +630,7 @@ static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
                           tu, tv, tw);
   }
 
-  // final source point (46)
+  // final source point (41+(5|9))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -516,7 +643,7 @@ static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
 }
 
 // same, but for source source terms only
-//   122 flops
+//   102+(20|36) flops
 template <class S, class A>
 static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
                                  const S sx1, const S sy1, const S sz1,
@@ -528,21 +655,21 @@ static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
   // scale the strength by 1/4, to account for the 4 calls below (1 flop)
   const S strs = S(0.25) * ss;
 
-  // first source point (28 flops)
+  // first source point (23+(5|9) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (19 flops)
+    // accumulate the influence (14+(5|9) flops)
     (void) kernel_0s_0p (sx, sy, sz, (S)0.0,
                          strs,
                          tx, ty, tz,
                          tu, tv, tw);
   }
 
-  // second source point (31)
+  // second source point (26+(5|9))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -553,7 +680,7 @@ static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
                          tu, tv, tw);
   }
 
-  // third source point (31)
+  // third source point (26+(5|9))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -564,7 +691,7 @@ static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
                          tu, tv, tw);
   }
 
-  // final source point (31)
+  // final source point (26+(5|9))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -581,7 +708,7 @@ static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
 // influence of 3d linear constant-strength *vortex* panel on thick-cored target vortex
 //   ignoring the 1/4pi factor, which will be multiplied later
 // uses four singular integration points on the source side
-//   168 flops
+//   140+(28|48) flops
 //
 template <class S, class A>
 static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
@@ -597,21 +724,21 @@ static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
   const S strz = S(0.25) * ssz;
   //const S targr = S(0.1) * tr;
 
-  // first source point (39 flops)
+  // first source point (32+(7|12) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (30 flops)
+    // accumulate the influence (23+(7|12) flops)
     (void) kernel_0v_0b (sx, sy, sz, (S)0.0,
                          strx, stry, strz,
                          tx, ty, tz, tr,
                          tu, tv, tw);
   }
 
-  // second source point (42)
+  // second source point (35+(7|12))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -622,7 +749,7 @@ static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
                          tu, tv, tw);
   }
 
-  // third source point (42)
+  // third source point (35+(7|12))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -633,7 +760,7 @@ static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
                          tu, tv, tw);
   }
 
-  // final source point (42)
+  // final source point (35+(7|12))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -646,7 +773,7 @@ static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
 }
 
 // same thing, but for vortex+source strengths
-//   193 flops
+//   165+(28|48) flops
 template <class S, class A>
 static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -662,21 +789,21 @@ static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
   const S strs = S(0.25) * ss;
   //const S targr = S(0.1) * tr;
 
-  // first source point (45 flops)
+  // first source point (38+(7|12) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (36 flops)
+    // accumulate the influence (29+(7|12) flops)
     (void) kernel_0vs_0b (sx, sy, sz, (S)0.0,
                           strx, stry, strz, strs,
                           tx, ty, tz, tr,
                           tu, tv, tw);
   }
 
-  // second source point (48)
+  // second source point (41+(7|12))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -687,7 +814,7 @@ static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
                           tu, tv, tw);
   }
 
-  // third source point (48)
+  // third source point (41+(7|12))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -698,7 +825,7 @@ static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
                           tu, tv, tw);
   }
 
-  // final source point (48)
+  // final source point (41+(7|12))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -715,7 +842,7 @@ static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
 // influence of 3d linear constant-strength *vortex* panel on thick-cored target vortex with gradients
 //   ignoring the 1/4pi factor, which will be multiplied later
 // uses four singular integration points on the source side
-//   308 flops
+//   264+(36|56) flops
 //
 template <class S, class A>
 static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
@@ -734,14 +861,14 @@ static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
   const S strz = S(0.25) * ssz;
   //const S targr = S(0.1) * tr;
 
-  // first source point (74 flops)
+  // first source point (63+(9|14) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (65 flops)
+    // accumulate the influence (54+(9|14) flops)
     (void) kernel_0v_0bg (sx, sy, sz, (S)0.0,
                           strx, stry, strz,
                           tx, ty, tz, tr,
@@ -749,7 +876,7 @@ static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
                           tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // second source point (77)
+  // second source point (66+(9|14))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -761,7 +888,7 @@ static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
                           tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // third source point (77)
+  // third source point (66+(9|14))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -773,7 +900,7 @@ static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
                           tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // final source point (77)
+  // final source point (66+(9|14))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -787,7 +914,7 @@ static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
 }
 
 // same thing for vortex+source strengths
-//   409 flops
+//   365+(36|56) flops
 template <class S, class A>
 static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
                                    const S sx1, const S sy1, const S sz1,
@@ -806,14 +933,14 @@ static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
   const S strs = S(0.25) * ss;
   //const S targr = S(0.1) * tr;
 
-  // first source point (99 flops)
+  // first source point (88+(9|14) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (90 flops)
+    // accumulate the influence (79+(9|14) flops)
     (void) kernel_0vs_0bg (sx, sy, sz, (S)0.0,
                            strx, stry, strz, strs,
                            tx, ty, tz, tr,
@@ -821,7 +948,7 @@ static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // second source point (102)
+  // second source point (91+(9|14))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -833,7 +960,7 @@ static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // third source point (102)
+  // third source point (91+(9|14))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -845,7 +972,7 @@ static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // final source point (102)
+  // final source point (91+(9|14))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -863,7 +990,7 @@ static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
 // influence of 3d linear constant-strength *vortex* panel on singular target point with gradients
 //   ignoring the 1/4pi factor, which will be multiplied later
 // uses four singular integration points on the source side
-//   300 flops
+//   264+(28|44) flops
 //
 template <class S, class A>
 static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
@@ -881,14 +1008,14 @@ static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
   const S stry = S(0.25) * ssy;
   const S strz = S(0.25) * ssz;
 
-  // first source point (72 flops)
+  // first source point (63+(7|11) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (63 flops)
+    // accumulate the influence (54+(7|11) flops)
     (void) kernel_0v_0pg (sx, sy, sz, (S)0.0,
                           strx, stry, strz,
                           tx, ty, tz,
@@ -896,7 +1023,7 @@ static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
                           tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // second source point (75)
+  // second source point (66+(7|11))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -908,7 +1035,7 @@ static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
                           tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // third source point (75)
+  // third source point (66+(7|11))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -920,7 +1047,7 @@ static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
                           tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // final source point (75)
+  // final source point (66+(7|11))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -934,7 +1061,7 @@ static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
 }
 
 // same thing for vortex+source strengths
-//   401 flops
+//   365+(28|44) flops
 template <class S, class A>
 static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                                    const S sx1, const S sy1, const S sz1,
@@ -952,14 +1079,14 @@ static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
   const S strz = S(0.25) * ssz;
   const S strs = S(0.25) * ss;
 
-  // first source point (97 flops)
+  // first source point (88+(7|11) flops)
   {
     // prepare the source points (9 flops)
     const S sx = (sx0 + sx1 + sx2) / S(3.0);
     const S sy = (sy0 + sy1 + sy2) / S(3.0);
     const S sz = (sz0 + sz1 + sz2) / S(3.0);
 
-    // accumulate the influence (88 flops)
+    // accumulate the influence (79+(7|11) flops)
     (void) kernel_0vs_0pg (sx, sy, sz, (S)0.0,
                            strx, stry, strz, strs,
                            tx, ty, tz,
@@ -967,7 +1094,7 @@ static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // second source point (100)
+  // second source point (91+(7|11))
   {
     const S sx = (S(4.0)*sx0 + sx1 + sx2) / S(6.0);
     const S sy = (S(4.0)*sy0 + sy1 + sy2) / S(6.0);
@@ -979,7 +1106,7 @@ static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // third source point (100)
+  // third source point (91+(7|11))
   {
     const S sx = (sx0 + S(4.0)*sx1 + sx2) / S(6.0);
     const S sy = (sy0 + S(4.0)*sy1 + sy2) / S(6.0);
@@ -991,7 +1118,7 @@ static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
   }
 
-  // final source point (100)
+  // final source point (91+(7|11))
   {
     const S sx = (sx0 + sx1 + S(4.0)*sx2) / S(6.0);
     const S sy = (sy0 + sy1 + S(4.0)*sy2) / S(6.0);
@@ -1063,7 +1190,11 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
                           tx, ty, tz,
                           tu, tv, tw);
 
+#ifdef USE_EXPONENTIAL_KERNEL
+    flops += 38;
+#else
     flops += 34;
+#endif
 
 #ifdef USE_VC
     flops *= 8;
@@ -1166,7 +1297,11 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                            tu, tv, tw,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
 
-    flops += 100;
+#ifdef USE_EXPONENTIAL_KERNEL
+    flops += 90;
+#else
+    flops += 88;
+#endif
 
 #ifdef USE_VC
     flops *= 8;
@@ -1271,7 +1406,11 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
                           tx, ty, tz,
                           tu, tv, tw);
 
+#ifdef USE_EXPONENTIAL_KERNEL
+    flops += 38;
+#else
     flops += 34;
+#endif
 
 #ifdef USE_VC
     flops *= 8;

@@ -241,7 +241,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tug[8][i] += accumwz;
 #endif // no Vc
     }
-    flops *= 12.0 + 63.0*(float)src.get_n();
+    flops *= 12.0 + 65.0*(float)src.get_n();
 
   } else {
 
@@ -281,7 +281,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tu[2][i] += accumw;
 #endif // no Vc
     }
-    flops *= 3.0 + 28.0*(float)src.get_n();
+    flops *= 3.0 + 32.0*(float)src.get_n();
   }
 
   //
@@ -380,7 +380,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tug[8][i] += accumwz;
 #endif // no Vc
     }
-    flops *= 12.0 + 65.0*(float)src.get_n();
+    flops *= 12.0 + 68.0*(float)src.get_n();
 
   } else {
 
@@ -422,7 +422,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tu[2][i] += accumw;
 #endif // no Vc
     }
-    flops *= 3.0 + 30.0*(float)src.get_n();
+    flops *= 3.0 + 35.0*(float)src.get_n();
   }
 
   //
@@ -1108,7 +1108,7 @@ void panels_affect_panels (Surfaces<S> const& src, Surfaces<S>& targ) {
   // run panels_affect_points instead
 
   // generate temporary colocation points as Points - is this inefficient?
-  std::vector<S> xysr = targ.represent_as_particles(0.0001, 0.0001);
+  std::vector<S> xysr = targ.represent_as_particles(0.001, 0.001);
   Points<float> temppts(xysr, active, lagrangian, nullptr);
 
   // run the calculation
