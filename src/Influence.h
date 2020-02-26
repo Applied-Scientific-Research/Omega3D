@@ -127,7 +127,6 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 #endif
 
 #ifdef USE_VC
-  // define vector types for Vc (still only S==A supported here)
   typedef Vc::Vector<S> StoreVec;
   typedef Vc::SimdArray<A, Vc::Vector<S>::size()> AccumVec;
 
@@ -166,7 +165,6 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       const StoreVec txv(tx[0][i]);
       const StoreVec tyv(tx[1][i]);
       const StoreVec tzv(tx[2][i]);
-      // care must be taken if S != A, because these vectors must have the same length
       AccumVec accumu(0.0);
       AccumVec accumv(0.0);
       AccumVec accumw(0.0);
@@ -258,8 +256,8 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       AccumVec accumw = 0.0;
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
         kernel_0v_0p<StoreVec,AccumVec>(
-                          sxv[j], syv[j], szv[j], srv[j],
-                          ssxv[j], ssyv[j], sszv[j],
+                          sxv.vector(j), syv.vector(j), szv.vector(j), srv.vector(j),
+                          ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                           txv, tyv, tzv,
                           &accumu, &accumv, &accumw);
       }
@@ -305,7 +303,6 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       const StoreVec tyv(tx[1][i]);
       const StoreVec tzv(tx[2][i]);
       const StoreVec trv(tr[i]);
-      // care must be taken if S != A, because these vectors must have the same length
       AccumVec accumu(0.0);
       AccumVec accumv(0.0);
       AccumVec accumw(0.0);
@@ -393,14 +390,13 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       const StoreVec tyv = tx[1][i];
       const StoreVec tzv = tx[2][i];
       const StoreVec trv = tr[i];
-      // care must be taken if S != A, because these vectors must have the same length
       AccumVec accumu = 0.0;
       AccumVec accumv = 0.0;
       AccumVec accumw = 0.0;
       for (size_t j=0; j<sxv.vectorsCount(); ++j) {
         kernel_0v_0b<StoreVec,AccumVec>(
-                         sxv[j], syv[j], szv[j], srv[j],
-                         ssxv[j], ssyv[j], sszv[j],
+                         sxv.vector(j), syv.vector(j), szv.vector(j), srv.vector(j),
+                         ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                          txv, tyv, tzv, trv,
                          &accumu, &accumv, &accumw);
       }
@@ -464,12 +460,15 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   typedef Vc::SimdArray<A, Vc::Vector<S>::size()> AccumVec;
 
   // prepare the source panels for vectorization - first the strengths
-  const Vc::Memory<StoreVec> ssxv = stdvec_to_vcvec<S>(ss[0], 0.0);
-  const Vc::Memory<StoreVec> ssyv = stdvec_to_vcvec<S>(ss[1], 0.0);
-  const Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
-  Vc::Memory<StoreVec> sssv = stdvec_to_vcvec<S>(sss, 0.0);
+  const Vc::Memory<StoreVec> sav  = stdvec_to_vcvec<S>(sa, 0.0);
+  Vc::Memory<StoreVec> ssxv = stdvec_to_vcvec<S>(ss[0], 0.0);
+  Vc::Memory<StoreVec> ssyv = stdvec_to_vcvec<S>(ss[1], 0.0);
+  Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
+  const Vc::Memory<StoreVec> sssv = stdvec_to_vcvec<S>(sss, 0.0);
   for (size_t j=0; j<src.get_npanels(); ++j) {
-    sssv[j] *= sa[j];
+    ssxv[j] /= sa[j];
+    ssyv[j] /= sa[j];
+    sszv[j] /= sa[j];
   }
   // then the triangle nodes
   //Vector<S> sx0, sy0, sz0, sx1, sy1, sz1, sx2, sy2, sz2;
@@ -551,15 +550,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              //kernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                    ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
-              //                    tx[0][i], tx[1][i], tx[2][i],
-              //                    &accumu, &accumv, &accumw,
-              //                    &accumux, &accumvx, &accumwx,
-              //                    &accumuy, &accumvy, &accumwy,
-              //                    &accumuz, &accumvz, &accumwz);
               flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -576,15 +566,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              //kernel_2v_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                   ss[0][j], ss[1][j], ss[2][j],
-              //                   tx[0][i], tx[1][i], tx[2][i],
-              //                   &accumu, &accumv, &accumw,
-              //                   &accumux, &accumvx, &accumwx,
-              //                   &accumuy, &accumvy, &accumwy,
-              //                   &accumuz, &accumvz, &accumwz);
               flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -634,22 +615,25 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
             for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
               // NOTE: .vectorAt(i) gets the vector at scalar position i
               //       .vector(i) gets the i'th vector!!!
-              kernel_2vs_0p<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+              flops += rkernel_2vs_0p<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
                                                sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
                                                sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
                                                ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                sssv.vector(j),
                                                txv, tyv, tzv,
+                                               sav.vector(j), 0, 3,
                                                &accumu, &accumv, &accumw);
             }
           } else {
             for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
-              kernel_2v_0p<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
-                                              sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
-                                              sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
-                                              ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
-                                              txv, tyv, tzv,
-                                              &accumu, &accumv, &accumw);
+              flops += rkernel_2vs_0p<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                               sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                               sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                               ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                               StoreVec(0.0),
+                                               txv, tyv, tzv,
+                                               sav.vector(j), 0, 3,
+                                               &accumu, &accumv, &accumw);
             }
           }
 
@@ -657,7 +641,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tu[1][i] += accumv.sum();
           tu[2][i] += accumw.sum();
         }
-        flops = (float)ntarg * (3.0 + (havess ? 185. : 160.)*(float)src.get_npanels());
+        flops += 3.0*(float)ntarg;
 
       #else  // no Vc
         #pragma omp parallel for
@@ -670,12 +654,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              //kernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
-              //                   tx[0][i], tx[1][i], tx[2][i],
-              //                   &accumu, &accumv, &accumw);
               flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -689,12 +667,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              //kernel_2v_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                  ss[0][j], ss[1][j], ss[2][j],
-              //                  tx[0][i], tx[1][i], tx[2][i],
-              //                  &accumu, &accumv, &accumw);
               flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -718,7 +690,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
   } else {
 
     // get the core radius
-    const Vector<S>&                            tr = targ.get_rad();
+    //const Vector<S>&                            tr = targ.get_rad();
 
     if (opttug) { // velocity-and-grads kernel -------------------------------------------------
       if (havess) {
@@ -736,7 +708,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
           const StoreVec tzv(tx[2][i]);
-          const StoreVec trv(tr[i]);
+          //const StoreVec trv(tr[i]);
           AccumVec accumu(0.0);
           AccumVec accumv(0.0);
           AccumVec accumw(0.0);
@@ -754,12 +726,13 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
             for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
               // NOTE: .vectorAt(i) gets the vector at scalar position i
               //       .vector(i) gets the i'th vector!!!
-              kernel_2vs_0bg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+              flops += rkernel_2vs_0pg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
                                                 sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
                                                 sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
                                                 ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                 sssv.vector(j),
-                                                txv, tyv, tzv, trv,
+                                                txv, tyv, tzv,
+                                                sav.vector(j), 0, 3,
                                                 &accumu, &accumv, &accumw,
                                                 &accumux, &accumvx, &accumwx,
                                                 &accumuy, &accumvy, &accumwy,
@@ -767,15 +740,17 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
             }
           } else {
             for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
-              kernel_2v_0bg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
-                                               sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
-                                               sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
-                                               ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
-                                               txv, tyv, tzv, trv,
-                                               &accumu, &accumv, &accumw,
-                                               &accumux, &accumvx, &accumwx,
-                                               &accumuy, &accumvy, &accumwy,
-                                               &accumuz, &accumvz, &accumwz);
+              flops += rkernel_2vs_0pg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                                sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                                sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                                ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                                StoreVec(0.0),
+                                                txv, tyv, tzv,
+                                                sav.vector(j), 0, 3,
+                                                &accumu, &accumv, &accumw,
+                                                &accumux, &accumvx, &accumwx,
+                                                &accumuy, &accumvy, &accumwy,
+                                                &accumuz, &accumvz, &accumwz);
             }
           }
 
@@ -792,7 +767,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tug[7][i] += accumvz.sum();
           tug[8][i] += accumwz.sum();
         }
-        flops = (float)ntarg * (12.0 + (havess ? 409. : 308.)*(float)src.get_npanels());
+        flops += 12.0*(float)ntarg;
 
       #else  // no Vc
         #pragma omp parallel for
@@ -814,15 +789,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              //kernel_2vs_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                    ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
-              //                    tx[0][i], tx[1][i], tx[2][i], tr[i],
-              //                    &accumu, &accumv, &accumw,
-              //                    &accumux, &accumvx, &accumwx,
-              //                    &accumuy, &accumvy, &accumwy,
-              //                    &accumuz, &accumvz, &accumwz);
               flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -839,15 +805,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              //kernel_2v_0bg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                   ss[0][j], ss[1][j], ss[2][j],
-              //                   tx[0][i], tx[1][i], tx[2][i], tr[i],
-              //                   &accumu, &accumv, &accumw,
-              //                   &accumux, &accumvx, &accumwx,
-              //                   &accumuy, &accumvy, &accumwy,
-              //                   &accumuz, &accumvz, &accumwz);
               flops += rkernel_2vs_0pg<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                    sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -890,7 +847,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
           const StoreVec tzv(tx[2][i]);
-          const StoreVec trv(tr[i]);
+          //const StoreVec trv(tr[i]);
           AccumVec accumu(0.0);
           AccumVec accumv(0.0);
           AccumVec accumw(0.0);
@@ -899,22 +856,25 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
             for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
               // NOTE: .vectorAt(i) gets the vector at scalar position i
               //       .vector(i) gets the i'th vector!!!
-              kernel_2vs_0b<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+              flops += rkernel_2vs_0p<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
                                                sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
                                                sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
                                                ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                sssv.vector(j),
-                                               txv, tyv, tzv, trv,
+                                               txv, tyv, tzv,
+                                               sav.vector(j), 0, 3,
                                                &accumu, &accumv, &accumw);
             }
           } else {
             for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
-              kernel_2v_0b<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
-                                              sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
-                                              sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
-                                              ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
-                                              txv, tyv, tzv, trv,
-                                              &accumu, &accumv, &accumw);
+              flops += rkernel_2vs_0p<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                               sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                               sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                               ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                               StoreVec(0.0),
+                                               txv, tyv, tzv,
+                                               sav.vector(j), 0, 3,
+                                               &accumu, &accumv, &accumw);
             }
           }
 
@@ -922,7 +882,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tu[1][i] += accumv.sum();
           tu[2][i] += accumw.sum();
         }
-        flops = (float)ntarg * (3.0 + (havess ? 193. : 168.)*(float)src.get_npanels());
+        flops += 3.0*(float)ntarg;
 
       #else  // no Vc
         #pragma omp parallel for
@@ -935,12 +895,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              //kernel_2vs_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                   ss[0][j], ss[1][j], ss[2][j], sss[j]*sa[j],
-              //                   tx[0][i], tx[1][i], tx[2][i], tr[i],
-              //                   &accumu, &accumv, &accumw);
               flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -954,12 +908,6 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
               const size_t jp0 = si[3*j];
               const size_t jp1 = si[3*j+1];
               const size_t jp2 = si[3*j+2];
-              //kernel_2v_0b<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
-              //                  sx[0][jp1], sx[1][jp1], sx[2][jp1],
-              //                  sx[0][jp2], sx[1][jp2], sx[2][jp2],
-              //                  ss[0][j], ss[1][j], ss[2][j],
-              //                  tx[0][i], tx[1][i], tx[2][i], tr[i],
-              //                  &accumu, &accumv, &accumw);
               flops += rkernel_2vs_0p<S,A>(sx[0][jp0], sx[1][jp0], sx[2][jp0],
                                   sx[0][jp1], sx[1][jp1], sx[2][jp1],
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
@@ -1036,6 +984,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
     const StoreVec tx2 = tx[0][ip2];
     const StoreVec ty2 = tx[1][ip2];
     const StoreVec tz2 = tx[2][ip2];
+    const StoreVec tav = ta[i];
 
     AccumVec accumu = 0.0;
     AccumVec accumv = 0.0;
@@ -1048,18 +997,20 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
     for (size_t j=0; j<sxv.vectorsCount(); ++j) {
       // NOTE: .vectorAt(i) gets the vector at scalar position i
       //       .vector(i) gets the i'th vector!!!
-      kernel_2v_0p<StoreVec,AccumVec>(tx0, ty0, tz0,
+      flops += rkernel_2vs_0p<StoreVec,AccumVec>(tx0, ty0, tz0,
                                       tx1, ty1, tz1,
                                       tx2, ty2, tz2,
-                                      ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                      ssxv.vector(j)/tav, ssyv.vector(j)/tav, sszv.vector(j)/tav,
+                                      StoreVec(0.0),
                                       sxv.vector(j), syv.vector(j), szv.vector(j),
+                                      tav, 0, 3,
                                       &accumu, &accumv, &accumw);
     }
     tu[0][i] -= accumu.sum();
     tu[1][i] -= accumv.sum();
     tu[2][i] -= accumw.sum();
   }
-  flops = (float)targ.get_npanels() * (3.0 + 160.0*(float)src.get_n());
+  flops += 3.0 * (float)targ.get_npanels();
 
 #else  // no Vc
   #pragma omp parallel for
@@ -1072,16 +1023,11 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
     const size_t ip2 = ti[3*i+2];
     for (size_t j=0; j<src.get_n(); ++j) {
       // note that this is the same kernel as panels_affect_points!
-      //kernel_2v_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
-      //                  tx[0][ip1], tx[1][ip1], tx[2][ip1],
-      //                  tx[0][ip2], tx[1][ip2], tx[2][ip2],
-      //                  ss[0][j], ss[1][j], ss[2][j],
-      //                  sx[0][j], sx[1][j], sx[2][j],
-      //                  &accumu, &accumv, &accumw);
       flops += rkernel_2vs_0p<S,A>(tx[0][ip0], tx[1][ip0], tx[2][ip0],
                                    tx[0][ip1], tx[1][ip1], tx[2][ip1],
                                    tx[0][ip2], tx[1][ip2], tx[2][ip2],
-                                   ss[0][j]/ta[i], ss[1][j]/ta[i], ss[2][j]/ta[i], S(0.0),
+                                   ss[0][j]/ta[i], ss[1][j]/ta[i], ss[2][j]/ta[i],
+                                   S(0.0),
                                    sx[0][j], sx[1][j], sx[2][j],
                                    ta[i], 0, 3,
                                    &accumu, &accumv, &accumw);

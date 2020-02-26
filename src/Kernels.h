@@ -80,10 +80,22 @@ static inline void core_rm (const S distsq, const S sr,
 // this probably averages out to 12 flops
 template <class S>
 static inline S core_exp (const S distsq, const S sr, const S tr) {
+#ifdef USE_VC
+  const S dist = Vc::sqrt(distsq);
+  const S ood3 = Vc::reciprocal(distsq * dist);
+  const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
+#else
   const S dist = std::sqrt(distsq);
   const S ood3 = S(1.0) / (distsq * dist);
   const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
+#endif
   const S reld3 = corefac / ood3;
+#ifdef USE_VC
+  S returnval = ood3;
+  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
+  returnval(reld3 < S(0.001)) = corefac;
+  return returnval;
+#else
   if (reld3 > S(16.0)) {
     return ood3;
   } else if (reld3 < S(0.001)) {
@@ -91,16 +103,30 @@ static inline S core_exp (const S distsq, const S sr, const S tr) {
   } else {
     return ood3 * (S(1.0) - std::exp(-reld3));
   }
+#endif
 }
 
 // this probably averages out to 9 flops
 template <class S>
 static inline S core_exp (const S distsq, const S sr) {
+#ifdef USE_VC
+  const S dist = Vc::sqrt(distsq);
+  const S ood3 = Vc::reciprocal(distsq * dist);
+  const S corefac = Vc::reciprocal(sr*sr*sr);
+#else
   const S dist = std::sqrt(distsq);
   const S ood3 = S(1.0) / (distsq * dist);
   const S corefac = S(1.0) / std::pow(sr,3);
+#endif
   const S reld3 = corefac / ood3;
   // 7 flops to here
+#ifdef USE_VC
+  S returnval = ood3;
+  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
+  returnval(reld3 < S(0.001)) = corefac;
+  //std::cout << std::endl << dist << std::endl << reld3 << std::endl << returnval << std::endl;
+  return returnval;
+#else
   if (reld3 > S(16.0)) {
     return ood3;
     // 1 flop (comparison)
@@ -111,6 +137,7 @@ static inline S core_exp (const S distsq, const S sr) {
     return ood3 * (S(1.0) - std::exp(-reld3));
     // 3 flops
   }
+#endif
 }
 
 // core functions - compact exponential with gradients
@@ -119,15 +146,31 @@ static inline S core_exp (const S distsq, const S sr) {
 template <class S>
 static inline void core_exp (const S distsq, const S sr, const S tr,
                              S* const __restrict__ r3, S* const __restrict__ bbb) {
-
+#ifdef USE_VC
+  const S dist = Vc::sqrt(distsq);
+  const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
+#else
   const S dist = std::sqrt(distsq);
-  const S d3 = distsq * dist;
   const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
+#endif
+  const S d3 = distsq * dist;
   const S reld3 = d3 * corefac;
   // 9 flops to here
+#ifdef USE_VC
+  S myr3, mybbb;
+  myr3(reld3 > S(16.0)) = Vc::reciprocal(d3);
+  mybbb(reld3 > S(16.0)) = S(-3.0) / (d3 * distsq);
+  const S expreld3 = Vc::exp(-reld3);
+  myr3(reld3 < S(16.0)) = (S(1.0) - expreld3) / d3;
+  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - myr3) / distsq;
+  myr3(reld3 < S(0.001)) = corefac;
+  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * corefac * corefac;
+  *r3 = myr3;
+  *bbb = mybbb;
+#else
   if (reld3 > S(16.0)) {
     *r3 = S(1.0) / d3;
-    *bbb = S(-3.0) * d3 / distsq;
+    *bbb = S(-3.0) / (d3 * distsq);
     // this is 4 flops and is most likely
   } else if (reld3 < S(0.001)) {
     *r3 = corefac;
@@ -139,21 +182,38 @@ static inline void core_exp (const S distsq, const S sr, const S tr,
     *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
     // this is 9 flops
   }
+#endif
 }
 
 // call this one 11 flops average
 template <class S>
 static inline void core_exp (const S distsq, const S sr,
                              S* const __restrict__ r3, S* const __restrict__ bbb) {
-
+#ifdef USE_VC
+  const S dist = Vc::sqrt(distsq);
+  const S corefac = Vc::reciprocal(sr*sr*sr);
+#else
   const S dist = std::sqrt(distsq);
-  const S d3 = distsq * dist;
   const S corefac = S(1.0) / std::pow(sr,3);
+#endif
+  const S d3 = distsq * dist;
   const S reld3 = d3 * corefac;
   // 6 flops to here
+#ifdef USE_VC
+  S myr3, mybbb;
+  myr3(reld3 > S(16.0)) = Vc::reciprocal(d3);
+  mybbb(reld3 > S(16.0)) = S(-3.0) / (d3 * distsq);
+  const S expreld3 = Vc::exp(-reld3);
+  myr3(reld3 < S(16.0)) = (S(1.0) - expreld3) / d3;
+  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - myr3) / distsq;
+  myr3(reld3 < S(0.001)) = corefac;
+  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * corefac * corefac;
+  *r3 = myr3;
+  *bbb = mybbb;
+#else
   if (reld3 > S(16.0)) {
     *r3 = S(1.0) / d3;
-    *bbb = S(-3.0) * d3 / distsq;
+    *bbb = S(-3.0) / (d3 * distsq);
     // this is 4 flops and is most likely
   } else if (reld3 < S(0.001)) {
     *r3 = corefac;
@@ -165,6 +225,7 @@ static inline void core_exp (const S distsq, const S sr,
     *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
     // this is 9 flops
   }
+#endif
 }
 
 //
@@ -1166,7 +1227,10 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
   flops += 9;
 #ifdef USE_VC
   const S trisize = Vc::sqrt(sa);
-  const S dist = Vc::sqrt(Vc::pow(tx-sx,2) + Vc::pow(ty-sy,2) + Vc::pow(tz-sz,2));
+  const S dx = tx-sx;
+  const S dy = ty-sy;
+  const S dz = tz-sz;
+  const S dist = Vc::sqrt(dx*dx + dy*dy + dz*dz);
 #else
   const S trisize = std::sqrt(sa);
   const S dist = std::sqrt(std::pow(tx-sx,2) + std::pow(ty-sy,2) + std::pow(tz-sz,2));
@@ -1184,8 +1248,7 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
 
     // run just one influence calculation
     // desingularize, but only by a little bit
-    //(void) kernel_0vs_0p (sx, sy, sz, S(0.25)*trisize,
-    (void) kernel_0vs_0p (sx, sy, sz, S(0.0),
+    (void) kernel_0vs_0p (sx, sy, sz, S(0.5)*trisize,
                           strx, stry, strz, strs,
                           tx, ty, tz,
                           tu, tv, tw);
@@ -1279,7 +1342,10 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
   flops += 9;
 #ifdef USE_VC
   const S trisize = Vc::sqrt(sa);
-  const S dist = Vc::sqrt(Vc::pow(tx-sx,2) + Vc::pow(ty-sy,2) + Vc::pow(tz-sz,2));
+  const S dx = tx-sx;
+  const S dy = ty-sy;
+  const S dz = tz-sz;
+  const S dist = Vc::sqrt(dx*dx + dy*dy + dz*dz);
 #else
   const S trisize = std::sqrt(sa);
   const S dist = std::sqrt(std::pow(tx-sx,2) + std::pow(ty-sy,2) + std::pow(tz-sz,2));
@@ -1288,10 +1354,14 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
 
   // recurse or solve?
   flops += 1;
+#ifdef USE_VC
+  if (Vc::all_of(dist > trisize*S(4.0)) or lev == maxlev) {
+#else
   if (dist > trisize*S(4.0) or lev == maxlev) {
+#endif
 
     // run just one influence calculation
-    (void) kernel_0vs_0pg (sx, sy, sz, S(0.0),
+    (void) kernel_0vs_0pg (sx, sy, sz, S(0.5)*trisize,
                            strx, stry, strz, strs,
                            tx, ty, tz,
                            tu, tv, tw,
@@ -1389,7 +1459,10 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
   flops += 18;
 #ifdef USE_VC
   const S trisize = Vc::sqrt(sa) + Vc::sqrt(ta);
-  const S dist = Vc::sqrt(Vc::pow(tx-sx,2) + Vc::pow(ty-sy,2) + Vc::pow(tz-sz,2));
+  const S dx = tx-sx;
+  const S dy = ty-sy;
+  const S dz = tz-sz;
+  const S dist = Vc::sqrt(dx*dx + dy*dy + dz*dz);
 #else
   const S trisize = std::sqrt(sa) + std::sqrt(ta);
   const S dist = std::sqrt(std::pow(tx-sx,2) + std::pow(ty-sy,2) + std::pow(tz-sz,2));
@@ -1398,10 +1471,14 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
 
   // recurse or solve?
   flops += 1;
+#ifdef USE_VC
+  if (Vc::all_of(dist > trisize*S(4.0)) or lev == maxlev) {
+#else
   if (dist > trisize*S(4.0) or lev == maxlev) {
+#endif
 
     // run just one influence calculation
-    (void) kernel_0vs_0p (sx, sy, sz, S(0.0),
+    (void) kernel_0vs_0p (sx, sy, sz, S(0.5)*trisize,
                           strx, stry, strz, strs,
                           tx, ty, tz,
                           tu, tv, tw);

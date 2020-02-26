@@ -226,7 +226,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
     for (size_t i=0; i<ntargvec; i++) {
 
       // fill a 4- or 8-wide vector with the target coordinates
-      StoreVec tx0, ty0, tz0, tx1, ty1, tz1, tx2, ty2, tz2;
+      StoreVec tx0, ty0, tz0, tx1, ty1, tz1, tx2, ty2, tz2, tav;
       for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
         const size_t idx = i*StoreVec::size() + ii;
         const Int tfirst  = ti[3*idx];
@@ -241,67 +241,75 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
         tx2[ii] = tx[0][tthird];
         ty2[ii] = tx[1][tthird];
         tz2[ii] = tx[2][tthird];
+        tav[ii] = ta[idx];
       }
-
-      // collocation point for panel i
-      const StoreVec txi = (tx0 + tx1 + tx2) / StoreVec(3.0);
-      const StoreVec tyi = (ty0 + ty1 + ty2) / StoreVec(3.0);
-      const StoreVec tzi = (tz0 + tz1 + tz2) / StoreVec(3.0);
 
       // influence of vortex panel j with unit circulation on center of panel i
       StoreVec resultu, resultv, resultw;
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
 
       // first, strength along panel-centric x1 vector
-      kernel_2v_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
+      flops += rkernel_2vs_2p<StoreVec,StoreVec>(sx0, sy0, sz0,
                                       sx1, sy1, sz1,
                                       sx2, sy2, sz2,
                                       StoreVec(sb1[0][j]), StoreVec(sb1[1][j]), StoreVec(sb1[2][j]),
-                                      txi, tyi, tzi,
+                                      StoreVec(0.0),
+                                      tx0, ty0, tz0,
+                                      tx1, ty1, tz1,
+                                      tx2, ty2, tz2,
+                                      StoreVec(sarea), tav, 0, 3,
                                       &resultu, &resultv, &resultw);
 
       // dot product with tangent vector, applying normalization here
       // spread the results from a vector register back to the primary array
       for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
         const size_t idx = i*StoreVec::size() + ii;
-        coeffs[jptr[0]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]) * sarea;
+        coeffs[jptr[0]++] = resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx];
 
         // recompute for other target vector
-        coeffs[jptr[0]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]) * sarea;
+        coeffs[jptr[0]++] = resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx];
 
         // recompute for normal
-        if (targ_has_src) coeffs[jptr[0]++] = (resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx]) * sarea;
+        if (targ_has_src) coeffs[jptr[0]++] = resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx];
       }
 
       // now, along x2 direction (another 168+20 flops)
       resultu = 0.0; resultv = 0.0; resultw = 0.0;
-      kernel_2v_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
+      flops += rkernel_2vs_2p<StoreVec,StoreVec>(sx0, sy0, sz0,
                                       sx1, sy1, sz1,
                                       sx2, sy2, sz2,
                                       StoreVec(sb2[0][j]), StoreVec(sb2[1][j]), StoreVec(sb2[2][j]),
-                                      txi, tyi, tzi,
+                                      StoreVec(0.0),
+                                      tx0, ty0, tz0,
+                                      tx1, ty1, tz1,
+                                      tx2, ty2, tz2,
+                                      StoreVec(sarea), tav, 0, 3,
                                       &resultu, &resultv, &resultw);
       for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
         const size_t idx = i*StoreVec::size() + ii;
-        coeffs[jptr[1]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]) * sarea;
-        coeffs[jptr[1]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]) * sarea;
-        if (targ_has_src) coeffs[jptr[1]++] = (resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx]) * sarea;
+        coeffs[jptr[1]++] = resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx];
+        coeffs[jptr[1]++] = resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx];
+        if (targ_has_src) coeffs[jptr[1]++] = resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx];
       }
 
       // finally the influence of a unit-strength source sheet
       if (src_has_src) {
         resultu = 0.0; resultv = 0.0; resultw = 0.0;
-        kernel_2s_0p<StoreVec,StoreVec>(sx0, sy0, sz0,
-                                        sx1, sy1, sz1,
-                                        sx2, sy2, sz2,
-                                        StoreVec(1.0),
-                                        txi, tyi, tzi,
-                                        &resultu, &resultv, &resultw);
+        flops += rkernel_2vs_2p<StoreVec,StoreVec>(sx0, sy0, sz0,
+                                      sx1, sy1, sz1,
+                                      sx2, sy2, sz2,
+                                      StoreVec(0.0), StoreVec(0.0), StoreVec(0.0),
+                                      StoreVec(1.0),
+                                      tx0, ty0, tz0,
+                                      tx1, ty1, tz1,
+                                      tx2, ty2, tz2,
+                                      StoreVec(sarea), tav, 0, 3,
+                                      &resultu, &resultv, &resultw);
         for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
           const size_t idx = i*StoreVec::size() + ii;
-          coeffs[jptr[2]++] = (resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx]) * sarea;
-          coeffs[jptr[2]++] = (resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx]) * sarea;
-          if (targ_has_src) coeffs[jptr[2]++] = (resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx]) * sarea;
+          coeffs[jptr[2]++] = resultu[ii]*tb1[0][idx] + resultv[ii]*tb1[1][idx] + resultw[ii]*tb1[2][idx];
+          coeffs[jptr[2]++] = resultu[ii]*tb2[0][idx] + resultv[ii]*tb2[1][idx] + resultw[ii]*tb2[2][idx];
+          if (targ_has_src) coeffs[jptr[2]++] = resultu[ii]*tn[0][idx] + resultv[ii]*tn[1][idx] + resultw[ii]*tn[2][idx];
         }
       }
     }
