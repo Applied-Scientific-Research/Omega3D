@@ -7,11 +7,11 @@
 
 #pragma once
 
-#define USE_EXPONENTIAL_KERNEL
-
 #ifdef _WIN32
 #define __restrict__ __restrict
 #endif
+
+#include "CoreFunc.h"
 
 #ifdef USE_VC
 #include <Vc/Vc>
@@ -19,219 +19,6 @@
 
 #include <cmath>
 
-//
-// core functions - Rosenhead-Moore
-//
-
-// this is always 7 flops
-template <class S>
-static inline S core_rm (const S distsq, const S sr, const S tr) {
-  const S r2 = distsq + sr*sr + tr*tr;
-#ifdef USE_VC
-  return Vc::reciprocal(r2*Vc::sqrt(r2));
-#else
-  return S(1.0) / (r2*std::sqrt(r2));
-#endif
-}
-
-// this is always 5 flops
-template <class S>
-static inline S core_rm (const S distsq, const S sr) {
-  const S r2 = distsq + sr*sr;
-#ifdef USE_VC
-  return Vc::reciprocal(r2*Vc::sqrt(r2));
-#else
-  return S(1.0) / (r2*std::sqrt(r2));
-#endif
-}
-
-// core functions - Rosenhead-Moore with gradients
-
-// this is always 9 flops
-template <class S>
-static inline void core_rm (const S distsq, const S sr, const S tr,
-                            S* const __restrict__ r3, S* const __restrict__ bbb) {
-  const S r2 = distsq + sr*sr + tr*tr;
-#ifdef USE_VC
-  *r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
-  *bbb = S(-3.0) * (*r3) * Vc::reciprocal(r2);
-#else
-  *r3 = S(1.0) / (r2*std::sqrt(r2));
-  *bbb = S(-3.0) * (*r3) / r2;
-#endif
-}
-
-// this is always 7 flops
-template <class S>
-static inline void core_rm (const S distsq, const S sr,
-                            S* const __restrict__ r3, S* const __restrict__ bbb) {
-  const S r2 = distsq + sr*sr;
-#ifdef USE_VC
-  *r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
-  *bbb = S(-3.0) * (*r3) * Vc::reciprocal(r2);
-#else
-  *r3 = S(1.0) / (r2*std::sqrt(r2));
-  *bbb = S(-3.0) * (*r3) / r2;
-#endif
-}
-
-// core functions - compact exponential
-
-// this probably averages out to 12 flops
-template <class S>
-static inline S core_exp (const S distsq, const S sr, const S tr) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S ood3 = Vc::reciprocal(distsq * dist);
-  const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S ood3 = S(1.0) / (distsq * dist);
-  const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
-#endif
-  const S reld3 = corefac / ood3;
-#ifdef USE_VC
-  S returnval = ood3;
-  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
-  returnval(reld3 < S(0.001)) = corefac;
-  return returnval;
-#else
-  if (reld3 > S(16.0)) {
-    return ood3;
-  } else if (reld3 < S(0.001)) {
-    return corefac;
-  } else {
-    return ood3 * (S(1.0) - std::exp(-reld3));
-  }
-#endif
-}
-
-// this probably averages out to 9 flops
-template <class S>
-static inline S core_exp (const S distsq, const S sr) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S ood3 = Vc::reciprocal(distsq * dist);
-  const S corefac = Vc::reciprocal(sr*sr*sr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S ood3 = S(1.0) / (distsq * dist);
-  const S corefac = S(1.0) / std::pow(sr,3);
-#endif
-  const S reld3 = corefac / ood3;
-  // 7 flops to here
-#ifdef USE_VC
-  S returnval = ood3;
-  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
-  returnval(reld3 < S(0.001)) = corefac;
-  //std::cout << std::endl << dist << std::endl << reld3 << std::endl << returnval << std::endl;
-  return returnval;
-#else
-  if (reld3 > S(16.0)) {
-    return ood3;
-    // 1 flop (comparison)
-  } else if (reld3 < S(0.001)) {
-    return corefac;
-    // 2 flops
-  } else {
-    return ood3 * (S(1.0) - std::exp(-reld3));
-    // 3 flops
-  }
-#endif
-}
-
-// core functions - compact exponential with gradients
-
-// call this one 14 flops average
-template <class S>
-static inline void core_exp (const S distsq, const S sr, const S tr,
-                             S* const __restrict__ r3, S* const __restrict__ bbb) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
-#endif
-  const S d3 = distsq * dist;
-  const S reld3 = d3 * corefac;
-  // 9 flops to here
-#ifdef USE_VC
-  S myr3, mybbb;
-  myr3(reld3 > S(16.0)) = Vc::reciprocal(d3);
-  mybbb(reld3 > S(16.0)) = S(-3.0) / (d3 * distsq);
-  const S expreld3 = Vc::exp(-reld3);
-  myr3(reld3 < S(16.0)) = (S(1.0) - expreld3) / d3;
-  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - myr3) / distsq;
-  myr3(reld3 < S(0.001)) = corefac;
-  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * corefac * corefac;
-  *r3 = myr3;
-  *bbb = mybbb;
-#else
-  if (reld3 > S(16.0)) {
-    *r3 = S(1.0) / d3;
-    *bbb = S(-3.0) / (d3 * distsq);
-    // this is 4 flops and is most likely
-  } else if (reld3 < S(0.001)) {
-    *r3 = corefac;
-    *bbb = S(-1.5) * dist * corefac * corefac;
-    // this is 5 flops
-  } else {
-    const S expreld3 = std::exp(-reld3);
-    *r3 = (S(1.0) - expreld3) / d3;
-    *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
-    // this is 9 flops
-  }
-#endif
-}
-
-// call this one 11 flops average
-template <class S>
-static inline void core_exp (const S distsq, const S sr,
-                             S* const __restrict__ r3, S* const __restrict__ bbb) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S corefac = Vc::reciprocal(sr*sr*sr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S corefac = S(1.0) / std::pow(sr,3);
-#endif
-  const S d3 = distsq * dist;
-  const S reld3 = d3 * corefac;
-  // 6 flops to here
-#ifdef USE_VC
-  S myr3, mybbb;
-  myr3(reld3 > S(16.0)) = Vc::reciprocal(d3);
-  mybbb(reld3 > S(16.0)) = S(-3.0) / (d3 * distsq);
-  const S expreld3 = Vc::exp(-reld3);
-  myr3(reld3 < S(16.0)) = (S(1.0) - expreld3) / d3;
-  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - myr3) / distsq;
-  myr3(reld3 < S(0.001)) = corefac;
-  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * corefac * corefac;
-  *r3 = myr3;
-  *bbb = mybbb;
-#else
-  if (reld3 > S(16.0)) {
-    *r3 = S(1.0) / d3;
-    *bbb = S(-3.0) / (d3 * distsq);
-    // this is 4 flops and is most likely
-  } else if (reld3 < S(0.001)) {
-    *r3 = corefac;
-    *bbb = S(-1.5) * dist * corefac * corefac;
-    // this is 5 flops
-  } else {
-    const S expreld3 = std::exp(-reld3);
-    *r3 = (S(1.0) - expreld3) / d3;
-    *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
-    // this is 9 flops
-  }
-#endif
-}
-
-//
-// core functions - consider a Vatistas n=2 core here (see notes 2020-02-24 or Leishman p.588)
-//                  or the Wincklemans-Leonard core (see Ghoniem paper)
-//
 
 //
 // velocity influence functions
@@ -258,11 +45,7 @@ static inline void kernel_0v_0b (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-#ifdef USE_EXPONENTIAL_KERNEL
-  const S r2 = core_exp<S>(dx*dx + dy*dy + dz*dz, sr, tr);
-#else
-  const S r2 = core_rm<S>(dx*dx + dy*dy + dz*dz, sr, tr);
-#endif
+  const S r2 = core_func<S>(dx*dx + dy*dy + dz*dz, sr, tr);
   const S dxxw = dz*ssy - dy*ssz;
   const S dyxw = dx*ssz - dz*ssx;
   const S dzxw = dy*ssx - dx*ssy;
@@ -283,11 +66,7 @@ static inline void kernel_0vs_0b (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-#ifdef USE_EXPONENTIAL_KERNEL
-  const S r2 = core_exp<S>(dx*dx + dy*dy + dz*dz, sr, tr);
-#else
-  const S r2 = core_rm<S>(dx*dx + dy*dy + dz*dz, sr, tr);
-#endif
+  const S r2 = core_func<S>(dx*dx + dy*dy + dz*dz, sr, tr);
   const S dxxw = dz*ssy - dy*ssz + dx*ss;
   const S dyxw = dx*ssz - dz*ssx + dy*ss;
   const S dzxw = dy*ssx - dx*ssy + dz*ss;
@@ -307,11 +86,7 @@ static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-#ifdef USE_EXPONENTIAL_KERNEL
-  const S r2 = core_exp<S>(dx*dx + dy*dy + dz*dz, sr);
-#else
-  const S r2 = core_rm<S>(dx*dx + dy*dy + dz*dz, sr);
-#endif
+  const S r2 = core_func<S>(dx*dx + dy*dy + dz*dz, sr);
   const S dxxw = dz*ssy - dy*ssz;
   const S dyxw = dx*ssz - dz*ssx;
   const S dzxw = dy*ssx - dx*ssy;
@@ -331,11 +106,7 @@ static inline void kernel_0vs_0p (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-#ifdef USE_EXPONENTIAL_KERNEL
-  const S r2 = core_exp<S>(dx*dx + dy*dy + dz*dz, sr);
-#else
-  const S r2 = core_rm<S>(dx*dx + dy*dy + dz*dz, sr);
-#endif
+  const S r2 = core_func<S>(dx*dx + dy*dy + dz*dz, sr);
   const S dxxw = dz*ssy - dy*ssz + dx*ss;
   const S dyxw = dx*ssz - dz*ssx + dy*ss;
   const S dzxw = dy*ssx - dx*ssy + dz*ss;
@@ -355,11 +126,7 @@ static inline void kernel_0s_0p (const S sx, const S sy, const S sz,
   const S dx = tx - sx;
   const S dy = ty - sy;
   const S dz = tz - sz;
-#ifdef USE_EXPONENTIAL_KERNEL
-  const S r2 = ss * core_exp<S>(dx*dx + dy*dy + dz*dz, sr);
-#else
-  const S r2 = ss * core_rm<S>(dx*dx + dy*dy + dz*dz, sr);
-#endif
+  const S r2 = ss * core_func<S>(dx*dx + dy*dy + dz*dz, sr);
   *tu += r2 * dx;
   *tv += r2 * dy;
   *tw += r2 * dz;
@@ -382,11 +149,7 @@ static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
   const S dy = ty - sy;
   const S dz = tz - sz;
   S r3, bbb;
-#ifdef USE_EXPONENTIAL_KERNEL
-  (void) core_exp<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
-#else
-  (void) core_rm<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
-#endif
+  (void) core_func<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
   S dzxw = dy*ssx - dx*ssy;
@@ -427,11 +190,7 @@ static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
   const S dy = ty - sy;
   const S dz = tz - sz;
   S r3, bbb;
-#ifdef USE_EXPONENTIAL_KERNEL
-  (void) core_exp<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
-#else
-  (void) core_rm<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
-#endif
+  (void) core_func<S>(dx*dx + dy*dy + dz*dz, sr, tr, &r3, &bbb);
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
   S dzxw = dy*ssx - dx*ssy;
@@ -485,11 +244,7 @@ static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
   const S dy = ty - sy;
   const S dz = tz - sz;
   S r3, bbb;
-#ifdef USE_EXPONENTIAL_KERNEL
-  (void) core_exp<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
-#else
-  (void) core_rm<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
-#endif
+  (void) core_func<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
   S dzxw = dy*ssx - dx*ssy;
@@ -529,11 +284,7 @@ static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
   const S dy = ty - sy;
   const S dz = tz - sz;
   S r3, bbb;
-#ifdef USE_EXPONENTIAL_KERNEL
-  (void) core_exp<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
-#else
-  (void) core_rm<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
-#endif
+  (void) core_func<S>(dx*dx + dy*dy + dz*dz, sr, &r3, &bbb);
   S dxxw = dz*ssy - dy*ssz;
   S dyxw = dx*ssz - dz*ssx;
   S dzxw = dy*ssx - dx*ssy;
@@ -1248,7 +999,8 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
 
     // run just one influence calculation
     // desingularize, but only by a little bit
-    (void) kernel_0vs_0p (sx, sy, sz, S(0.5)*trisize,
+    //(void) kernel_0vs_0p (sx, sy, sz, S(0.5)*trisize,
+    (void) kernel_0vs_0p (sx, sy, sz, S(0.0),
                           strx, stry, strz, strs,
                           tx, ty, tz,
                           tu, tv, tw);
@@ -1361,7 +1113,8 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
 #endif
 
     // run just one influence calculation
-    (void) kernel_0vs_0pg (sx, sy, sz, S(0.5)*trisize,
+    //(void) kernel_0vs_0pg (sx, sy, sz, S(0.5)*trisize,
+    (void) kernel_0vs_0pg (sx, sy, sz, S(0.0),
                            strx, stry, strz, strs,
                            tx, ty, tz,
                            tu, tv, tw,
@@ -1478,7 +1231,8 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
 #endif
 
     // run just one influence calculation
-    (void) kernel_0vs_0p (sx, sy, sz, S(0.5)*trisize,
+    //(void) kernel_0vs_0p (sx, sy, sz, S(0.5)*trisize,
+    (void) kernel_0vs_0p (sx, sy, sz, S(0.0),
                           strx, stry, strz, strs,
                           tx, ty, tz,
                           tu, tv, tw);
