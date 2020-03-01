@@ -269,14 +269,36 @@ static inline S core_func (const S distsq, const S sr) {
 #endif
 }
 
+// always 16 flops
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
+  const S r2 = sr*sr + tr*tr;
+  const S d2 = distsq + r2;
+  const S d2top = distsq + S(2.5)*r2;
+#ifdef USE_VC
+  const S dn5 = Vc::reciprocal(d2*d2*Vc::sqrt(d2));
+#else
+  const S dn5 = S(1.0) / (d2*d2*std::sqrt(d2));
+#endif
+  *r3 = d2top * dn5;
+  *bbb = S(2.0)*dn5 - S(5.0)*d2top*dn5/d2;
 }
 
+// always 14 flops
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
+  const S r2 = sr*sr;
+  const S d2 = distsq + r2;
+  const S d2top = distsq + S(2.5)*r2;
+#ifdef USE_VC
+  const S dn5 = Vc::reciprocal(d2*d2*Vc::sqrt(d2));
+#else
+  const S dn5 = S(1.0) / (d2*d2*std::sqrt(d2));
+#endif
+  *r3 = d2top * dn5;
+  *bbb = S(2.0)*dn5 - S(5.0)*d2top*dn5/d2;
 }
 #endif
 
