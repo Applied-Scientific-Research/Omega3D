@@ -59,7 +59,10 @@ and the batch program with
 ## To do
 Tasks to consider or implement:
 
-* Use subpaneling for both BEM matrix and panel-particle evaluations
+* Make the freestream a formula-entry system as well
+* Write a compute shader for both new core functions
+* Standardize the core function selection: put it in the GUI, update the moments for aVRM, update flops, use new shader
+* Update flops counts for all influence calcs, using whichever core function
 * Get compute shader evaluation to work when called within vtu-writing
 * Get BEM working for moving bodies
 * Allow general rectangles - use the ips to scale panel sizes
