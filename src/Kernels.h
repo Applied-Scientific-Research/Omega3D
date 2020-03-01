@@ -1005,10 +1005,14 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
                           tx, ty, tz,
                           tu, tv, tw);
 
+#ifdef USE_RM_KERNEL
+    flops += 34;
+#endif
 #ifdef USE_EXPONENTIAL_KERNEL
     flops += 38;
-#else
-    flops += 34;
+#endif
+#ifdef USE_WL_KERNEL
+    flops += 37;
 #endif
 
 #ifdef USE_VC
@@ -1120,10 +1124,14 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                            tu, tv, tw,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
 
+#ifdef USE_RM_KERNEL
+    flops += 88;
+#endif
 #ifdef USE_EXPONENTIAL_KERNEL
     flops += 90;
-#else
-    flops += 88;
+#endif
+#ifdef USE_WL_KERNEL
+    flops += 95;
 #endif
 
 #ifdef USE_VC
@@ -1237,10 +1245,14 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
                           tx, ty, tz,
                           tu, tv, tw);
 
+#ifdef USE_RM_KERNEL
+    flops += 34;
+#endif
 #ifdef USE_EXPONENTIAL_KERNEL
     flops += 38;
-#else
-    flops += 34;
+#endif
+#ifdef USE_WL_KERNEL
+    flops += 37;
 #endif
 
 #ifdef USE_VC
