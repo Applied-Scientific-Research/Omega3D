@@ -239,7 +239,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tug[8][i] += accumwz;
 #endif // no Vc
     }
-    flops *= 12.0 + 65.0*(float)src.get_n();
+    flops *= 12.0 + (float)flops_0v_0pg<S,A>() * (float)src.get_n();
 
   } else {
 
@@ -279,7 +279,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tu[2][i] += accumw;
 #endif // no Vc
     }
-    flops *= 3.0 + 32.0*(float)src.get_n();
+    flops *= 3.0 + (float)flops_0v_0p<S,A>() * (float)src.get_n();
   }
 
   //
@@ -377,7 +377,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tug[8][i] += accumwz;
 #endif // no Vc
     }
-    flops *= 12.0 + 68.0*(float)src.get_n();
+    flops *= 12.0 + (float)flops_0v_0bg<S,A>() * (float)src.get_n();
 
   } else {
 
@@ -418,7 +418,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
       tu[2][i] += accumw;
 #endif // no Vc
     }
-    flops *= 3.0 + 35.0*(float)src.get_n();
+    flops *= 3.0 + (float)flops_0v_0b<S,A>() * (float)src.get_n();
   }
 
   //

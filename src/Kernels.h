@@ -34,6 +34,7 @@
 //
 
 // thick-cored particle on thick-cored point, no gradients
+template <class S, class A> size_t flops_0v_0b () { return 23 + flops_tv_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0v_0b (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -55,6 +56,7 @@ static inline void kernel_0v_0b (const S sx, const S sy, const S sz,
 }
 
 // same, but vortex+source strength
+template <class S, class A> size_t flops_0vs_0b () { return 29 + flops_tv_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0vs_0b (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -76,6 +78,7 @@ static inline void kernel_0vs_0b (const S sx, const S sy, const S sz,
 }
 
 // thick-cored particle on singular point, no gradients
+template <class S, class A> size_t flops_0v_0p () { return 23 + flops_tp_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -96,6 +99,7 @@ static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
 }
 
 // same, but vortex+source strength
+template <class S, class A> size_t flops_0vs_0p () { return 29 + flops_tp_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0vs_0p (const S sx, const S sy, const S sz,
                                   const S sr,
@@ -116,6 +120,7 @@ static inline void kernel_0vs_0p (const S sx, const S sy, const S sz,
 }
 
 // same, but source strength only
+template <class S, class A> size_t flops_0s_0p () { return 14 + flops_tp_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0s_0p (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -134,6 +139,7 @@ static inline void kernel_0s_0p (const S sx, const S sy, const S sz,
 
 // thick-cored particle on thick-cored point, with gradients
 //   54+(9|14) flops total
+template <class S, class A> size_t flops_0v_0bg () { return 54 + flops_tv_grads<S>(); }
 template <class S, class A>
 static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
                                   const S sr,
@@ -175,6 +181,7 @@ static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
 
 // same, but for vortex+source strengths
 //   79+(9|14) flops total
+template <class S, class A> size_t flops_0vs_0bg () { return 79 + flops_tv_grads<S>(); }
 template <class S, class A>
 static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
                                    const S sr,
@@ -230,6 +237,7 @@ static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
 
 // thick-cored particle on singular point, with gradients
 //   54+(7|11) flops total
+template <class S, class A> size_t flops_0v_0pg () { return 54 + flops_tp_grads<S>(); }
 template <class S, class A>
 static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
                                   const S sr,
@@ -270,6 +278,7 @@ static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
 
 // same, but for vortex+source strengths
 //   79+(7|11) flops total
+template <class S, class A> size_t flops_0vs_0pg () { return 79 + flops_tp_grads<S>(); }
 template <class S, class A>
 static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
                                    const S sr,
@@ -329,6 +338,7 @@ static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
 // uses four singular integration points on the source side
 //   140+(20|36) flops
 //
+template <class S, class A> size_t flops_2v_0p () { return 48 + 4*flops_0v_0p<S,A>(); }
 template <class S, class A>
 static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
                                  const S sx1, const S sy1, const S sz1,
@@ -392,6 +402,7 @@ static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
 
 // same for vortex+source terms
 //   165+(20|36) flops
+template <class S, class A> size_t flops_2vs_0p () { return 49 + 4*flops_0vs_0p<S,A>(); }
 template <class S, class A>
 static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -456,6 +467,7 @@ static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
 
 // same, but for source source terms only
 //   102+(20|36) flops
+template <class S, class A> size_t flops_2s_0p () { return 46 + 4*flops_0s_0p<S,A>(); }
 template <class S, class A>
 static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
                                  const S sx1, const S sy1, const S sz1,
@@ -522,6 +534,7 @@ static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
 // uses four singular integration points on the source side
 //   140+(28|48) flops
 //
+template <class S, class A> size_t flops_2v_0b () { return 48 + 4*flops_0v_0b<S,A>(); }
 template <class S, class A>
 static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
                                  const S sx1, const S sy1, const S sz1,
@@ -586,6 +599,7 @@ static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
 
 // same thing, but for vortex+source strengths
 //   165+(28|48) flops
+template <class S, class A> size_t flops_2vs_0b () { return 49 + 4*flops_0vs_0b<S,A>(); }
 template <class S, class A>
 static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -656,6 +670,7 @@ static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
 // uses four singular integration points on the source side
 //   264+(36|56) flops
 //
+template <class S, class A> size_t flops_2v_0bg () { return 48 + 4*flops_0v_0bg<S,A>(); }
 template <class S, class A>
 static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -727,6 +742,7 @@ static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
 
 // same thing for vortex+source strengths
 //   365+(36|56) flops
+template <class S, class A> size_t flops_2vs_0bg () { return 49 + 4*flops_0vs_0bg<S,A>(); }
 template <class S, class A>
 static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
                                    const S sx1, const S sy1, const S sz1,
@@ -804,6 +820,7 @@ static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
 // uses four singular integration points on the source side
 //   264+(28|44) flops
 //
+template <class S, class A> size_t flops_2v_0pg () { return 48 + 4*flops_0v_0pg<S,A>(); }
 template <class S, class A>
 static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -874,6 +891,7 @@ static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
 
 // same thing for vortex+source strengths
 //   365+(28|44) flops
+template <class S, class A> size_t flops_2vs_0pg () { return 49 + 4*flops_0vs_0pg<S,A>(); }
 template <class S, class A>
 static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                                    const S sx1, const S sy1, const S sz1,

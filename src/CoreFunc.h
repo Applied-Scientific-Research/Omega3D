@@ -18,8 +18,8 @@
 #include <cmath>
 
 //#define USE_RM_KERNEL
-#define USE_EXPONENTIAL_KERNEL
-//#define USE_WL_KERNEL
+//#define USE_EXPONENTIAL_KERNEL
+#define USE_WL_KERNEL
 //#define USE_V2_KERNEL
 
 
@@ -28,7 +28,8 @@
 // core functions - Rosenhead-Moore
 //
 
-// this is always 7 flops
+template <class S> size_t flops_tv_nograds () { return 7; }
+
 template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
   const S r2 = distsq + sr*sr + tr*tr;
@@ -39,7 +40,8 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 #endif
 }
 
-// this is always 5 flops
+template <class S> size_t flops_tp_nograds () { return 5; }
+
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S r2 = distsq + sr*sr;
@@ -52,7 +54,8 @@ static inline S core_func (const S distsq, const S sr) {
 
 // core functions - Rosenhead-Moore with gradients
 
-// this is always 9 flops
+template <class S> size_t flops_tv_grads () { return 9; }
+
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -66,7 +69,8 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 #endif
 }
 
-// this is always 7 flops
+template <class S> size_t flops_tp_grads () { return 7; }
+
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -87,7 +91,8 @@ static inline void core_func (const S distsq, const S sr,
 // core functions - compact exponential
 //
 
-// this probably averages out to 12 flops
+template <class S> size_t flops_tv_nograds () { return 12; }
+
 template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
 #ifdef USE_VC
@@ -116,7 +121,8 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 #endif
 }
 
-// this probably averages out to 9 flops
+template <class S> size_t flops_tp_nograds () { return 9; }
+
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
 #ifdef USE_VC
@@ -152,7 +158,8 @@ static inline S core_func (const S distsq, const S sr) {
 
 // core functions - compact exponential with gradients
 
-// call this one 14 flops average
+template <class S> size_t flops_tv_grads () { return 14; }
+
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -195,7 +202,8 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 #endif
 }
 
-// call this one 11 flops average
+template <class S> size_t flops_tp_grads () { return 11; }
+
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -245,7 +253,8 @@ static inline void core_func (const S distsq, const S sr,
 // core functions - Winckelmans–Leonard
 //
 
-// this is always 10 flops
+template <class S> size_t flops_tv_nograds () { return 10; }
+
 template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
   const S r2 = sr*sr + tr*tr;
@@ -257,7 +266,8 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 #endif
 }
 
-// this is always 8 flops
+template <class S> size_t flops_tp_nograds () { return 8; }
+
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S r2 = sr*sr;
@@ -269,7 +279,8 @@ static inline S core_func (const S distsq, const S sr) {
 #endif
 }
 
-// always 16 flops
+template <class S> size_t flops_tv_grads () { return 16; }
+
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -285,7 +296,8 @@ static inline void core_func (const S distsq, const S sr, const S tr,
   *bbb = S(2.0)*dn5 - S(5.0)*d2top*dn5/d2;
 }
 
-// always 14 flops
+template <class S> size_t flops_tp_grads () { return 14; }
+
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
