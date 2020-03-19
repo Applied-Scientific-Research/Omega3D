@@ -242,6 +242,7 @@ int main(int argc, char const *argv[]) {
   io.IniFilename = ".omega3d.ini";
   std::vector<std::string> recent_json_files;
   std::vector<std::string> recent_geom_files;
+  //sim.set_status_file_name("status.dat");
 
   // Load Fonts
   // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
