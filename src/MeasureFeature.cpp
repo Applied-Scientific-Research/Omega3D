@@ -1,8 +1,8 @@
 /*
  * MeasureFeature.cpp - GUI-side descriptions of flow features
  *
- * (c)2018-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2018-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #include "MeasureFeature.h"
@@ -36,6 +36,7 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
   else if (ftype == "tracer blob") {      _flist.emplace_back(std::make_unique<TracerBlob>()); }
   else if (ftype == "tracer line") {      _flist.emplace_back(std::make_unique<TracerLine>()); }
   else if (ftype == "measurement line") { _flist.emplace_back(std::make_unique<MeasurementLine>()); }
+  else if (ftype == "measurement plane") { _flist.emplace_back(std::make_unique<Grid2dPoints>()); }
 
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
@@ -355,6 +356,85 @@ MeasurementLine::to_json() const {
   j["type"] = "measurement line";
   j["center"] = {m_x, m_y, m_z};
   j["end"] = {m_xf, m_yf, m_zf};
+  return j;
+}
+
+
+//
+// Create a 2D grid of static measurement points
+//
+std::vector<float>
+Grid2dPoints::init_particles(float _ips) const {
+
+  // create a new vector to pass on
+  std::vector<float> x;
+
+  if (not this->is_enabled()) return x;
+
+  // ignore _ips and use m_dx to define grid density
+
+  // calculate length of two axes
+  const float dist_s = std::sqrt( std::pow(m_xs, 2) + std::pow(m_ys, 2) + std::pow(m_zs, 2));
+  const float dist_t = std::sqrt( std::pow(m_xt, 2) + std::pow(m_yt, 2) + std::pow(m_zt, 2));
+
+  // loop over integer indices
+  for (float sp=0.5*m_ds/dist_s; sp<1.0+0.01*m_ds/dist_s; sp+=m_ds/dist_s) {
+    for (float tp=0.5*m_dt/dist_t; tp<1.0+0.01*m_dt/dist_t; tp+=m_dt/dist_t) {
+      // create a field point here
+      x.emplace_back(m_x + m_xs*sp + m_xt*tp);
+      x.emplace_back(m_y + m_ys*sp + m_yt*tp);
+      x.emplace_back(m_z + m_zs*sp + m_zt*tp);
+    }
+  }
+
+  return x;
+}
+
+std::vector<float>
+Grid2dPoints::step_particles(float _ips) const {
+  // does not emit
+  return std::vector<float>();
+}
+
+void
+Grid2dPoints::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+Grid2dPoints::to_string() const {
+  std::stringstream ss;
+  ss << "measurement plane at " << m_x << " " << m_y << " " << m_z << " with ds,dt " << m_ds << " " << m_dt;
+  return ss.str();
+}
+
+void
+Grid2dPoints::from_json(const nlohmann::json j) {
+  const std::vector<float> s = j["start"];
+  m_x = s[0];
+  m_y = s[1];
+  m_z = s[2];
+  const std::vector<float> e = j["axis1"];
+  m_xs = e[0];
+  m_ys = e[1];
+  m_zs = e[2];
+  const std::vector<float> f = j["axis2"];
+  m_xt = f[0];
+  m_yt = f[1];
+  m_zt = f[2];
+  const std::vector<float> d = j["dx"];
+  m_ds = d[0];
+  m_dt = d[1];
+}
+
+nlohmann::json
+Grid2dPoints::to_json() const {
+  nlohmann::json j;
+  j["type"] = "measurement plane";
+  j["start"] = {m_x, m_y, m_z};
+  j["axis1"] = {m_xs, m_ys, m_zs};
+  j["axis2"] = {m_xt, m_yt, m_zt};
+  j["dx"] = {m_ds, m_dt};
   return j;
 }
 

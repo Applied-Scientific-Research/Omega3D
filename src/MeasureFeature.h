@@ -195,6 +195,47 @@ protected:
 
 
 //
+// Concrete class for a 2D grid of measurement points
+//
+class Grid2dPoints : public MeasureFeature {
+public:
+  Grid2dPoints(float _x = -1.0,
+               float _y = -1.0,
+               float _z =  0.0,
+               float _xs = 2.0,
+               float _ys = 0.0,
+               float _zs = 0.0,
+               float _xt = 0.0,
+               float _yt = 2.0,
+               float _zt = 0.0,
+               float _ds = 0.1,
+               float _dt = 0.1)
+    : MeasureFeature(_x, _y, _z, false),
+      m_xs(_xs),
+      m_ys(_ys),
+      m_zs(_zs),
+      m_xt(_xt),
+      m_yt(_yt),
+      m_zt(_zt),
+      m_ds(_ds),
+      m_dt(_dt)
+    {}
+
+  void debug(std::ostream& os) const override;
+  std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
+  nlohmann::json to_json() const override;
+  std::vector<float> init_particles(float) const override;
+  std::vector<float> step_particles(float) const override;
+
+protected:
+  float m_xs, m_ys, m_zs;
+  float m_xt, m_yt, m_zt;
+  float m_ds, m_dt;
+};
+
+
+//
 // Parser for converting json object to new feature
 //
 void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>&, const nlohmann::json);

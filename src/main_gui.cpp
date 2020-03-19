@@ -1158,8 +1158,8 @@ int main(int argc, char const *argv[]) {
       if (ImGui::BeginPopupModal("New measurement structure"))
       {
         static int item = 0;
-        const char* items[] = { "single point/tracer", "streakline", "circle of tracers", "line of tracers", "measurement line" };
-        ImGui::Combo("type", &item, items, 5);
+        const char* items[] = { "single point/tracer", "streakline", "circle of tracers", "line of tracers", "measurement line", "2D grid" };
+        ImGui::Combo("type", &item, items, 6);
 
         static float xc[3] = {0.0f, 0.0f, 0.0f};
         static float xf[3] = {0.0f, 1.0f, 0.0f};
@@ -1225,6 +1225,25 @@ int main(int argc, char const *argv[]) {
                                1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(rparams.tracer_scale*sim.get_ips())));
             if (ImGui::Button("Add line of measurement points")) {
               mfeatures.emplace_back(std::make_unique<MeasurementLine>(xc[0], xc[1], xc[2], xf[0], xf[1], xf[2]));
+              std::cout << "Added " << (*mfeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            } break;
+          case 5: {
+            // a static, 2d measurement grid
+            static float xg[3] = {1.0f, 0.0f, 0.0f};
+            static float dx[2] = {0.1f, 0.1f};
+            ImGui::InputFloat3("corner", xc);
+            ImGui::InputFloat3("axis 1", xf);
+            ImGui::InputFloat3("axis 2", xg);
+            ImGui::InputFloat2("dx", dx);
+            ImGui::TextWrapped("This feature will add about %d field points",
+                               1+(int)(std::sqrt(xf[0]*xf[0]+xf[1]*xf[1]+xf[2]*xf[2])*
+                                       std::sqrt(xg[0]*xg[0]+xg[1]*xg[1]+xg[2]*xg[2])/
+                                       (dx[0]*dx[1])));
+            if (ImGui::Button("Add 2D grid of measurement points")) {
+              mfeatures.emplace_back(std::make_unique<Grid2dPoints>(xc[0], xc[1], xc[2], xf[0], xf[1], xf[2], xg[0], xg[1], xg[2], dx[0], dx[1]));
               std::cout << "Added " << (*mfeatures.back()) << std::endl;
               ImGui::CloseCurrentPopup();
             }
