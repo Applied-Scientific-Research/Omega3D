@@ -101,7 +101,9 @@ public:
     }
 
     // optional velgrads here
-    if (_m == lagrangian) {
+    if (_e != inert or _m != lagrangian) {
+      // i.e. all active particles get grads, as do all fixed field points
+      //      but lagrangian field points do not
       std::array<Vector<S>,Dimensions*Dimensions> new_ug;
       for (size_t d=0; d<Dimensions*Dimensions; ++d) {
         new_ug[d].resize(this->n);
