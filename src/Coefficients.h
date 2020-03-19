@@ -1,11 +1,13 @@
 /*
  * Coefficients.h - Non-class influence coefficients calculations
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
+
+#define RECURSIVE_LEVELS 3
 
 #include "Omega3D.h"
 #include "VectorHelper.h"
@@ -257,7 +259,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                       tx0, ty0, tz0,
                                       tx1, ty1, tz1,
                                       tx2, ty2, tz2,
-                                      StoreVec(sarea), tav, 0, 3,
+                                      StoreVec(sarea), tav, 0, RECURSIVE_LEVELS,
                                       &resultu, &resultv, &resultw);
 
       // dot product with tangent vector, applying normalization here
@@ -283,7 +285,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                       tx0, ty0, tz0,
                                       tx1, ty1, tz1,
                                       tx2, ty2, tz2,
-                                      StoreVec(sarea), tav, 0, 3,
+                                      StoreVec(sarea), tav, 0, RECURSIVE_LEVELS,
                                       &resultu, &resultv, &resultw);
       for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
         const size_t idx = i*StoreVec::size() + ii;
@@ -303,7 +305,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                       tx0, ty0, tz0,
                                       tx1, ty1, tz1,
                                       tx2, ty2, tz2,
-                                      StoreVec(sarea), tav, 0, 3,
+                                      StoreVec(sarea), tav, 0, RECURSIVE_LEVELS,
                                       &resultu, &resultv, &resultw);
         for (size_t ii=0; ii<StoreVec::size() && i*StoreVec::size()+ii<ntarg; ++ii) {
           const size_t idx = i*StoreVec::size() + ii;
@@ -345,7 +347,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                     tx[0][tfirst], tx[1][tfirst], tx[2][tfirst],
                                     tx[0][tsecond], tx[1][tsecond], tx[2][tsecond],
                                     tx[0][tthird], tx[1][tthird], tx[2][tthird],
-                                    sarea, ta[i], 0, 3,
+                                    sarea, ta[i], 0, RECURSIVE_LEVELS,
                                     &resultu, &resultv, &resultw);
 
       // dot product with tangent vector, applying normalization here
@@ -367,7 +369,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                     tx[0][tfirst], tx[1][tfirst], tx[2][tfirst],
                                     tx[0][tsecond], tx[1][tsecond], tx[2][tsecond],
                                     tx[0][tthird], tx[1][tthird], tx[2][tthird],
-                                    sarea, ta[i], 0, 3,
+                                    sarea, ta[i], 0, RECURSIVE_LEVELS,
                                     &resultu, &resultv, &resultw);
       coeffs[jptr[1]++] = resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i];
       coeffs[jptr[1]++] = resultu*tb2[0][i] + resultv*tb2[1][i] + resultw*tb2[2][i];
@@ -385,7 +387,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
                                       tx[0][tfirst], tx[1][tfirst], tx[2][tfirst],
                                       tx[0][tsecond], tx[1][tsecond], tx[2][tsecond],
                                       tx[0][tthird], tx[1][tthird], tx[2][tthird],
-                                      sarea, ta[i], 0, 3,
+                                      sarea, ta[i], 0, RECURSIVE_LEVELS,
                                       &resultu, &resultv, &resultw);
 
         coeffs[jptr[2]++] = resultu*tb1[0][i] + resultv*tb1[1][i] + resultw*tb1[2][i];

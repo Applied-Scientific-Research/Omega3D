@@ -1,11 +1,13 @@
 /*
  * Influence.h - Non-class influence calculations
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
+
+#define RECURSIVE_LEVELS 3
 
 #include "Omega3D.h"
 #include "VectorHelper.h"
@@ -523,13 +525,75 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
         std::cout << "    2v_0pg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
       }
 
+      // get the pointer from the optional
+      std::array<Vector<S>,9>& tug = *opttug;
+
       #ifdef USE_VC
-        assert(false && "Velocity gradient influence on points with Vc is unsupported!");
-        flops = (float)ntarg * (12.0 + (havess ? 401. : 300.)*(float)src.get_npanels());
+
+        #pragma omp parallel for
+        for (int32_t i=0; i<ntarg; ++i) {
+          const StoreVec txv(tx[0][i]);
+          const StoreVec tyv(tx[1][i]);
+          const StoreVec tzv(tx[2][i]);
+          AccumVec accumu(0.0);
+          AccumVec accumv(0.0);
+          AccumVec accumw(0.0);
+          AccumVec accumux(0.0);
+          AccumVec accumvx(0.0);
+          AccumVec accumwx(0.0);
+          AccumVec accumuy(0.0);
+          AccumVec accumvy(0.0);
+          AccumVec accumwy(0.0);
+          AccumVec accumuz(0.0);
+          AccumVec accumvz(0.0);
+          AccumVec accumwz(0.0);
+          if (havess) {
+            for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
+              // NOTE: .vectorAt(i) gets the vector at scalar position i
+              //       .vector(i) gets the i'th vector!!!
+              flops += rkernel_2vs_0pg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                   sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                   sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                   ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                   sssv.vector(j),
+                                   txv, tyv, tzv,
+                                   sav.vector(j), 0, RECURSIVE_LEVELS,
+                                   &accumu, &accumv, &accumw,
+                                   &accumux, &accumvx, &accumwx,
+                                   &accumuy, &accumvy, &accumwy,
+                                   &accumuz, &accumvz, &accumwz);
+            }
+          } else {
+            for (size_t j=0; j<sx0v.vectorsCount(); ++j) {
+              flops += rkernel_2vs_0pg<StoreVec,AccumVec>(sx0v.vector(j), sy0v.vector(j), sz0v.vector(j),
+                                   sx1v.vector(j), sy1v.vector(j), sz1v.vector(j),
+                                   sx2v.vector(j), sy2v.vector(j), sz2v.vector(j),
+                                   ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
+                                   StoreVec(0.0),
+                                   txv, tyv, tzv,
+                                   sav.vector(j), 0, RECURSIVE_LEVELS,
+                                   &accumu, &accumv, &accumw,
+                                   &accumux, &accumvx, &accumwx,
+                                   &accumuy, &accumvy, &accumwy,
+                                   &accumuz, &accumvz, &accumwz);
+            }
+          }
+          tu[0][i] += accumu.sum();
+          tu[1][i] += accumv.sum();
+          tu[2][i] += accumw.sum();
+          tug[0][i] += accumux.sum();
+          tug[1][i] += accumvx.sum();
+          tug[2][i] += accumwx.sum();
+          tug[3][i] += accumuy.sum();
+          tug[4][i] += accumvy.sum();
+          tug[5][i] += accumwy.sum();
+          tug[6][i] += accumuz.sum();
+          tug[7][i] += accumvz.sum();
+          tug[8][i] += accumwz.sum();
+          flops += 12.0;
+        }
 
       #else  // no Vc
-        // get the pointer from the optional
-        std::array<Vector<S>,9>& tug = *opttug;
 
         #pragma omp parallel for
         for (int32_t i=0; i<ntarg; ++i) {
@@ -555,7 +619,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                    ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], sss[j],
                                    tx[0][i], tx[1][i], tx[2][i],
-                                   sa[j], 0, 3,
+                                   sa[j], 0, RECURSIVE_LEVELS,
                                    &accumu, &accumv, &accumw,
                                    &accumux, &accumvx, &accumwx,
                                    &accumuy, &accumvy, &accumwy,
@@ -571,7 +635,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                    ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], S(0.0),
                                    tx[0][i], tx[1][i], tx[2][i],
-                                   sa[j], 0, 3,
+                                   sa[j], 0, RECURSIVE_LEVELS,
                                    &accumu, &accumv, &accumw,
                                    &accumux, &accumvx, &accumwx,
                                    &accumuy, &accumvy, &accumwy,
@@ -590,7 +654,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tug[6][i] += accumuz;
           tug[7][i] += accumvz;
           tug[8][i] += accumwz;
-          flops += 12;
+          flops += 12.0;
         }
       #endif // no Vc
 
@@ -621,7 +685,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                                ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                sssv.vector(j),
                                                txv, tyv, tzv,
-                                               sav.vector(j), 0, 3,
+                                               sav.vector(j), 0, RECURSIVE_LEVELS,
                                                &accumu, &accumv, &accumw);
             }
           } else {
@@ -632,7 +696,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                                ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                StoreVec(0.0),
                                                txv, tyv, tzv,
-                                               sav.vector(j), 0, 3,
+                                               sav.vector(j), 0, RECURSIVE_LEVELS,
                                                &accumu, &accumv, &accumw);
             }
           }
@@ -640,8 +704,8 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
           tu[0][i] += accumu.sum();
           tu[1][i] += accumv.sum();
           tu[2][i] += accumw.sum();
+          flops += 3.0;
         }
-        flops += 3.0*(float)ntarg;
 
       #else  // no Vc
         #pragma omp parallel for
@@ -659,7 +723,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                   ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], sss[j],
                                   tx[0][i], tx[1][i], tx[2][i],
-                                  sa[j], 0, 3,
+                                  sa[j], 0, RECURSIVE_LEVELS,
                                   &accumu, &accumv, &accumw);
             }
           } else {
@@ -672,14 +736,14 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                   ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], S(0.0),
                                   tx[0][i], tx[1][i], tx[2][i],
-                                  sa[j], 0, 3,
+                                  sa[j], 0, RECURSIVE_LEVELS,
                                   &accumu, &accumv, &accumw);
             }
           }
           tu[0][i] += accumu;
           tu[1][i] += accumv;
           tu[2][i] += accumw;
-          flops += 3;
+          flops += 3.0;
         }
       #endif // no Vc
     }
@@ -732,7 +796,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                                 ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                 sssv.vector(j),
                                                 txv, tyv, tzv,
-                                                sav.vector(j), 0, 3,
+                                                sav.vector(j), 0, RECURSIVE_LEVELS,
                                                 &accumu, &accumv, &accumw,
                                                 &accumux, &accumvx, &accumwx,
                                                 &accumuy, &accumvy, &accumwy,
@@ -746,7 +810,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                                 ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                 StoreVec(0.0),
                                                 txv, tyv, tzv,
-                                                sav.vector(j), 0, 3,
+                                                sav.vector(j), 0, RECURSIVE_LEVELS,
                                                 &accumu, &accumv, &accumw,
                                                 &accumux, &accumvx, &accumwx,
                                                 &accumuy, &accumvy, &accumwy,
@@ -794,7 +858,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                    ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], sss[j],
                                    tx[0][i], tx[1][i], tx[2][i],
-                                   sa[j], 0, 3,
+                                   sa[j], 0, RECURSIVE_LEVELS,
                                    &accumu, &accumv, &accumw,
                                    &accumux, &accumvx, &accumwx,
                                    &accumuy, &accumvy, &accumwy,
@@ -810,7 +874,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                    sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                    ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], S(0.0),
                                    tx[0][i], tx[1][i], tx[2][i],
-                                   sa[j], 0, 3,
+                                   sa[j], 0, RECURSIVE_LEVELS,
                                    &accumu, &accumv, &accumw,
                                    &accumux, &accumvx, &accumwx,
                                    &accumuy, &accumvy, &accumwy,
@@ -862,7 +926,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                                ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                sssv.vector(j),
                                                txv, tyv, tzv,
-                                               sav.vector(j), 0, 3,
+                                               sav.vector(j), 0, RECURSIVE_LEVELS,
                                                &accumu, &accumv, &accumw);
             }
           } else {
@@ -873,7 +937,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                                ssxv.vector(j), ssyv.vector(j), sszv.vector(j),
                                                StoreVec(0.0),
                                                txv, tyv, tzv,
-                                               sav.vector(j), 0, 3,
+                                               sav.vector(j), 0, RECURSIVE_LEVELS,
                                                &accumu, &accumv, &accumw);
             }
           }
@@ -900,7 +964,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                   ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], sss[j],
                                   tx[0][i], tx[1][i], tx[2][i],
-                                  sa[j], 0, 3,
+                                  sa[j], 0, RECURSIVE_LEVELS,
                                   &accumu, &accumv, &accumw);
             }
           } else {
@@ -913,7 +977,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ) {
                                   sx[0][jp2], sx[1][jp2], sx[2][jp2],
                                   ss[0][j]/sa[j], ss[1][j]/sa[j], ss[2][j]/sa[j], S(0.0),
                                   tx[0][i], tx[1][i], tx[2][i],
-                                  sa[j], 0, 3,
+                                  sa[j], 0, RECURSIVE_LEVELS,
                                   &accumu, &accumv, &accumw);
             }
           }
@@ -1003,7 +1067,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
                                       ssxv.vector(j)/tav, ssyv.vector(j)/tav, sszv.vector(j)/tav,
                                       StoreVec(0.0),
                                       sxv.vector(j), syv.vector(j), szv.vector(j),
-                                      tav, 0, 3,
+                                      tav, 0, RECURSIVE_LEVELS,
                                       &accumu, &accumv, &accumw);
     }
     tu[0][i] -= accumu.sum();
@@ -1029,7 +1093,7 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ) {
                                    ss[0][j]/ta[i], ss[1][j]/ta[i], ss[2][j]/ta[i],
                                    S(0.0),
                                    sx[0][j], sx[1][j], sx[2][j],
-                                   ta[i], 0, 3,
+                                   ta[i], 0, RECURSIVE_LEVELS,
                                    &accumu, &accumv, &accumw);
     }
     // we use it backwards, so the resulting velocities are negative
