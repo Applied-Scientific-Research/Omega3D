@@ -129,6 +129,7 @@ public:
   void step();
   void dump_stats_to_status();
   std::array<float,Dimensions> calculate_simple_forces();
+  std::array<float,Dimensions> calculate_total_impulse();
   bool is_initialized();
   void set_initialized();
   std::string check_initialization();

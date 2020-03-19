@@ -755,8 +755,8 @@ void Simulation::dump_stats_to_status() {
     for (size_t i=0; i<3; ++i) sf.append_value(tot_circ[i]);
 
     // now forces
-    //std::array<float,Dimensions> impulse = calculate_simple_forces();
-    //for (size_t i=0; i<Dimensions; ++i) sf.append_value(impulse[i]);
+    std::array<float,Dimensions> this_force = calculate_simple_forces();
+    for (size_t i=0; i<Dimensions; ++i) sf.append_value(this_force[i]);
 
     // write here
     sf.write_line();
@@ -769,7 +769,6 @@ Simulation::calculate_simple_forces() {
 
   static double last_time = 0.0;
   static std::array<float,Dimensions> last_impulse = {0.0};
-  std::array<float,Dimensions> this_impulse = {0.0};
 
   // reset the "last" values if time is zero
   if (time < 0.1*dt) {
@@ -777,16 +776,7 @@ Simulation::calculate_simple_forces() {
     last_impulse.fill(0.0);
   }
 
-  // calculate impulse from particles
-  for (auto &src : vort) {
-    std::array<float,Dimensions> this_imp = std::visit([=](auto& elem) { return elem.get_total_impulse(); }, src);
-    for (size_t i=0; i<Dimensions; ++i) this_impulse[i] += this_imp[i];
-  }
-  // then add up the impulse from bodies - DO WE NEED TO RE-SOLVE BEM FIRST?
-  for (auto &src : bdry) {
-    std::array<float,Dimensions> this_imp = std::visit([=](auto& elem) { return elem.get_total_impulse(); }, src);
-    for (size_t i=0; i<Dimensions; ++i) this_impulse[i] += this_imp[i];
-  }
+  std::array<float,Dimensions> this_impulse = calculate_total_impulse();
 
   // find the time derivative of the impulses
   std::array<float,Dimensions> forces;
@@ -797,6 +787,28 @@ Simulation::calculate_simple_forces() {
   for (size_t i=0; i<Dimensions; ++i) last_impulse[i] = this_impulse[i];
 
   return forces;
+}
+
+// Calculate total system impulse
+std::array<float,Dimensions>
+Simulation::calculate_total_impulse() {
+
+  std::array<float,Dimensions> impulse = {0.0};
+
+  // calculate impulse from particles
+  for (auto &src : vort) {
+    std::array<float,Dimensions> imp = std::visit([=](auto& elem) { return elem.get_total_impulse(); }, src);
+    for (size_t i=0; i<Dimensions; ++i) impulse[i] += imp[i];
+  }
+  // then add up the impulse from bodies - DO WE NEED TO RE-SOLVE BEM FIRST?
+  for (auto &src : bdry) {
+    std::array<float,Dimensions> imp = std::visit([=](auto& elem) { return elem.get_total_impulse(); }, src);
+    for (size_t i=0; i<Dimensions; ++i) impulse[i] += imp[i];
+  }
+
+  std::cout << "  total impulse " << impulse[0] << " " << impulse[1] << " " << impulse[2] << std::endl;
+
+  return impulse;
 }
 
 // set up some vortex particles
