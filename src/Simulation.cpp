@@ -678,7 +678,7 @@ void Simulation::step() {
 
       Points<float>& pts = std::get<Points<float>>(coll);
       //std::cout << "    check split for " << pts.get_n() << " particles" << std::endl;
-      std::cout << std::endl;
+      //std::cout << std::endl;
 
       // none of these are passed as const, because both may be extended with new particles
       std::array<Vector<float>,Dimensions>& x = pts.get_pos();

@@ -135,7 +135,7 @@ void Convection<S,A,I>::advect_1st(const double                         _time,
 
   // part C - convection here
 
-  std::cout << std::endl << "Convection step" << std::endl;
+  //std::cout << std::endl << "Convection step" << std::endl;
 
   // move every movable element
   for (auto &coll : _vort) {
