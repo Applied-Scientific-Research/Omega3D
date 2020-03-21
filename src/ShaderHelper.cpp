@@ -4,11 +4,12 @@
  * These methods are from https://solarianprogrammer.com/2013/05/13/opengl-101-drawing-primitives/
  * and https://github.com/sol-prog/OpenGL-101
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #include "ShaderHelper.h"
+#include "CoreFunc.h"
 
 #include <GLFW/glfw3.h>
 
@@ -40,9 +41,28 @@ const std::string panel_frag_shader_source =
 #include "shaders/flattriangle.frag"
 ;
 
+//
+// Select core function based on cpp defines in CoreFunc.h
+//
+#ifdef USE_RM_KERNEL
 const std::string ptpt_velgrad_shader_source =
-#include "shaders/ptptvelgrad.comp"
+#include "shaders/ptptvelgradrm.comp"
 ;
+#endif
+#ifdef USE_EXPONENTIAL_KERNEL
+const std::string ptpt_velgrad_shader_source =
+#include "shaders/ptptvelgradexp.comp"
+;
+#endif
+#ifdef USE_WL_KERNEL
+const std::string ptpt_velgrad_shader_source =
+#include "shaders/ptptvelgradwl.comp"
+;
+#endif
+#ifdef USE_V2_KERNEL
+#endif
+#ifdef USE_V3_KERNEL
+#endif
 
 
 // Compile a shader

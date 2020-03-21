@@ -61,9 +61,8 @@ Tasks to consider or implement:
 
 * Add GUI checkbox for saving the per-step status file
 * Add measure feature for 3D grid of values
-* Have measure features output vorticity in addition to velocity to vtu files
+* Add option to only compute vels on fldpts when a vtu file is written - saves time
 * Make the freestream a formula-entry system as well
-* Write a compute shader for both new core functions: W-L and Exponential
 * Standardize the core function selection: put it in the GUI, update the moments for aVRM, update flops, use new shader
 * Get compute shader evaluation to work when called within vtu-writing
 * Get BEM working for moving bodies
