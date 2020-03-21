@@ -24,39 +24,43 @@ void main() {
    vec4 newv2 = vec4(0.f);
    vec4 newv3 = vec4(0.f);
    for (uint stile=isrc; stile<nsrc; stile+=uint(gl_WorkGroupSize.x)) {
-       uint sidx = stile + uint(gl_LocalInvocationIndex);
-       tmppos[gl_LocalInvocationIndex] = sx[sidx];
-       tmpstr[gl_LocalInvocationIndex] = ss[sidx];
-       groupMemoryBarrier();
-       barrier();
-       for (uint i=0; i<gl_WorkGroupSize.x && stile+i<nsrc; ++i) {
-           vec3 str = tmpstr[i].xyz;
-           vec3 diff = targpos.xyz - tmppos[i].xyz;
-           float r2 = diff.x*diff.x + diff.y*diff.y + diff.z*diff.z + tmppos[i].w*tmppos[i].w + targpos.w*targpos.w;
-           float r3 = 1.f / (r2*sqrt(r2));
-           float dxxw = diff.z*str.y - diff.y*str.z;
-           float dyxw = diff.x*str.z - diff.z*str.x;
-           float dzxw = diff.y*str.x - diff.x*str.y;
-           newv1.x += r3 * dxxw;
-           newv1.y += r3 * dyxw;
-           newv1.z += r3 * dzxw;
-           // now the vel grads
-           float bbb = -3.f * r3 / r2;
-           dxxw *= bbb;
-           dyxw *= bbb;
-           dzxw *= bbb;
-           newv1.w += diff.x*dxxw;
-           newv2.x += diff.x*dyxw + str.z*r3;
-           newv2.y += diff.x*dzxw - str.y*r3;
-           newv2.z += diff.y*dxxw - str.z*r3;
-           newv2.w += diff.y*dyxw;
-           newv3.x += diff.y*dzxw + str.x*r3;
-           newv3.y += diff.z*dxxw + str.y*r3;
-           newv3.z += diff.z*dyxw - str.x*r3;
-           newv3.w += diff.z*dzxw;
-       }
-       groupMemoryBarrier();
-       barrier();
+      uint sidx = stile + uint(gl_LocalInvocationIndex);
+      tmppos[gl_LocalInvocationIndex] = sx[sidx];
+      tmpstr[gl_LocalInvocationIndex] = ss[sidx];
+      groupMemoryBarrier();
+      barrier();
+      // each inner loop interation is 65 flops
+      for (uint i=0; i<gl_WorkGroupSize.x && stile+i<nsrc; ++i) {
+         // prepare the main vars (3 flops)
+         vec3 str = tmpstr[i].xyz;
+         vec3 diff = targpos.xyz - tmppos[i].xyz;
+         // work on the core function (15 flops here)
+         float r2 = diff.x*diff.x + diff.y*diff.y + diff.z*diff.z + tmppos[i].w*tmppos[i].w + targpos.w*targpos.w;
+         float r3 = 1.f / (r2*sqrt(r2));
+         float bbb = -3.f * r3 / r2;
+         // find the velocities (15 flops here)
+         float dxxw = diff.z*str.y - diff.y*str.z;
+         float dyxw = diff.x*str.z - diff.z*str.x;
+         float dzxw = diff.y*str.x - diff.x*str.y;
+         newv1.x += r3 * dxxw;
+         newv1.y += r3 * dyxw;
+         newv1.z += r3 * dzxw;
+         // now the vel grads (33 flops here)
+         dxxw *= bbb;
+         dyxw *= bbb;
+         dzxw *= bbb;
+         newv1.w += diff.x*dxxw;
+         newv2.x += diff.x*dyxw + str.z*r3;
+         newv2.y += diff.x*dzxw - str.y*r3;
+         newv2.z += diff.y*dxxw - str.z*r3;
+         newv2.w += diff.y*dyxw;
+         newv3.x += diff.y*dzxw + str.x*r3;
+         newv3.y += diff.z*dxxw + str.y*r3;
+         newv3.z += diff.z*dyxw - str.x*r3;
+         newv3.w += diff.z*dzxw;
+      }
+      groupMemoryBarrier();
+      barrier();
    }
    // scale vels by 1/4pi later
    t1[tidx] = newv1;
