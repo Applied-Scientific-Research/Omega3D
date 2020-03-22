@@ -1,0 +1,18 @@
+R"(
+#version 430
+layout(local_size_x=128) in;
+
+layout(location = 0) uniform uint itarg;
+layout(location = 1) uniform uint ntarg;
+layout(std430, binding=1) restrict buffer _t1 { vec4 t1[]; };
+layout(std430, binding=2) restrict buffer _t2 { vec4 t2[]; };
+layout(std430, binding=3) restrict buffer _t3 { vec4 t3[]; };
+
+void main() {
+   uint tidx = itarg + uint(gl_GlobalInvocationID);
+   // set vels and vel grads to the input value
+   t1[tidx] = vec4(0.f);
+   t2[tidx] = vec4(0.f);
+   t3[tidx] = vec4(0.f);
+}
+)"
