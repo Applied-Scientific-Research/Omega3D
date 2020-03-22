@@ -120,7 +120,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
-    float flops = (float)targ.get_n() * (12.0 + 63.0*(float)src.get_n());
+    float flops = (float)targ.get_n() * (12.0 + (float)flops_0v_0bg<S,A>()*(float)src.get_n());
     const float gflops = 1.e-9 * flops / (float)elapsed_seconds.count();
     printf("    ptptvelgrad shader: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
 
