@@ -380,43 +380,58 @@ void Simulation::computeGL() {
 
   if (cgl->cstate.load() == computing) {
     // for now, sliver (block) only over targets
-    //static GLuint targ_offset = 0;
-    //GLuint targ_count = cgl->ntarg;
+    static GLuint sliver_index = 0;
 
-    // calculate work group count
-    GLuint total_targ_grps = ((GLuint)cgl->ntarg + 128 - 1) / 128;
-    //std::cout << "  total_targ_grps is " << total_targ_grps << std::endl;
+    if (sliver_index == 0) std::cout << "    running sliver." << std::flush;
+    else std::cout << "." << std::flush;
 
     // estimate total work and number of slivers (2 TFlop/s and 60 fps)
     float total_work = 1.0 + (float)cgl->ntarg * (float)cgl->nsrc * (float)flops_0v_0bg<float,float>();
     //GLuint num_slivers = 1 + (GLuint)(total_work / (150.e+9/30.0));
     GLuint num_slivers = 1 + (GLuint)(total_work / (2.e+12/30.0));
     //GLuint num_slivers = 3;
-    GLuint groups_per_sliver = (total_targ_grps + num_slivers - 1) / num_slivers;
 
+    // when slivering over targets...
+    // calculate work group count
+    GLuint total_targ_grps = ((GLuint)cgl->ntarg + 128 - 1) / 128;
+    //std::cout << "  total_targ_grps is " << total_targ_grps << std::endl;
+    //GLuint groups_per_sliver = (total_targ_grps + num_slivers - 1) / num_slivers;
     // find offset and count for this sliver
-    static GLuint sliver_index = 0;
-    GLuint group_offset = sliver_index*groups_per_sliver;
-    GLuint targ_offset = 128*group_offset;
-    GLuint group_count = std::min(groups_per_sliver, total_targ_grps-group_offset);
-    GLuint targ_count = std::min(128*group_count, cgl->ntarg-targ_offset);
-
-    if (sliver_index == 0) std::cout << "    running sliver." << std::flush;
-    else std::cout << "." << std::flush;
-
+    //GLuint group_offset = sliver_index*groups_per_sliver;
+    //GLuint targ_offset = 128*group_offset;
+    //GLuint group_count = std::min(groups_per_sliver, total_targ_grps-group_offset);
+    //GLuint targ_count = std::min(128*group_count, cgl->ntarg-targ_offset);
     //std::cout << "    sliver of " << group_count << " target groups offset by " << group_offset << std::endl << std::flush;
     //std::cout << "           or " << cgl->nsrc << " sources on " << targ_count << " targets" << std::endl << std::flush;
+
+    // when slivering over sources...
+    GLuint total_src_grps = ((GLuint)cgl->nsrc + 128 - 1) / 128;
+    GLuint groups_per_sliver = (total_src_grps + num_slivers - 1) / num_slivers;
+    // find offset and count for this sliver
+    GLuint group_offset = sliver_index*groups_per_sliver;
+    GLuint src_offset = 128*group_offset;
+    GLuint group_count = std::min(groups_per_sliver, total_src_grps-group_offset);
+    GLuint src_count = std::min(128*group_count, cgl->nsrc-src_offset);
 
     // set up the compute shader program
     glBindVertexArray(cgl->vao);
     glUseProgram(cgl->spo[0]);
 
-    // set compute sliver
-    glUniform1ui(cgl->target_offset_attr, (const GLuint)targ_offset);
-    glUniform1ui(cgl->target_count_attr,  (const GLuint)targ_count);
+    // sliver over targets, each target integrates over all sources
+    //glUniform1ui(cgl->source_offset_attr, (const GLuint)0);
+    //glUniform1ui(cgl->source_count_attr,  (const GLuint)cgl->nsrc);
+    //glUniform1ui(cgl->target_offset_attr, (const GLuint)targ_offset);
+    //glUniform1ui(cgl->target_count_attr,  (const GLuint)targ_count);
+
+    // sliver over sources, every target adds some influence
+    glUniform1ui(cgl->source_offset_attr, (const GLuint)src_offset);
+    glUniform1ui(cgl->source_count_attr,  (const GLuint)src_count);
+    glUniform1ui(cgl->target_offset_attr, (const GLuint)0);
+    glUniform1ui(cgl->target_count_attr,  (const GLuint)cgl->ntarg);
+    //std::cout << "    sliver of sources " << src_offset << " " << src_count << " on targets " << 0 << " " << cgl->ntarg << std::endl << std::flush;
 
     // do the work
-    glDispatchCompute( group_count, 1, 1 );
+    glDispatchCompute( total_targ_grps, 1, 1 );
     glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
     //glFinish();	// do we need this? probably not
     glBindVertexArray(0);

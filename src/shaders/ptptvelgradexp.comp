@@ -23,14 +23,14 @@ void main() {
    vec4 newv1 = vec4(0.f);
    vec4 newv2 = vec4(0.f);
    vec4 newv3 = vec4(0.f);
-   for (uint stile=isrc; stile<nsrc; stile+=uint(gl_WorkGroupSize.x)) {
+   for (uint stile=isrc; stile<isrc+nsrc; stile+=uint(gl_WorkGroupSize.x)) {
       uint sidx = stile + uint(gl_LocalInvocationIndex);
       tmppos[gl_LocalInvocationIndex] = sx[sidx];
       tmpstr[gl_LocalInvocationIndex] = ss[sidx];
       groupMemoryBarrier();
       barrier();
       // each inner loop interation is likely 77 flops
-      for (uint i=0; i<gl_WorkGroupSize.x && stile+i<nsrc; ++i) {
+      for (uint i=0; i<gl_WorkGroupSize.x && stile+i<isrc+nsrc; ++i) {
          // prepare the main vars (3 flops)
          vec3 str = tmpstr[i].xyz;
          vec3 diff = targpos.xyz - tmppos[i].xyz;
@@ -78,7 +78,7 @@ void main() {
       barrier();
    }
    // scale vels by 1/4pi later
-   if (itarg == 0) {
+   if (isrc == 0) {
       // this is the first call, zero the vels
       t1[tidx] = newv1;
       t2[tidx] = newv2;
