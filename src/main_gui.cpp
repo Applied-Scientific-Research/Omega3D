@@ -1376,6 +1376,16 @@ int main(int argc, char const *argv[]) {
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Solver parameters (advanced)")) {
 
+      // Core function selector
+
+      //ImGui::PushItemWidth(-270);
+      //float merge_thresh = sim.get_merge_thresh();
+      //ImGui::SliderFloat("Merge threshold", &merge_thresh, 0.0, 0.5, "%.2f");
+      //ImGui::SameLine();
+      //ShowHelpMarker("Merge pairs of particles closer than this relative distance.");
+      //sim.set_merge_thresh(merge_thresh);
+      //ImGui::PopItemWidth();
+
       bool relative_thresh = sim.get_vrm_relative();
       ImGui::Checkbox("Thresholds are relative to strongest particle", &relative_thresh);
       ImGui::SameLine();
