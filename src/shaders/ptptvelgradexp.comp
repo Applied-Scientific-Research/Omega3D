@@ -78,8 +78,16 @@ void main() {
       barrier();
    }
    // scale vels by 1/4pi later
-   t1[tidx] = newv1;
-   t2[tidx] = newv2;
-   t3[tidx] = newv3;
+   if (itarg == 0) {
+      // this is the first call, zero the vels
+      t1[tidx] = newv1;
+      t2[tidx] = newv2;
+      t3[tidx] = newv3;
+   } else {
+      // accumulate the results
+      t1[tidx] += newv1;
+      t2[tidx] += newv2;
+      t3[tidx] += newv3;
+   }
 }
 )"
