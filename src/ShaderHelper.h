@@ -27,5 +27,6 @@ GLuint create_draw_blob_program();
 GLuint create_draw_point_program();
 GLuint create_draw_surface_tri_prog();
 
-// Create a compute program from one shader
+// Create a compute program from one shader, and a zeroing program
 GLuint create_ptptvelgrad_program();
+GLuint create_initvelgrad_program();

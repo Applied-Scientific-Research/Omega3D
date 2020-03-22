@@ -1,8 +1,8 @@
 /*
  * GlComputeState.h - Store compute-specific OpenGL state
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2019-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -79,6 +79,7 @@ public:
 
   // attributes
   GLint source_offset_attr, source_count_attr, target_offset_attr, target_count_attr;
+  GLint target_offset_attr_z, target_count_attr_z;
 
   // the current source and target Collections
   //std::shared_ptr<Collection> src, targ;

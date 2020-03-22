@@ -64,6 +64,10 @@ const std::string ptpt_velgrad_shader_source =
 #ifdef USE_V3_KERNEL
 #endif
 
+const std::string init_velgrad_shader_source =
+#include "shaders/zeropointvels.comp"
+;
+
 
 // Compile a shader
 GLuint load_and_compile_shader(const std::string shader_src, GLenum shaderType) {
@@ -180,4 +184,21 @@ GLuint create_ptptvelgrad_program() {
   return shaderProgram;
 }
 
+// And a simple program to zero the vels and vel grads
+GLuint create_initvelgrad_program() {
+  // Load and compile the vertex and fragment shaders
+  GLuint computeShader = load_and_compile_shader(init_velgrad_shader_source, GL_COMPUTE_SHADER);
 
+  // Attach the above shader to a program
+  GLuint shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, computeShader);
+
+  // Flag the shaders for deletion
+  glDeleteShader(computeShader);
+
+  // Link and use the program
+  glLinkProgram(shaderProgram);
+  glUseProgram(shaderProgram);
+
+  return shaderProgram;
+}

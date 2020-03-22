@@ -1,8 +1,8 @@
 /*
  * Simulation.cpp - a class to control a 3D vortex particle sim
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #include "Simulation.h"
@@ -11,6 +11,7 @@
 #include "BEMHelper.h"
 #include "VtkXmlHelper.h"
 #include "Split.h"
+#include "Kernels.h"
 
 #include <cassert>
 #include <cmath>
@@ -257,11 +258,14 @@ void Simulation::drawGL(std::vector<float>& _projmat,
 
 void Simulation::initGLcs() {
 
-  // generate the opengl state object with space for 6 vbos and 1 shader program
-  cgl = std::make_shared<GlComputeState<STORE>>(6,1);
+  // generate the opengl state object with space for 6 vbos and 2 shader programs
+  cgl = std::make_shared<GlComputeState<STORE>>(6,2);
 
   // Load and create the blob-drawing shader program
   cgl->spo[0] = create_ptptvelgrad_program();
+
+  // do the same for the zeroing program
+  cgl->spo[1] = create_initvelgrad_program();
 
   // Identify and bind
   for (GLuint i=0; i<6; ++i) {
@@ -274,6 +278,9 @@ void Simulation::initGLcs() {
   cgl->source_count_attr  = glGetUniformLocation(cgl->spo[0], "nsrc");
   cgl->target_offset_attr = glGetUniformLocation(cgl->spo[0], "itarg");
   cgl->target_count_attr  = glGetUniformLocation(cgl->spo[0], "ntarg");
+
+  cgl->target_offset_attr_z = glGetUniformLocation(cgl->spo[1], "itarg");
+  cgl->target_count_attr_z  = glGetUniformLocation(cgl->spo[1], "ntarg");
 }
 
 // upload the new data arrays to the GPU
@@ -289,6 +296,27 @@ void Simulation::updateGLcs() {
 
   if (cgl->ntarg > 0) {
     glBindVertexArray(cgl->vao);
+
+    // set the zero-vels shader and run it
+    //glUseProgram(cgl->spo[1]);
+    //glUniform1ui(cgl->target_offset_attr_z, (const GLuint)0);
+    //glUniform1ui(cgl->target_count_attr_z,  (const GLuint)cgl->ntarg);
+
+    // allocate space for the results
+    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[3]);
+    //glBufferData(GL_SHADER_STORAGE_BUFFER, sztrg, nullptr, GL_DYNAMIC_DRAW);
+    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[4]);
+    //glBufferData(GL_SHADER_STORAGE_BUFFER, sztrg, nullptr, GL_DYNAMIC_DRAW);
+    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, cgl->vbo[5]);
+    //glBufferData(GL_SHADER_STORAGE_BUFFER, sztrg, nullptr, GL_DYNAMIC_DRAW);
+
+    // do the work
+    //GLuint group_count = ((GLuint)cgl->ntarg + 128 - 1) / 128;
+    //glDispatchCompute( group_count, 1, 1 );
+    //glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+
+
+    // and do the same for the vel evaluation shader
     glUseProgram(cgl->spo[0]);
 
     // send the current values
@@ -360,7 +388,7 @@ void Simulation::computeGL() {
     //std::cout << "  total_targ_grps is " << total_targ_grps << std::endl;
 
     // estimate total work and number of slivers (2 TFlop/s and 60 fps)
-    float total_work = 1.0 + (float)cgl->ntarg * (float)cgl->nsrc * 63.0;
+    float total_work = 1.0 + (float)cgl->ntarg * (float)cgl->nsrc * (float)flops_0v_0bg<float,float>();
     //GLuint num_slivers = 1 + (GLuint)(total_work / (150.e+9/30.0));
     GLuint num_slivers = 1 + (GLuint)(total_work / (2.e+12/30.0));
     //GLuint num_slivers = 3;
