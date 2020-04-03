@@ -174,12 +174,14 @@ std::string write_vtu_points(Points<S> const& pts, const size_t file_idx, const 
   const bool asbase64 = true;
 
   bool has_radii = true;
+  bool has_elong = true;
   bool has_strengths = true;
   bool has_vorticity = pts.get_velgrad();
   std::string prefix = "part_";
   if (pts.is_inert()) {
     has_strengths = false;
     has_radii = false;
+    has_elong = false;
     //has_vorticity = false;
     prefix = "fldpt_";
   }
@@ -269,6 +271,7 @@ std::string write_vtu_points(Points<S> const& pts, const size_t file_idx, const 
   vector_list.append("velocity,");
   if (has_strengths) vector_list.append("circulation,");
   if (has_radii) scalar_list.append("radius,");
+  if (has_elong) scalar_list.append("elongation,");
   if (has_vorticity) vector_list.append("vorticity,");
 
   if (vector_list.size()>1) {
@@ -286,6 +289,14 @@ std::string write_vtu_points(Points<S> const& pts, const size_t file_idx, const 
     printer.PushAttribute( "Name", "circulation" );
     printer.PushAttribute( "type", "Float32" );
     write_DataArray (printer, pts.get_str(), compress, asbase64);
+    printer.CloseElement();	// DataArray
+  }
+
+  if (has_elong) {
+    printer.OpenElement( "DataArray" );
+    printer.PushAttribute( "Name", "elongation" );
+    printer.PushAttribute( "type", "Float32" );
+    write_DataArray (printer, pts.get_elong(), compress, asbase64);
     printer.CloseElement();	// DataArray
   }
 

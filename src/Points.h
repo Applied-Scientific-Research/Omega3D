@@ -112,7 +112,8 @@ public:
     }
   }
 
-  Vector<S>& get_elong() { return elong; }
+  const Vector<S>& get_elong() const { return elong; }
+  Vector<S>&       get_elong()       { return elong; }
   const std::optional<std::array<Vector<S>,Dimensions*Dimensions>>& get_velgrad() const { return ug; }
   std::optional<std::array<Vector<S>,Dimensions*Dimensions>>&       get_velgrad()       { return ug; }
   const Vector<S>& get_rad() const { return r; }
