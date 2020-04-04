@@ -388,8 +388,19 @@ public:
         if (thisstr > thismax) thismax = thisstr;
 
         if (false) {
-          std::array<S,3> thisx = {this->x[0][i], this->x[1][i], this->x[2][i]};
-          std::cout << "  p " << i << " at rad " << length(thisx) << " has circmag " << std::sqrt(thisstr) << " and new elong " << elong[i] << std::endl;
+        //if (i == 0) {
+        //if (i == this->n - 1) {
+          //std::array<S,3> thisx = {this->x[0][i], this->x[1][i], this->x[2][i]};
+          //std::cout << "  p " << i << " at rad " << length(thisx) << " has circmag " << std::sqrt(thisstr) << " and new elong " << elong[i] << std::endl;
+          std::cout << "x " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i];// << std::endl;
+          std::cout << "  v " << this->u[0][i] << " " << this->u[1][i] << " " << this->u[2][i];// << std::endl;
+          std::cout << "  ug " << this_ug[0] << " " << this_ug[1] << " " << this_ug[2];// << std::endl;
+          std::cout << "  " << this_ug[3] << " " << this_ug[4] << " " << this_ug[5];// << std::endl;
+          std::cout << "  " << this_ug[6] << " " << this_ug[7] << " " << this_ug[8];// << std::endl;
+          std::cout << "  wdu " << wdu[0] << " " << wdu[1] << " " << wdu[2];// << std::endl;
+          std::cout << "  s " << (*this->s)[0][i] << " " << (*this->s)[1][i] << " " << (*this->s)[2][i];// << std::endl;
+          //std::cout << "  elong " << elong[i];
+          std::cout << std::endl;
         }
       }
 
