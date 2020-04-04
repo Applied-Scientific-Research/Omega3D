@@ -18,9 +18,10 @@
 #include <cmath>
 
 //#define USE_RM_KERNEL
-//#define USE_EXPONENTIAL_KERNEL
-#define USE_WL_KERNEL
-//#define USE_V2_KERNEL
+#define USE_EXPONENTIAL_KERNEL
+//#define USE_WL_KERNEL
+//#define USE_V2_KERNEL	// not programmed
+//#define USE_V3_KERNEL	// not programmed
 
 
 #ifdef USE_RM_KERNEL
@@ -312,5 +313,93 @@ static inline void core_func (const S distsq, const S sr,
   *r3 = d2top * dn5;
   *bbb = S(2.0)*dn5 - S(5.0)*d2top*dn5/d2;
 }
+#endif
+
+
+#ifdef USE_V2_KERNEL
+//
+// core functions - Vatistas n=2
+//
+
+#ifdef USE_VC
+template <class S> size_t flops_tv_nograds () { return 10; }
+#else
+template <class S> size_t flops_tv_nograds () { return 11; }
+#endif
+
+template <class S>
+static inline S core_func (const S distsq, const S sr, const S tr) {
+  const S s2 = sr*sr;
+  const S t2 = tr*tr;
+  const S denom = distsq*distsq + s2*s2 + t2*t2;
+#ifdef USE_VC
+  const S rsqd = Vc::rsqrt(denom);
+  return rsqd*Vc::sqrt(rsqd);
+#else
+  const S sqd = std::sqrt(denom);
+  return S(1.0) / (sqd*std::sqrt(sqd));
+#endif
+}
+
+#ifdef USE_VC
+template <class S> size_t flops_tp_nograds () { return 7; }
+#else
+template <class S> size_t flops_tp_nograds () { return 8; }
+#endif
+
+template <class S>
+static inline S core_func (const S distsq, const S sr) {
+  const S s2 = sr*sr;
+  const S denom = distsq*distsq + s2*s2;
+#ifdef USE_VC
+  const S rsqd = Vc::rsqrt(denom);
+  return rsqd*Vc::sqrt(rsqd);
+#else
+  const S sqd = std::sqrt(denom);
+  return S(1.0) / (sqd*std::sqrt(sqd));
+#endif
+}
+
+// core functions - Vatistas n=2 with gradients
+
+template <class S> size_t flops_tv_grads () { return 9; }
+
+template <class S>
+static inline void core_func (const S distsq, const S sr, const S tr,
+                              S* const __restrict__ r3, S* const __restrict__ bbb) {
+  const S s2 = sr*sr;
+  const S t2 = tr*tr;
+  const S denom = distsq*distsq + s2*s2 + t2*t2;
+#ifdef USE_VC
+  const S rsqd = Vc::rsqrt(denom);
+  *r3 = rsqd*Vc::sqrt(rsqd);
+#else
+  const S sqd = std::sqrt(denom);
+  *r3 = S(1.0) / (sqd*std::sqrt(sqd));
+#endif
+}
+
+template <class S> size_t flops_tp_grads () { return 7; }
+
+template <class S>
+static inline void core_func (const S distsq, const S sr,
+                              S* const __restrict__ r3, S* const __restrict__ bbb) {
+  const S s2 = sr*sr;
+  const S denom = distsq*distsq + s2*s2;
+#ifdef USE_VC
+  const S rsqd = Vc::rsqrt(denom);
+  *r3 = rsqd*Vc::sqrt(rsqd);
+#else
+  const S sqd = std::sqrt(denom);
+  *r3 = S(1.0) / (sqd*std::sqrt(sqd));
+#endif
+}
+#endif
+
+
+#ifdef USE_V3_KERNEL
+//
+// core functions - Vatistas n=3
+//
 #endif
 
