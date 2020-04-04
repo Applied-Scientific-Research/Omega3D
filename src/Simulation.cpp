@@ -455,6 +455,9 @@ void Simulation::computeGL() {
     retrieveGLcs();
     //glFinish();	// do we need this? probably not
 
+    // tell flow objects to update their values to the GPU
+    updateGL();
+
     // tell the other thread that we're done
     cgl->cstate.store(no_compute);
   }
