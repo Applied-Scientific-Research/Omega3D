@@ -60,8 +60,14 @@ const std::string ptpt_velgrad_shader_source =
 ;
 #endif
 #ifdef USE_V2_KERNEL
+const std::string ptpt_velgrad_shader_source =
+#include "shaders/ptptvelgradv2.comp"
+;
 #endif
 #ifdef USE_V3_KERNEL
+const std::string ptpt_velgrad_shader_source =
+#include "shaders/ptptvelgradrm.comp"
+;
 #endif
 
 const std::string init_velgrad_shader_source =

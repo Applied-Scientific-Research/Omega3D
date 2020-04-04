@@ -20,7 +20,7 @@
 //#define USE_RM_KERNEL
 #define USE_EXPONENTIAL_KERNEL
 //#define USE_WL_KERNEL
-//#define USE_V2_KERNEL	// not programmed
+//#define USE_V2_KERNEL
 //#define USE_V3_KERNEL	// not programmed
 
 
@@ -362,7 +362,11 @@ static inline S core_func (const S distsq, const S sr) {
 
 // core functions - Vatistas n=2 with gradients
 
-template <class S> size_t flops_tv_grads () { return 9; }
+#ifdef USE_VC
+template <class S> size_t flops_tv_grads () { return 12; }
+#else
+template <class S> size_t flops_tv_grads () { return 13; }
+#endif
 
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
@@ -377,9 +381,14 @@ static inline void core_func (const S distsq, const S sr, const S tr,
   const S sqd = std::sqrt(denom);
   *r3 = S(1.0) / (sqd*std::sqrt(sqd));
 #endif
+  *bbb = S(-3.0) * distsq / denom;
 }
 
-template <class S> size_t flops_tp_grads () { return 7; }
+#ifdef USE_VC
+template <class S> size_t flops_tp_grads () { return 9; }
+#else
+template <class S> size_t flops_tp_grads () { return 10; }
+#endif
 
 template <class S>
 static inline void core_func (const S distsq, const S sr,
@@ -393,6 +402,7 @@ static inline void core_func (const S distsq, const S sr,
   const S sqd = std::sqrt(denom);
   *r3 = S(1.0) / (sqd*std::sqrt(sqd));
 #endif
+  *bbb = S(-3.0) * distsq / denom;
 }
 #endif
 
