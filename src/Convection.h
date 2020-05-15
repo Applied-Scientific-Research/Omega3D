@@ -1,8 +1,8 @@
 /*
  * Convection.h - a class for forward integration of elements and their strengths
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -14,6 +14,7 @@
 #include "BEM.h"
 #include "BEMHelper.h"
 #include "Reflect.h"
+#include "GuiHelper.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -50,6 +51,10 @@ public:
                   std::vector<Collection>&,
                   std::vector<Collection>&,
                   BEM<S,I>&);
+
+#ifdef USE_IMGUI
+  void draw_advanced();
+#endif
 
 private:
   // local copies of particle data
@@ -119,7 +124,7 @@ void Convection<S,A,I>::advect_1st(const double                         _time,
                                    std::vector<Collection>&             _fldpt,
                                    BEM<S,I>&                            _bem) {
 
-  std::cout << "Inside advect_1st with dt=" << _dt << std::endl;
+  std::cout << "Inside Convection::advect_1st with dt=" << _dt << std::endl;
 
   // part A - unknowns
 
@@ -163,7 +168,7 @@ void Convection<S,A,I>::advect_2nd(const double                         _time,
                                    std::vector<Collection>&             _fldpt,
                                    BEM<S,I>&                            _bem) {
 
-  std::cout << "Inside advect_2nd with dt=" << _dt << std::endl;
+  std::cout << "Inside Convection::advect_2nd with dt=" << _dt << std::endl;
 
   // take the first Euler step ---------
 
@@ -236,4 +241,18 @@ void Convection<S,A,I>::advect_2nd(const double                         _time,
     ++v2p;
   }
 }
+
+
+#ifdef USE_IMGUI
+//
+// draw advanced options parts of the GUI
+//
+template <class S, class A, class I>
+void Convection<S,A,I>::draw_advanced() {
+
+  //ImGui::Separator();
+  //ImGui::Spacing();
+  //ImGui::Text("Convection settings");
+}
+#endif
 
