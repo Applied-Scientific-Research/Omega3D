@@ -1433,6 +1433,15 @@ int main(int argc, char const *argv[]) {
         ImGui::PopItemWidth();
       }
 #endif
+
+#ifdef EXTERNAL_VEL_SOLVE
+      //ImGui::Separator();
+
+      //static bool use_external_solver = false;
+      //ImGui::Checkbox("Use external function for velocity", &use_external_solver);
+      //ImGui::SameLine();
+      //ShowHelpMarker("Use an external method to calculate velocities. If unchecked, the internal O(N^2) method is used.");
+#endif
     }
 
     // Output buttons, under a header

@@ -15,6 +15,23 @@
 #include "Points.h"
 #include "Surfaces.h"
 
+#ifdef EXTERNAL_VEL_SOLVE
+extern "C" float external_vel_solver_f_(int*, const float*, const float*, const float*,
+                                              const float*, const float*, const float*,
+                                              const float*,
+                                        int*, const float*, const float*, const float*,
+                                              float*, float*, float*, float*,
+                                              float*, float*, float*, float*,
+                                              float*, float*, float*, float*);
+extern "C" float external_vel_solver_d_(int*, const double*, const double*, const double*,
+                                              const double*, const double*, const double*,
+                                              const double*,
+                                        int*, const double*, const double*, const double*,
+                                              double*, double*, double*, double*,
+                                              double*, double*, double*, double*,
+                                              double*, double*, double*, double*);
+#endif
+
 #ifdef USE_VC
 #include <Vc/Vc>
 #endif
@@ -35,6 +52,8 @@
 template <class S, class A>
 void points_affect_points (Points<S> const& src, Points<S>& targ) {
   auto start = std::chrono::system_clock::now();
+  float flops = (float)targ.get_n();
+
 
   // get references to use locally
   const std::array<Vector<S>,Dimensions>&     sx = src.get_pos();
@@ -44,6 +63,23 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   const std::array<Vector<S>,Dimensions>&     tx = targ.get_pos();
   std::array<Vector<S>,Dimensions>&           tu = targ.get_vel();
   std::optional<std::array<Vector<S>,9>>& opttug = targ.get_velgrad();
+
+#ifdef EXTERNAL_VEL_SOLVE
+  std::cout << "    external influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert(opttug && "Targets do not have velocity gradients in points_affect_points");
+  if (opttug) {
+    std::array<Vector<S>,9>& tug = *opttug;
+    int ns = src.get_n();
+    int nt = targ.get_n();
+    flops = external_vel_solver_f_(&ns, sx[0].data(), sx[1].data(), sx[2].data(),
+                                        ss[0].data(), ss[1].data(), ss[2].data(), sr.data(), 
+                                   &nt, tx[0].data(), tx[1].data(), tx[2].data(),
+                                        tu[0].data(), tu[1].data(), tu[2].data(),
+                                        tug[0].data(), tug[1].data(), tug[2].data(),
+                                        tug[3].data(), tug[4].data(), tug[5].data(),
+                                        tug[6].data(), tug[7].data(), tug[8].data());
+  }
+#else  // no external fast solve, perform O(N^2) calculations here
 
 #ifdef USE_OGL_COMPUTE
   // atomic must be ready to accept computation
@@ -129,6 +165,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
 #endif
 
 #ifdef USE_VC
+  // define vector types for Vc
   typedef Vc::Vector<S> StoreVec;
   typedef Vc::SimdArray<A, Vc::Vector<S>::size()> AccumVec;
 
@@ -141,8 +178,6 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   const Vc::Memory<StoreVec> ssyv = stdvec_to_vcvec<S>(ss[1], 0.0);
   const Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
 #endif
-
-  float flops = (float)targ.get_n();
 
   // We need 8 different loops here, for the options:
   //   target radii or no target radii
@@ -427,6 +462,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ) {
   // end conditional over whether targets are field points (with no core radius)
   //
   }
+#endif // no external fast solve
 
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
