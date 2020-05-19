@@ -17,10 +17,10 @@
 
 #include <cmath>
 
-#define USE_RM_KERNEL
+//#define USE_RM_KERNEL
 //#define USE_EXPONENTIAL_KERNEL
 //#define USE_WL_KERNEL
-//#define USE_V2_KERNEL
+#define USE_V2_KERNEL
 //#define USE_V3_KERNEL	// not programmed
 
 // helper functions: recip, oor1p5
@@ -46,9 +46,30 @@ static inline S my_recip(const S _in) {
 
 #ifdef USE_VC
 template <class S>
+static inline S oor2p5(const S _in) {
+  //return Vc::reciprocal(_in*_in*Vc::sqrt(_in));	// 234 GFlop/s
+  return Vc::rsqrt(_in) * Vc::reciprocal(_in*_in);	// 269 GFlop/s
+}
+template <>
+inline float oor2p5(const float _in) {
+  return 1.0f / (_in*_in*std::sqrt(_in));
+}
+template <>
+inline double oor2p5(const double _in) {
+  return 1.0 / (_in*_in*std::sqrt(_in));
+}
+#else
+template <class S>
+static inline S oor2p5(const S _in) {
+  return S(1.0) / (_in*_in*std::sqrt(_in));
+}
+#endif
+
+#ifdef USE_VC
+template <class S>
 static inline S oor1p5(const S _in) {
-  return Vc::reciprocal(_in*Vc::sqrt(_in));
-  //return Vc::rsqrt(_in) * Vc::reciprocal(_in);
+  //return Vc::reciprocal(_in*Vc::sqrt(_in));		// 243 GFlop/s
+  return Vc::rsqrt(_in) * Vc::reciprocal(_in);		// 302 GFlop/s
 }
 template <>
 inline float oor1p5(const float _in) {
@@ -62,6 +83,31 @@ inline double oor1p5(const double _in) {
 template <class S>
 static inline S oor1p5(const S _in) {
   return S(1.0) / (_in*std::sqrt(_in));
+}
+#endif
+
+#ifdef USE_VC
+template <class S>
+static inline S oor0p75(const S _in) {
+  const S rsqd = Vc::rsqrt(_in);
+  //return rsqd*Vc::sqrt(rsqd);				// 265 GFlop/s
+  return rsqd*rsqd*Vc::rsqrt(rsqd);			// 301 GFlop/s
+}
+template <>
+inline float oor0p75(const float _in) {
+  const float sqd = std::sqrt(_in);
+  return 1.0f / (sqd*std::sqrt(sqd));
+}
+template <>
+inline double oor0p75(const double _in) {
+  const double sqd = std::sqrt(_in);
+  return 1.0 / (sqd*std::sqrt(sqd));
+}
+#else
+template <class S>
+static inline S oor0p75(const S _in) {
+  const S sqd = std::sqrt(_in);
+  return S(1.0) / (sqd*std::sqrt(sqd));
 }
 #endif
 
@@ -275,11 +321,7 @@ template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
   const S r2 = sr*sr + tr*tr;
   const S d2 = distsq + r2;
-#ifdef USE_VC
-  return (distsq + S(2.5)*r2) / (d2*d2*Vc::sqrt(d2));
-#else
-  return (distsq + S(2.5)*r2) / (d2*d2*std::sqrt(d2));
-#endif
+  return (distsq + S(2.5)*r2) * oor2p5<S>(d2);
 }
 template <class S> inline size_t flops_tv_nograds () { return 10; }
 
@@ -287,11 +329,7 @@ template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S r2 = sr*sr;
   const S d2 = distsq + r2;
-#ifdef USE_VC
-  return (distsq + S(2.5)*r2) / (d2*d2*Vc::sqrt(d2));
-#else
-  return (distsq + S(2.5)*r2) / (d2*d2*std::sqrt(d2));
-#endif
+  return (distsq + S(2.5)*r2) * oor2p5<S>(d2);
 }
 template <class S> inline size_t flops_tp_nograds () { return 8; }
 
@@ -301,11 +339,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
   const S r2 = sr*sr + tr*tr;
   const S d2 = distsq + r2;
   const S d2top = distsq + S(2.5)*r2;
-#ifdef USE_VC
-  const S dn5 = Vc::reciprocal(d2*d2*Vc::sqrt(d2));
-#else
-  const S dn5 = S(1.0) / (d2*d2*std::sqrt(d2));
-#endif
+  const S dn5 = oor2p5<S>(d2);
   *r3 = d2top * dn5;
   *bbb = S(2.0)*dn5 - S(5.0)*d2top*dn5/d2;
 }
@@ -317,11 +351,7 @@ static inline void core_func (const S distsq, const S sr,
   const S r2 = sr*sr;
   const S d2 = distsq + r2;
   const S d2top = distsq + S(2.5)*r2;
-#ifdef USE_VC
-  const S dn5 = Vc::reciprocal(d2*d2*Vc::sqrt(d2));
-#else
-  const S dn5 = S(1.0) / (d2*d2*std::sqrt(d2));
-#endif
+  const S dn5 = oor2p5<S>(d2);
   *r3 = d2top * dn5;
   *bbb = S(2.0)*dn5 - S(5.0)*d2top*dn5/d2;
 }
@@ -333,90 +363,44 @@ template <class S> inline size_t flops_tp_grads () { return 14; }
 //
 // Vatistas n=2 - velocity only
 //
-
-#ifdef USE_VC
-template <class S> inline size_t flops_tv_nograds () { return 10; }
-#else
-template <class S> inline size_t flops_tv_nograds () { return 11; }
-#endif
-
 template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
   const S s2 = sr*sr;
   const S t2 = tr*tr;
   const S denom = distsq*distsq + s2*s2 + t2*t2;
-#ifdef USE_VC
-  const S rsqd = Vc::rsqrt(denom);
-  return rsqd*Vc::sqrt(rsqd);
-#else
-  const S sqd = std::sqrt(denom);
-  return S(1.0) / (sqd*std::sqrt(sqd));
-#endif
+  return oor0p75<S>(denom);
 }
-
-#ifdef USE_VC
-template <class S> inline size_t flops_tp_nograds () { return 7; }
-#else
-template <class S> inline size_t flops_tp_nograds () { return 8; }
-#endif
+template <class S> inline size_t flops_tv_nograds () { return 11; }
 
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S s2 = sr*sr;
   const S denom = distsq*distsq + s2*s2;
-#ifdef USE_VC
-  const S rsqd = Vc::rsqrt(denom);
-  return rsqd*Vc::sqrt(rsqd);
-#else
-  const S sqd = std::sqrt(denom);
-  return S(1.0) / (sqd*std::sqrt(sqd));
-#endif
+  return oor0p75<S>(denom);
 }
+template <class S> inline size_t flops_tp_nograds () { return 8; }
 
 // core functions - Vatistas n=2 with gradients
-
-#ifdef USE_VC
-template <class S> inline size_t flops_tv_grads () { return 12; }
-#else
-template <class S> inline size_t flops_tv_grads () { return 13; }
-#endif
-
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
   const S s2 = sr*sr;
   const S t2 = tr*tr;
   const S denom = distsq*distsq + s2*s2 + t2*t2;
-#ifdef USE_VC
-  const S rsqd = Vc::rsqrt(denom);
-  *r3 = rsqd*Vc::sqrt(rsqd);
-#else
-  const S sqd = std::sqrt(denom);
-  *r3 = S(1.0) / (sqd*std::sqrt(sqd));
-#endif
+  *r3 = oor0p75<S>(denom);
   *bbb = S(-3.0) * distsq / denom;
 }
-
-#ifdef USE_VC
-template <class S> inline size_t flops_tp_grads () { return 9; }
-#else
-template <class S> inline size_t flops_tp_grads () { return 10; }
-#endif
+template <class S> inline size_t flops_tv_grads () { return 13; }
 
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
   const S s2 = sr*sr;
   const S denom = distsq*distsq + s2*s2;
-#ifdef USE_VC
-  const S rsqd = Vc::rsqrt(denom);
-  *r3 = rsqd*Vc::sqrt(rsqd);
-#else
-  const S sqd = std::sqrt(denom);
-  *r3 = S(1.0) / (sqd*std::sqrt(sqd));
-#endif
+  *r3 = oor0p75<S>(denom);
   *bbb = S(-3.0) * distsq / denom;
 }
+template <class S> inline size_t flops_tp_grads () { return 10; }
 #endif
 
 
