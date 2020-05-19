@@ -11,7 +11,6 @@
 #include "BEMHelper.h"
 #include "VtkXmlHelper.h"
 #include "Split.h"
-#include "Kernels.h"
 #include "GuiHelper.h"
 
 #include <cassert>
@@ -401,7 +400,7 @@ void Simulation::computeGL() {
     else std::cout << "." << std::flush;
 
     // estimate total work and number of slivers (2 TFlop/s and 60 fps)
-    float total_work = 1.0 + (float)cgl->ntarg * (float)cgl->nsrc * (float)flops_0v_0bg<float,float>();
+    float total_work = 1.0 + (float)cgl->ntarg * (float)cgl->nsrc * (float)flops_0v_0bg<float>();
     //GLuint num_slivers = 1 + (GLuint)(total_work / (150.e+9/30.0));
     GLuint num_slivers = 1 + (GLuint)(total_work / (2.e+12/30.0));
     //GLuint num_slivers = 3;

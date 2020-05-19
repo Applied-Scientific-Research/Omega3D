@@ -1,8 +1,8 @@
 /*
  * Omega3D.h - Useful definitions for anywhere in the code
  *
- * (c)2018-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2018-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -13,17 +13,9 @@
 const size_t Dimensions = 3;
 
 // Use this for indexes into panels or bodies
+// using 32-bit because we may have more than 65536 triangles/elements in the system
 #include <cstdint>
 using Int = uint32_t;
-
-// solver order and method
-enum solution_t {
-  direct_cpu   = 1,
-  direct_vc    = 2,
-  direct_glsl  = 3,
-  treecode_cpu = 4,
-  treecode_vc  = 5
-};
 
 // element type
 enum elem_t {

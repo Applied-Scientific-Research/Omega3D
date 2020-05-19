@@ -1,8 +1,8 @@
 /*
  * BEMHelper.h - non-class to coordinate solving the BEM problem
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2019-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -14,6 +14,7 @@
 #include "Coefficients.h"
 #include "RHS.h"
 #include "BEM.h"
+#include "ExecEnv.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -53,8 +54,9 @@ void solve_bem(const double                         _time,
   //  std::visit([=](auto& elem) { elem.add_unit_rot_strengths(0); }, src);
   //}
 
-  // need this for dispatching velocity influence calls, template param is accumulator type
-  InfluenceVisitor<A> ivisitor;
+  // need this for dispatching velocity influence calls, template param is accumulator type,
+  //   member variable is default execution environment
+  InfluenceVisitor<A> ivisitor = {ExecEnv()};
   RHSVisitor rvisitor;
 
   //
@@ -240,7 +242,7 @@ void solve_bem(const double                         _time,
       }
     }
 
-    // and send it to the elements
+    // send it to the elements, including the augmented entry
     std::visit([=](auto& elem) { elem.set_str(tstart, new_s.size(), new_s);  }, targ);
   }
 

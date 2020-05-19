@@ -17,113 +17,100 @@
 
 #include <cmath>
 
-//#define USE_RM_KERNEL
-#define USE_EXPONENTIAL_KERNEL
+#define USE_RM_KERNEL
+//#define USE_EXPONENTIAL_KERNEL
 //#define USE_WL_KERNEL
 //#define USE_V2_KERNEL
 //#define USE_V3_KERNEL	// not programmed
 
+// helper functions: recip, oor1p5
+#ifdef USE_VC
+template <class S>
+static inline S my_recip(const S _in) {
+  return Vc::reciprocal(_in);
+}
+template <>
+inline float my_recip(const float _in) {
+  return 1.0f / _in;
+}
+template <>
+inline double my_recip(const double _in) {
+  return 1.0 / _in;
+}
+#else
+template <class S>
+static inline S my_recip(const S _in) {
+  return S(1.0) / _in;
+}
+#endif
+
+#ifdef USE_VC
+template <class S>
+static inline S oor1p5(const S _in) {
+  return Vc::reciprocal(_in*Vc::sqrt(_in));
+  //return Vc::rsqrt(_in) * Vc::reciprocal(_in);
+}
+template <>
+inline float oor1p5(const float _in) {
+  return 1.0f / (_in*std::sqrt(_in));
+}
+template <>
+inline double oor1p5(const double _in) {
+  return 1.0 / (_in*std::sqrt(_in));
+}
+#else
+template <class S>
+static inline S oor1p5(const S _in) {
+  return S(1.0) / (_in*std::sqrt(_in));
+}
+#endif
+
 
 #ifdef USE_RM_KERNEL
 //
-// core functions - Rosenhead-Moore
+// Rosenhead-Moore velocity-only
 //
-
-template <class S> size_t flops_tv_nograds () { return 7; }
-
 template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
   const S r2 = distsq + sr*sr + tr*tr;
-#ifdef USE_VC
-  return Vc::reciprocal(r2*Vc::sqrt(r2));
-#else
-  return S(1.0) / (r2*std::sqrt(r2));
-#endif
+  return oor1p5(r2);
 }
-
-template <class S> size_t flops_tp_nograds () { return 5; }
+template <class S> inline size_t flops_tv_nograds () { return 7; }
 
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S r2 = distsq + sr*sr;
-#ifdef USE_VC
-  return Vc::reciprocal(r2*Vc::sqrt(r2));
-#else
-  return S(1.0) / (r2*std::sqrt(r2));
-#endif
+  return oor1p5(r2);
 }
+template <class S> inline size_t flops_tp_nograds () { return 5; }
 
-// core functions - Rosenhead-Moore with gradients
-
-template <class S> size_t flops_tv_grads () { return 9; }
-
+//
+// Rosenhead-Moore with gradients
+//
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
   const S r2 = distsq + sr*sr + tr*tr;
-#ifdef USE_VC
-  *r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
-  *bbb = S(-3.0) * (*r3) * Vc::reciprocal(r2);
-#else
-  *r3 = S(1.0) / (r2*std::sqrt(r2));
-  *bbb = S(-3.0) * (*r3) / r2;
-#endif
+  *r3 = oor1p5(r2);
+  *bbb = S(-3.0) * (*r3) * my_recip(r2);
 }
-
-template <class S> size_t flops_tp_grads () { return 7; }
+template <class S> inline size_t flops_tv_grads () { return 9; }
 
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
   const S r2 = distsq + sr*sr;
-#ifdef USE_VC
-  *r3 = Vc::reciprocal(r2*Vc::sqrt(r2));
-  *bbb = S(-3.0) * (*r3) * Vc::reciprocal(r2);
-#else
-  *r3 = S(1.0) / (r2*std::sqrt(r2));
-  *bbb = S(-3.0) * (*r3) / r2;
-#endif
+  *r3 = oor1p5(r2);
+  *bbb = S(-3.0) * (*r3) * my_recip(r2);
 }
+template <class S> inline size_t flops_tp_grads () { return 7; }
 #endif
 
 
 #ifdef USE_EXPONENTIAL_KERNEL
 //
-// core functions - compact exponential
+// exponential core - velocity only
 //
-
-template <class S> size_t flops_tv_nograds () { return 12; }
-
-template <class S>
-static inline S core_func (const S distsq, const S sr, const S tr) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S ood3 = Vc::reciprocal(distsq * dist);
-  const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S ood3 = S(1.0) / (distsq * dist);
-  const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
-#endif
-  const S reld3 = corefac / ood3;
-#ifdef USE_VC
-  S returnval = ood3;
-  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
-  returnval(reld3 < S(0.001)) = corefac;
-  return returnval;
-#else
-  if (reld3 > S(16.0)) {
-    return ood3;
-  } else if (reld3 < S(0.001)) {
-    return corefac;
-  } else {
-    return ood3 * (S(1.0) - std::exp(-reld3));
-  }
-#endif
-}
-
-template <class S> size_t flops_tp_nograds () { return 9; }
-
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
 #ifdef USE_VC
@@ -156,55 +143,41 @@ static inline S core_func (const S distsq, const S sr) {
   }
 #endif
 }
+template <class S> inline size_t flops_tp_nograds () { return 9; }
 
-// core functions - compact exponential with gradients
-
-template <class S> size_t flops_tv_grads () { return 14; }
-
+// non-singular targets
 template <class S>
-static inline void core_func (const S distsq, const S sr, const S tr,
-                              S* const __restrict__ r3, S* const __restrict__ bbb) {
+static inline S core_func (const S distsq, const S sr, const S tr) {
 #ifdef USE_VC
   const S dist = Vc::sqrt(distsq);
+  const S ood3 = Vc::reciprocal(distsq * dist);
   const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
 #else
   const S dist = std::sqrt(distsq);
+  const S ood3 = S(1.0) / (distsq * dist);
   const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
 #endif
-  const S d3 = distsq * dist;
-  const S reld3 = d3 * corefac;
-  // 9 flops to here
+  const S reld3 = corefac / ood3;
 #ifdef USE_VC
-  S myr3, mybbb;
-  myr3(reld3 > S(16.0)) = Vc::reciprocal(d3);
-  mybbb(reld3 > S(16.0)) = S(-3.0) / (d3 * distsq);
-  const S expreld3 = Vc::exp(-reld3);
-  myr3(reld3 < S(16.0)) = (S(1.0) - expreld3) / d3;
-  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - myr3) / distsq;
-  myr3(reld3 < S(0.001)) = corefac;
-  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * corefac * corefac;
-  *r3 = myr3;
-  *bbb = mybbb;
+  S returnval = ood3;
+  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
+  returnval(reld3 < S(0.001)) = corefac;
+  return returnval;
 #else
   if (reld3 > S(16.0)) {
-    *r3 = S(1.0) / d3;
-    *bbb = S(-3.0) / (d3 * distsq);
-    // this is 4 flops and is most likely
+    return ood3;
   } else if (reld3 < S(0.001)) {
-    *r3 = corefac;
-    *bbb = S(-1.5) * dist * corefac * corefac;
-    // this is 5 flops
+    return corefac;
   } else {
-    const S expreld3 = std::exp(-reld3);
-    *r3 = (S(1.0) - expreld3) / d3;
-    *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
-    // this is 9 flops
+    return ood3 * (S(1.0) - std::exp(-reld3));
   }
 #endif
 }
+template <class S> inline size_t flops_tv_nograds () { return 12; }
 
-template <class S> size_t flops_tp_grads () { return 11; }
-
+//
+// exponential core - with gradients
+//
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -246,16 +219,58 @@ static inline void core_func (const S distsq, const S sr,
   }
 #endif
 }
+template <class S> inline size_t flops_tp_grads () { return 11; }
+
+// non-singular targets
+template <class S>
+static inline void core_func (const S distsq, const S sr, const S tr,
+                              S* const __restrict__ r3, S* const __restrict__ bbb) {
+#ifdef USE_VC
+  const S dist = Vc::sqrt(distsq);
+  const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
+#else
+  const S dist = std::sqrt(distsq);
+  const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
+#endif
+  const S d3 = distsq * dist;
+  const S reld3 = d3 * corefac;
+  // 9 flops to here
+#ifdef USE_VC
+  S myr3, mybbb;
+  myr3(reld3 > S(16.0)) = Vc::reciprocal(d3);
+  mybbb(reld3 > S(16.0)) = S(-3.0) / (d3 * distsq);
+  const S expreld3 = Vc::exp(-reld3);
+  myr3(reld3 < S(16.0)) = (S(1.0) - expreld3) / d3;
+  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - myr3) / distsq;
+  myr3(reld3 < S(0.001)) = corefac;
+  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * corefac * corefac;
+  *r3 = myr3;
+  *bbb = mybbb;
+#else
+  if (reld3 > S(16.0)) {
+    *r3 = S(1.0) / d3;
+    *bbb = S(-3.0) / (d3 * distsq);
+    // this is 4 flops and is most likely
+  } else if (reld3 < S(0.001)) {
+    *r3 = corefac;
+    *bbb = S(-1.5) * dist * corefac * corefac;
+    // this is 5 flops
+  } else {
+    const S expreld3 = std::exp(-reld3);
+    *r3 = (S(1.0) - expreld3) / d3;
+    *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
+    // this is 9 flops
+  }
+#endif
+}
+template <class S> inline size_t flops_tv_grads () { return 14; }
 #endif
 
 
 #ifdef USE_WL_KERNEL
 //
-// core functions - Winckelmans–Leonard
+// Winckelmans–Leonard - velocity only
 //
-
-template <class S> size_t flops_tv_nograds () { return 10; }
-
 template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
   const S r2 = sr*sr + tr*tr;
@@ -266,8 +281,7 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
   return (distsq + S(2.5)*r2) / (d2*d2*std::sqrt(d2));
 #endif
 }
-
-template <class S> size_t flops_tp_nograds () { return 8; }
+template <class S> inline size_t flops_tv_nograds () { return 10; }
 
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
@@ -279,8 +293,7 @@ static inline S core_func (const S distsq, const S sr) {
   return (distsq + S(2.5)*r2) / (d2*d2*std::sqrt(d2));
 #endif
 }
-
-template <class S> size_t flops_tv_grads () { return 16; }
+template <class S> inline size_t flops_tp_nograds () { return 8; }
 
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
@@ -296,8 +309,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
   *r3 = d2top * dn5;
   *bbb = S(2.0)*dn5 - S(5.0)*d2top*dn5/d2;
 }
-
-template <class S> size_t flops_tp_grads () { return 14; }
+template <class S> inline size_t flops_tv_grads () { return 16; }
 
 template <class S>
 static inline void core_func (const S distsq, const S sr,
@@ -313,18 +325,19 @@ static inline void core_func (const S distsq, const S sr,
   *r3 = d2top * dn5;
   *bbb = S(2.0)*dn5 - S(5.0)*d2top*dn5/d2;
 }
+template <class S> inline size_t flops_tp_grads () { return 14; }
 #endif
 
 
 #ifdef USE_V2_KERNEL
 //
-// core functions - Vatistas n=2
+// Vatistas n=2 - velocity only
 //
 
 #ifdef USE_VC
-template <class S> size_t flops_tv_nograds () { return 10; }
+template <class S> inline size_t flops_tv_nograds () { return 10; }
 #else
-template <class S> size_t flops_tv_nograds () { return 11; }
+template <class S> inline size_t flops_tv_nograds () { return 11; }
 #endif
 
 template <class S>
@@ -342,9 +355,9 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 }
 
 #ifdef USE_VC
-template <class S> size_t flops_tp_nograds () { return 7; }
+template <class S> inline size_t flops_tp_nograds () { return 7; }
 #else
-template <class S> size_t flops_tp_nograds () { return 8; }
+template <class S> inline size_t flops_tp_nograds () { return 8; }
 #endif
 
 template <class S>
@@ -363,9 +376,9 @@ static inline S core_func (const S distsq, const S sr) {
 // core functions - Vatistas n=2 with gradients
 
 #ifdef USE_VC
-template <class S> size_t flops_tv_grads () { return 12; }
+template <class S> inline size_t flops_tv_grads () { return 12; }
 #else
-template <class S> size_t flops_tv_grads () { return 13; }
+template <class S> inline size_t flops_tv_grads () { return 13; }
 #endif
 
 template <class S>
@@ -385,9 +398,9 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 }
 
 #ifdef USE_VC
-template <class S> size_t flops_tp_grads () { return 9; }
+template <class S> inline size_t flops_tp_grads () { return 9; }
 #else
-template <class S> size_t flops_tp_grads () { return 10; }
+template <class S> inline size_t flops_tp_grads () { return 10; }
 #endif
 
 template <class S>
@@ -409,7 +422,7 @@ static inline void core_func (const S distsq, const S sr,
 
 #ifdef USE_V3_KERNEL
 //
-// core functions - Vatistas n=3
+// Vatistas n=3 - velocity only
 //
 #endif
 

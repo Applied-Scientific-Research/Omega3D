@@ -139,7 +139,9 @@ public:
   // graphics pass-through call
   void updateGL();
   void drawGL(std::vector<float>&, RenderParams&);
+#endif
 
+#ifdef USE_OGL_COMPUTE
   // compute shader calls (does not pass through to Collections)
   void initGLcs();
   void updateGLcs();

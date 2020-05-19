@@ -299,7 +299,7 @@ public:
     return mystr;
   }
 
-#ifdef USE_GL
+#ifdef USE_OGL_COMPUTE
   //void set_opengl_compute_state(GlComputeState<S>* _newgcsp) {
   void set_opengl_compute_state(std::shared_ptr<GlComputeState<S>> _newgcsp) {
     gcs = _newgcsp;
@@ -349,7 +349,7 @@ protected:
   // for objects moving with a body
   std::optional<std::array<Vector<S>,Dimensions>> ux;   // untransformed position of nodes
 
-#ifdef USE_GL
+#ifdef USE_OGL_COMPUTE
   std::shared_ptr<GlComputeState<S>> gcs;		// global compute state
 #endif
 };

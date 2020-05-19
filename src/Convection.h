@@ -15,6 +15,7 @@
 #include "BEMHelper.h"
 #include "Reflect.h"
 #include "GuiHelper.h"
+#include "ExecEnv.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -59,6 +60,9 @@ public:
 private:
   // local copies of particle data
   //Particles<S> temp;
+
+  // execution environment for velocity summations (not BEM)
+  ExecEnv conv_env;
 };
 
 
@@ -76,7 +80,8 @@ void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
 
   // need this for dispatching velocity influence calls, template param is accumulator type
   // should the solution_t be an argument to the constructor?
-  InfluenceVisitor<A> visitor;
+  // member variable is passed-in execution environment
+  InfluenceVisitor<A> visitor = {conv_env};
 
   // add vortex and source strengths to account for rotating bodies
   for (auto &src : _bdry) {
@@ -251,8 +256,77 @@ template <class S, class A, class I>
 void Convection<S,A,I>::draw_advanced() {
 
   //ImGui::Separator();
-  //ImGui::Spacing();
-  //ImGui::Text("Convection settings");
+  ImGui::Spacing();
+  ImGui::Text("Convection settings");
+
+  static bool use_internal_solver = conv_env.is_internal();
+#ifdef EXTERNAL_VEL_SOLVE
+  ImGui::Checkbox("Use internal velocity solver", &use_internal_solver);
+  conv_env.set_internal(use_internal_solver);
+  ImGui::SameLine();
+  ShowHelpMarker("Use the internal method to calculate velocities. Uncheck to use an external solver.");
+#endif
+
+  if (use_internal_solver) {
+#ifdef USE_VC
+  #ifdef USE_OGL_COMPUTE
+    static int acc_item = 2;
+    const char* acc_items[] = { "x86 (CPU)", "Vc SIMD (CPU)", "OpenGL (GPU)" };
+    ImGui::PushItemWidth(240);
+    ImGui::Combo("Select instructions", &acc_item, acc_items, 3);
+    ImGui::PopItemWidth();
+    switch(acc_item) {
+        case 0: conv_env.set_instrs(cpu_x86); break;
+        case 1: conv_env.set_instrs(cpu_vc); break;
+        case 2: conv_env.set_instrs(gpu_opengl); break;
+    } // end switch
+  #else
+    static int acc_item = 1;
+    const char* acc_items[] = { "x86 (CPU)", "Vc SIMD (CPU)" };
+    ImGui::PushItemWidth(240);
+    ImGui::Combo("Select instructions", &acc_item, acc_items, 2);
+    ImGui::PopItemWidth();
+    switch(acc_item) {
+        case 0: conv_env.set_instrs(cpu_x86); break;
+        case 1: conv_env.set_instrs(cpu_vc); break;
+    } // end switch
+  #endif
+#else
+  #ifdef USE_OGL_COMPUTE
+    static int acc_item = 1;
+    const char* acc_items[] = { "x86 (CPU)", "OpenGL (GPU)" };
+    ImGui::PushItemWidth(240);
+    ImGui::Combo("Select instructions", &acc_item, acc_items, 2);
+    ImGui::PopItemWidth();
+    switch(acc_item) {
+        case 0: conv_env.set_instrs(cpu_x86); break;
+        case 1: conv_env.set_instrs(gpu_opengl); break;
+    } // end switch
+  #else
+    // none!
+    ImGui::Text("Instructions are x86 (CPU)");
+  #endif
+#endif
+
+    // now, depending on which was selected, allow different summation algorithms
+    //static int algo_item = 0;
+    const accel_t accel_selected = conv_env.get_instrs();
+    if (accel_selected == cpu_x86) {
+      ImGui::Text("Algorithm is direct, O(N^2)");
+      conv_env.set_summation(direct);
+      //const char* algo_items[] = { "direct, O(N^2)", "treecode, O(NlogN)" };
+      //ImGui::PushItemWidth(240);
+      //ImGui::Combo("Select algorithm", &algo_item, algo_items, 2);
+      //ImGui::PopItemWidth();
+      //switch(algo_item) {
+      //  case 0: conv_env.set_summation(direct); break;
+      //  case 1: conv_env.set_summation(barneshut); break;
+      //} // end switch
+    } else {
+      ImGui::Text("Algorithm is direct, O(N^2)");
+      conv_env.set_summation(direct);
+    }
+  }
 }
 #endif
 

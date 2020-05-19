@@ -34,7 +34,7 @@
 //
 
 // thick-cored particle on thick-cored point, no gradients
-template <class S, class A> size_t flops_0v_0b () { return 23 + flops_tv_nograds<S>(); }
+template <class S> inline size_t flops_0v_0b () { return 23 + flops_tv_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0v_0b (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -56,7 +56,7 @@ static inline void kernel_0v_0b (const S sx, const S sy, const S sz,
 }
 
 // same, but vortex+source strength
-template <class S, class A> size_t flops_0vs_0b () { return 29 + flops_tv_nograds<S>(); }
+template <class S> inline size_t flops_0vs_0b () { return 29 + flops_tv_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0vs_0b (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -78,7 +78,7 @@ static inline void kernel_0vs_0b (const S sx, const S sy, const S sz,
 }
 
 // thick-cored particle on singular point, no gradients
-template <class S, class A> size_t flops_0v_0p () { return 23 + flops_tp_nograds<S>(); }
+template <class S> inline size_t flops_0v_0p () { return 23 + flops_tp_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -99,7 +99,7 @@ static inline void kernel_0v_0p (const S sx, const S sy, const S sz,
 }
 
 // same, but vortex+source strength
-template <class S, class A> size_t flops_0vs_0p () { return 29 + flops_tp_nograds<S>(); }
+template <class S> inline size_t flops_0vs_0p () { return 29 + flops_tp_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0vs_0p (const S sx, const S sy, const S sz,
                                   const S sr,
@@ -120,7 +120,7 @@ static inline void kernel_0vs_0p (const S sx, const S sy, const S sz,
 }
 
 // same, but source strength only
-template <class S, class A> size_t flops_0s_0p () { return 14 + flops_tp_nograds<S>(); }
+template <class S> inline size_t flops_0s_0p () { return 14 + flops_tp_nograds<S>(); }
 template <class S, class A>
 static inline void kernel_0s_0p (const S sx, const S sy, const S sz,
                                  const S sr,
@@ -139,7 +139,7 @@ static inline void kernel_0s_0p (const S sx, const S sy, const S sz,
 
 // thick-cored particle on thick-cored point, with gradients
 //   54+(9|14) flops total
-template <class S, class A> size_t flops_0v_0bg () { return 54 + flops_tv_grads<S>(); }
+template <class S> inline size_t flops_0v_0bg () { return 54 + flops_tv_grads<S>(); }
 template <class S, class A>
 static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
                                   const S sr,
@@ -181,7 +181,7 @@ static inline void kernel_0v_0bg (const S sx, const S sy, const S sz,
 
 // same, but for vortex+source strengths
 //   79+(9|14) flops total
-template <class S, class A> size_t flops_0vs_0bg () { return 79 + flops_tv_grads<S>(); }
+template <class S> inline size_t flops_0vs_0bg () { return 79 + flops_tv_grads<S>(); }
 template <class S, class A>
 static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
                                    const S sr,
@@ -237,7 +237,7 @@ static inline void kernel_0vs_0bg (const S sx, const S sy, const S sz,
 
 // thick-cored particle on singular point, with gradients
 //   54+(7|11) flops total
-template <class S, class A> size_t flops_0v_0pg () { return 54 + flops_tp_grads<S>(); }
+template <class S> inline size_t flops_0v_0pg () { return 54 + flops_tp_grads<S>(); }
 template <class S, class A>
 static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
                                   const S sr,
@@ -278,7 +278,7 @@ static inline void kernel_0v_0pg (const S sx, const S sy, const S sz,
 
 // same, but for vortex+source strengths
 //   79+(7|11) flops total
-template <class S, class A> size_t flops_0vs_0pg () { return 79 + flops_tp_grads<S>(); }
+template <class S> inline size_t flops_0vs_0pg () { return 79 + flops_tp_grads<S>(); }
 template <class S, class A>
 static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
                                    const S sr,
@@ -338,7 +338,7 @@ static inline void kernel_0vs_0pg (const S sx, const S sy, const S sz,
 // uses four singular integration points on the source side
 //   140+(20|36) flops
 //
-template <class S, class A> size_t flops_2v_0p () { return 48 + 4*flops_0v_0p<S,A>(); }
+template <class S> inline size_t flops_2v_0p () { return 48 + 4*flops_0v_0p<S>(); }
 template <class S, class A>
 static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
                                  const S sx1, const S sy1, const S sz1,
@@ -402,7 +402,7 @@ static inline void kernel_2v_0p (const S sx0, const S sy0, const S sz0,
 
 // same for vortex+source terms
 //   165+(20|36) flops
-template <class S, class A> size_t flops_2vs_0p () { return 49 + 4*flops_0vs_0p<S,A>(); }
+template <class S> inline size_t flops_2vs_0p () { return 49 + 4*flops_0vs_0p<S>(); }
 template <class S, class A>
 static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -467,7 +467,7 @@ static inline void kernel_2vs_0p (const S sx0, const S sy0, const S sz0,
 
 // same, but for source source terms only
 //   102+(20|36) flops
-template <class S, class A> size_t flops_2s_0p () { return 46 + 4*flops_0s_0p<S,A>(); }
+template <class S> inline size_t flops_2s_0p () { return 46 + 4*flops_0s_0p<S>(); }
 template <class S, class A>
 static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
                                  const S sx1, const S sy1, const S sz1,
@@ -534,7 +534,7 @@ static inline void kernel_2s_0p (const S sx0, const S sy0, const S sz0,
 // uses four singular integration points on the source side
 //   140+(28|48) flops
 //
-template <class S, class A> size_t flops_2v_0b () { return 48 + 4*flops_0v_0b<S,A>(); }
+template <class S> inline size_t flops_2v_0b () { return 48 + 4*flops_0v_0b<S>(); }
 template <class S, class A>
 static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
                                  const S sx1, const S sy1, const S sz1,
@@ -599,7 +599,7 @@ static inline void kernel_2v_0b (const S sx0, const S sy0, const S sz0,
 
 // same thing, but for vortex+source strengths
 //   165+(28|48) flops
-template <class S, class A> size_t flops_2vs_0b () { return 49 + 4*flops_0vs_0b<S,A>(); }
+template <class S> inline size_t flops_2vs_0b () { return 49 + 4*flops_0vs_0b<S>(); }
 template <class S, class A>
 static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -670,7 +670,7 @@ static inline void kernel_2vs_0b (const S sx0, const S sy0, const S sz0,
 // uses four singular integration points on the source side
 //   264+(36|56) flops
 //
-template <class S, class A> size_t flops_2v_0bg () { return 48 + 4*flops_0v_0bg<S,A>(); }
+template <class S> inline size_t flops_2v_0bg () { return 48 + 4*flops_0v_0bg<S>(); }
 template <class S, class A>
 static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -742,7 +742,7 @@ static inline void kernel_2v_0bg (const S sx0, const S sy0, const S sz0,
 
 // same thing for vortex+source strengths
 //   365+(36|56) flops
-template <class S, class A> size_t flops_2vs_0bg () { return 49 + 4*flops_0vs_0bg<S,A>(); }
+template <class S> inline size_t flops_2vs_0bg () { return 49 + 4*flops_0vs_0bg<S>(); }
 template <class S, class A>
 static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
                                    const S sx1, const S sy1, const S sz1,
@@ -820,7 +820,7 @@ static inline void kernel_2vs_0bg (const S sx0, const S sy0, const S sz0,
 // uses four singular integration points on the source side
 //   264+(28|44) flops
 //
-template <class S, class A> size_t flops_2v_0pg () { return 48 + 4*flops_0v_0pg<S,A>(); }
+template <class S> inline size_t flops_2v_0pg () { return 48 + 4*flops_0v_0pg<S>(); }
 template <class S, class A>
 static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
                                   const S sx1, const S sy1, const S sz1,
@@ -891,7 +891,7 @@ static inline void kernel_2v_0pg (const S sx0, const S sy0, const S sz0,
 
 // same thing for vortex+source strengths
 //   365+(28|44) flops
-template <class S, class A> size_t flops_2vs_0pg () { return 49 + 4*flops_0vs_0pg<S,A>(); }
+template <class S> inline size_t flops_2vs_0pg () { return 49 + 4*flops_0vs_0pg<S>(); }
 template <class S, class A>
 static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                                    const S sx1, const S sy1, const S sz1,
@@ -961,6 +961,74 @@ static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
   }
 }
 
+// helper functions: sqrt and dist
+
+#ifdef USE_VC
+template <class S>
+static inline S my_sqrt(const S _in) {
+  return Vc::sqrt(_in);
+}
+template <>
+inline float my_sqrt(const float _in) {
+  return std::sqrt(_in);
+}
+template <>
+inline double my_sqrt(const double _in) {
+  return std::sqrt(_in);
+}
+#else
+template <class S>
+static inline S my_sqrt(const S _in) {
+  return std::sqrt(_in);
+}
+#endif
+
+template <class S>
+static inline S my_dist(const S dx, const S dy, const S dz) {
+  return my_sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+#ifdef USE_VC
+template <class S>
+static inline bool my_well_sep(const S _dist, const S _size) {
+  return Vc::all_of(_dist > _size*S(4.0));
+}
+template <>
+inline bool my_well_sep(const float _dist, const float _size) {
+  return (_dist > _size*4.0f);
+}
+template <>
+inline bool my_well_sep(const double _dist, const double _size) {
+  return (_dist > _size*4.0);
+}
+#else
+template <class S>
+static inline bool my_well_sep(const S _dist, const S _size) {
+  return (_dist > _size*S(4.0));
+}
+#endif
+
+#ifdef USE_VC
+template <class S>
+static inline int my_simdwide(const S _in) {
+  //return Vc::Vector<S>::size();
+  return S::size();
+}
+template <>
+inline int my_simdwide(const float _in) {
+  return 1;
+}
+template <>
+inline int my_simdwide(const double _in) {
+  return 1;
+}
+#else
+template <class S>
+static inline int my_simdwide(const S _in) {
+  return 1;
+}
+#endif
+
 // panel-point influence, including subpaneling
 //   initial input strength is a sheet strength, all recursive calls are absolute
 //   returns flops
@@ -994,24 +1062,12 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
   const S sy = (sy0 + sy1 + sy2) / S(3.0);
   const S sz = (sz0 + sz1 + sz2) / S(3.0);
   flops += 9;
-#ifdef USE_VC
-  const S trisize = Vc::sqrt(sa);
-  const S dx = tx-sx;
-  const S dy = ty-sy;
-  const S dz = tz-sz;
-  const S dist = Vc::sqrt(dx*dx + dy*dy + dz*dz);
-#else
-  const S trisize = std::sqrt(sa);
-  const S dist = std::sqrt(std::pow(tx-sx,2) + std::pow(ty-sy,2) + std::pow(tz-sz,2));
-#endif
+  const S trisize = my_sqrt<S>(sa);
+  const S dist = my_dist<S>(tx-sx, ty-sy, tz-sz);
   flops += 10;
 
   // recurse or solve?
-#ifdef USE_VC
-  const bool wellseparated = Vc::all_of(dist > trisize*S(4.0));
-#else
-  const bool wellseparated = dist > trisize*S(4.0);
-#endif
+  const bool wellseparated = my_well_sep<S>(dist, trisize);
   flops += 1;
   if (wellseparated or lev == maxlev) {
 
@@ -1023,19 +1079,8 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
                           tx, ty, tz,
                           tu, tv, tw);
 
-#ifdef USE_RM_KERNEL
-    flops += 34;
-#endif
-#ifdef USE_EXPONENTIAL_KERNEL
-    flops += 38;
-#endif
-#ifdef USE_WL_KERNEL
-    flops += 37;
-#endif
-
-#ifdef USE_VC
-    flops *= 8;
-#endif
+    flops += (int)flops_0vs_0p<S>();
+    flops *= my_simdwide<S>(sx);
 
   } else {
 
@@ -1055,9 +1100,7 @@ int rkernel_2vs_0p (const S sx0, const S sy0, const S sz0,
     const S scy[6] = {sy0, S(0.5)*(sy0+sy1), sy1, S(0.5)*(sy0+sy2), S(0.5)*(sy1+sy2), sy2};
     const S scz[6] = {sz0, S(0.5)*(sz0+sz1), sz1, S(0.5)*(sz0+sz2), S(0.5)*(sz1+sz2), sz2};
     flops += 18;
-#ifdef USE_VC
-    flops *= 8;
-#endif
+    flops *= my_simdwide<S>(sx);
 
     // the index pointers to the child triangles
     const int id[4][3] = {{0,1,3}, {1,2,4}, {1,4,3}, {3,4,5}};
@@ -1114,25 +1157,14 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
   const S sy = (sy0 + sy1 + sy2) / S(3.0);
   const S sz = (sz0 + sz1 + sz2) / S(3.0);
   flops += 9;
-#ifdef USE_VC
-  const S trisize = Vc::sqrt(sa);
-  const S dx = tx-sx;
-  const S dy = ty-sy;
-  const S dz = tz-sz;
-  const S dist = Vc::sqrt(dx*dx + dy*dy + dz*dz);
-#else
-  const S trisize = std::sqrt(sa);
-  const S dist = std::sqrt(std::pow(tx-sx,2) + std::pow(ty-sy,2) + std::pow(tz-sz,2));
-#endif
+  const S trisize = my_sqrt<S>(sa);
+  const S dist = my_dist<S>(tx-sx, ty-sy, tz-sz);
   flops += 10;
 
   // recurse or solve?
+  const bool wellseparated = my_well_sep<S>(dist, trisize);
   flops += 1;
-#ifdef USE_VC
-  if (Vc::all_of(dist > trisize*S(4.0)) or lev == maxlev) {
-#else
-  if (dist > trisize*S(4.0) or lev == maxlev) {
-#endif
+  if (wellseparated or lev == maxlev) {
 
     // run just one influence calculation
     //(void) kernel_0vs_0pg (sx, sy, sz, S(0.5)*trisize,
@@ -1142,19 +1174,8 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                            tu, tv, tw,
                            tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
 
-#ifdef USE_RM_KERNEL
-    flops += 88;
-#endif
-#ifdef USE_EXPONENTIAL_KERNEL
-    flops += 90;
-#endif
-#ifdef USE_WL_KERNEL
-    flops += 95;
-#endif
-
-#ifdef USE_VC
-    flops *= 8;
-#endif
+    flops += (int)flops_0vs_0pg<S>();
+    flops *= my_simdwide<S>(sx);
 
   } else {
 
@@ -1174,9 +1195,7 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
     const S scy[6] = {sy0, S(0.5)*(sy0+sy1), sy1, S(0.5)*(sy0+sy2), S(0.5)*(sy1+sy2), sy2};
     const S scz[6] = {sz0, S(0.5)*(sz0+sz1), sz1, S(0.5)*(sz0+sz2), S(0.5)*(sz1+sz2), sz2};
     flops += 18;
-#ifdef USE_VC
-    flops *= 8;
-#endif
+    flops *= my_simdwide<S>(sx);
 
     // the index pointers to the child triangles
     const int id[4][3] = {{0,1,3}, {1,2,4}, {1,4,3}, {3,4,5}};
@@ -1236,25 +1255,14 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
   const S ty = (ty0 + ty1 + ty2) / S(3.0);
   const S tz = (tz0 + tz1 + tz2) / S(3.0);
   flops += 18;
-#ifdef USE_VC
-  const S trisize = Vc::sqrt(sa) + Vc::sqrt(ta);
-  const S dx = tx-sx;
-  const S dy = ty-sy;
-  const S dz = tz-sz;
-  const S dist = Vc::sqrt(dx*dx + dy*dy + dz*dz);
-#else
-  const S trisize = std::sqrt(sa) + std::sqrt(ta);
-  const S dist = std::sqrt(std::pow(tx-sx,2) + std::pow(ty-sy,2) + std::pow(tz-sz,2));
-#endif
+  const S trisize = my_sqrt<S>(sa) + my_sqrt<S>(ta);
+  const S dist = my_dist<S>(tx-sx, ty-sy, tz-sz);
   flops += 12;
 
   // recurse or solve?
+  const bool wellseparated = my_well_sep<S>(dist, trisize);
   flops += 1;
-#ifdef USE_VC
-  if (Vc::all_of(dist > trisize*S(4.0)) or lev == maxlev) {
-#else
-  if (dist > trisize*S(4.0) or lev == maxlev) {
-#endif
+  if (wellseparated or lev == maxlev) {
 
     // run just one influence calculation
     //(void) kernel_0vs_0p (sx, sy, sz, S(0.5)*trisize,
@@ -1263,19 +1271,8 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
                           tx, ty, tz,
                           tu, tv, tw);
 
-#ifdef USE_RM_KERNEL
-    flops += 34;
-#endif
-#ifdef USE_EXPONENTIAL_KERNEL
-    flops += 38;
-#endif
-#ifdef USE_WL_KERNEL
-    flops += 37;
-#endif
-
-#ifdef USE_VC
-    flops *= 8;
-#endif
+    flops += (int)flops_0vs_0p<S>();
+    flops *= my_simdwide<S>(sx);
 
   } else {
 
@@ -1299,9 +1296,7 @@ int rkernel_2vs_2p (const S sx0, const S sy0, const S sz0,
     const S tcy[6] = {ty0, S(0.5)*(ty0+ty1), ty1, S(0.5)*(ty0+ty2), S(0.5)*(ty1+ty2), ty2};
     const S tcz[6] = {tz0, S(0.5)*(tz0+tz1), tz1, S(0.5)*(tz0+tz2), S(0.5)*(tz1+tz2), tz2};
     flops += 36;
-#ifdef USE_VC
-    flops *= 8;
-#endif
+    flops *= my_simdwide<S>(sx);
 
     // the index pointers to the child triangles
     const int id[4][3] = {{0,1,3}, {1,2,4}, {1,4,3}, {3,4,5}};
