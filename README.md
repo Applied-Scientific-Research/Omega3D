@@ -68,7 +68,6 @@ Tasks to consider or implement:
 * Get BEM working for moving bodies
 * Allow general rectangles - use the ips to scale panel sizes
 * Use Eigen's Quaternion to represent rotations internally, but load them in as axis-angle
-* Augment BEM to make it work for rotating bodies
 * Consider using [libigl](https://libigl.github.io/tutorial/#closest-points) to find point-mesh closest point queries
 * Add some pics, maybe aGIF, to this readme
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
