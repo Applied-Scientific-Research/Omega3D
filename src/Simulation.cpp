@@ -124,7 +124,6 @@ void Simulation::set_diffuse(const bool _do_diffuse) {
 
 void Simulation::set_amr(const bool _do_amr) {
   diff.set_amr(_do_amr);
-  //diff.set_diffuse(true);
 }
 
 
@@ -216,6 +215,7 @@ Simulation::to_json() const {
   return j;
 }
 
+
 #ifdef USE_IMGUI
 //
 // ImGui code
@@ -229,6 +229,7 @@ void Simulation::draw_advanced() {
   diff.draw_advanced();
 }
 #endif
+
 
 #ifdef USE_GL
 //

@@ -2,7 +2,7 @@
  * MeasureFeature.cpp - GUI-side descriptions of flow features
  *
  * (c)2018-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #include "MeasureFeature.h"
@@ -29,7 +29,6 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
   if (_jin.count("type") != 1) return;
 
   const std::string ftype = _jin["type"];
-  std::cout << "  found " << ftype << std::endl;
 
   if      (ftype == "tracer") {           _flist.emplace_back(std::make_unique<SinglePoint>()); }
   else if (ftype == "tracer emitter") {   _flist.emplace_back(std::make_unique<TracerEmitter>()); }
@@ -37,9 +36,15 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
   else if (ftype == "tracer line") {      _flist.emplace_back(std::make_unique<TracerLine>()); }
   else if (ftype == "measurement line") { _flist.emplace_back(std::make_unique<MeasurementLine>()); }
   else if (ftype == "measurement plane") { _flist.emplace_back(std::make_unique<Grid2dPoints>()); }
+  else {
+    std::cout << "  type " << ftype << " does not name an available measurement feature, ignoring" << std::endl;
+    return;
+  }
 
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
+
+  std::cout << "  found " << ftype << std::endl;
 }
 
 

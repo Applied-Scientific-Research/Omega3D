@@ -1,8 +1,8 @@
 /*
  * BEM.h - Library code for a 3D vortex boundary element solver
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -19,6 +19,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <iostream>
 #include <vector>
 
 //
@@ -207,7 +208,11 @@ void BEM<S,I>::solve() {
 
   // find L2 norm of error
   start = std::chrono::system_clock::now();
-  double relative_error = (A*strengths - b).norm() / b.norm(); // norm() is L2 norm
+  //assert(b.norm() != 0 && "Can't divide by 0");
+  // b.norm() is 0 for first computation, so we let it be one for the error computation
+  double b_norm = b.norm(); // norm() is L2 norm
+  if (b_norm == 0) { b_norm = 1.0; }
+  double relative_error = (A*strengths - b).norm() / b_norm;
   if (verbose) printf("    L2 norm of error is %g\n", relative_error);
   end = std::chrono::system_clock::now();
   elapsed_seconds = end-start;

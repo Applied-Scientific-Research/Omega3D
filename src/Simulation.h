@@ -2,7 +2,7 @@
  * Simulation.h - a class to control a 3D vortex particle sim
  *
  * (c)2017-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -14,6 +14,7 @@
 #include "BEM.h"
 #include "Convection.h"
 #include "Diffusion.h"
+#include "ElementPacket.h"
 #include "StatusFile.h"
 
 #ifdef USE_GL

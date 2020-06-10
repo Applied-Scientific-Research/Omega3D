@@ -127,6 +127,7 @@ void Diffusion<S,A,I>::step(const double                _time,
   std::cout << "Inside Diffusion::step with dt=" << _dt << std::endl;
 
   // ensure that we have a current h_nu
+  assert((S)_re != 0); // Can't divide by 0
   h_nu = (S)std::sqrt(_dt/_re);
 
 #ifdef PLUGIN_AVRM
@@ -138,6 +139,7 @@ void Diffusion<S,A,I>::step(const double                _time,
   // always re-run the BEM calculation before shedding
   //
   // first push away particles inside or too close to the body
+  assert(M_PI != 0); // Can't divide by 0
   clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), get_nom_sep(h_nu));
   solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
@@ -378,6 +380,7 @@ void Diffusion<S,A,I>::from_json(const nlohmann::json j) {
     std::cout << "  setting is_viscous= " << get_diffuse() << std::endl;
   }
 
+  // regardless, load VRM settings as they were
   vrm.from_json(j);
 
 #ifdef PLUGIN_AVRM
@@ -405,7 +408,7 @@ void Diffusion<S,A,I>::add_to_json(nlohmann::json& j) const {
   //j["overlap"] = particle_overlap;
   //j["core"] = core_func;
 
-  // VRM will write "VRM" and "AMR" parameters
+  // VRM always writes "VRM" and "AMR" parameters
   vrm.add_to_json(j);
 }
 

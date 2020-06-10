@@ -1,8 +1,8 @@
 /*
  * FlowFeature.cpp - GUI-side descriptions of flow features
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #include "FlowFeature.h"
@@ -30,7 +30,6 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
   if (_jin.count("type") != 1) return;
 
   const std::string ftype = _jin["type"];
-  std::cout << "  found " << ftype << std::endl;
 
   if      (ftype == "single particle") {  _flist.emplace_back(std::make_unique<SingleParticle>()); }
   else if (ftype == "vortex blob") {      _flist.emplace_back(std::make_unique<VortexBlob>()); }
@@ -38,9 +37,15 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
   else if (ftype == "particle emitter") { _flist.emplace_back(std::make_unique<ParticleEmitter>()); }
   else if (ftype == "singular ring") {    _flist.emplace_back(std::make_unique<SingularRing>()); }
   else if (ftype == "thick ring") {       _flist.emplace_back(std::make_unique<ThickRing>()); }
+  else {
+    std::cout << "  type " << ftype << " does not name an available flow feature, ignoring" << std::endl;
+    return;
+  }
 
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
+
+  std::cout << "  found " << ftype << std::endl;
 }
 
 

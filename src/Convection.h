@@ -2,7 +2,7 @@
  * Convection.h - a class for forward integration of elements and their strengths
  *
  * (c)2017-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -134,6 +134,7 @@ void Convection<S,A,I>::advect_1st(const double                         _time,
   // part A - unknowns
 
   // push away particles inside or too close to the body
+  assert(M_PI != 0); // Can't divide by 0
   clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _ips);
   // and solve the bem
   solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
@@ -178,6 +179,7 @@ void Convection<S,A,I>::advect_2nd(const double                         _time,
   // take the first Euler step ---------
 
   // push away particles inside or too close to the body
+  assert(M_PI != 0); // Can't divide by 0
   clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _ips);
   // perform the first BEM
   solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);

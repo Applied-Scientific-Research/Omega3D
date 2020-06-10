@@ -1,13 +1,13 @@
 /*
  * IglReadGeom.h - Call into igl to read a triangle mesh
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2019-20 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
 
-#include "Omega3D.h"
+#include "ElementPacket.h"
 
 #include <string>
 
