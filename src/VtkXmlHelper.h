@@ -176,7 +176,7 @@ std::string write_vtu_points(Points<S> const& pts, const size_t file_idx, const 
   bool has_radii = true;
   bool has_elong = true;
   bool has_strengths = true;
-  bool has_vorticity = pts.get_velgrad();
+  bool has_vorticity = pts.get_velgrad().has_value();
   std::string prefix = "part_";
   if (pts.is_inert()) {
     has_strengths = false;
