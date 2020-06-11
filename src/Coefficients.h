@@ -204,7 +204,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
     // store separate pointers for each of the nunk columns
     std::vector<size_t> jptr;
-    for (size_t i=0; i<snunk; ++i) jptr[i] = (j*snunk + i) * (ntarg*tnunk);
+    for (size_t i = 0; i < snunk; ++i) { jptr.push_back((j * snunk + i) * (ntarg * tnunk)); }
 
     // source triangular panel stays the same
     const Int sfirst  = si[3*j];
