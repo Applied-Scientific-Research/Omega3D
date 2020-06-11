@@ -328,7 +328,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
 #endif  // Vc
     {
       #pragma omp parallel for
-      for (size_t i=0; i<targ.get_n(); ++i) {
+      for (int32_t i=0; i<targ.get_n(); ++i) {
         A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
         for (size_t j=0; j<src.get_n(); ++j) {
           kernel_0v_0p<S,A>(sx[0][j], sx[1][j], sx[2][j], sr[j],

@@ -21,7 +21,7 @@ ElementPacket<float> read_geometry_file(const std::string _infile) {
 
   // call the reader
   std::cout << std::endl << "Reading " << _infile << std::endl;
-  if (not igl::read_triangle_mesh<float,Int>(_infile, v, f)) {
+  if (!igl::read_triangle_mesh<float,Int>(_infile, v, f)) {
     // failed
     throw std::runtime_error("  Geometry file is unreadable, abandoning");
     return ElementPacket<float>({std::vector<float>(), std::vector<Int>(), std::vector<float>()});

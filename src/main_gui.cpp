@@ -467,7 +467,7 @@ int main(int argc, char const *argv[]) {
           fs[0] = 0.0; fs[1] = 0.0; fs[2] = 0.0;
           sim.set_re_for_ips(0.015);
           // generate the features
-          ffeatures.emplace_back(std::make_unique<SingularRing>(0.0,0.0,0.0, 0.9,0.05,0.1, 0.5, 1.0));
+          ffeatures.emplace_back(std::make_unique<SingularRing>(0.0f, 0.0f, 0.0f, 0.9f, 0.05f, 0.1f, 0.5f, 1.0f));
           is_viscous = false;
           sim.set_diffuse(false);
           rparams.vcx = -0.5;

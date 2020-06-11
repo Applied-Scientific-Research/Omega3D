@@ -5,7 +5,8 @@
 #include <sstream>
 #include <iostream>
 
-#include <experimental/filesystem>
+// #include <experimental/filesystem>
+#include <filesystem>
 
 #if defined(_WIN32)
   #include <windows.h>
@@ -243,7 +244,8 @@ bool MiniPath::isAbsoluteFilePath( const string& s )
 std::list<string> MiniPath::listDirectories( const string& s )
 {
 #if defined(_WIN32)
-	using namespace experimental::filesystem::v1;
+	//using namespace experimental::filesystem::v1;
+    using namespace filesystem;
 
     list<string> directories;
 
@@ -294,7 +296,9 @@ std::list<string> MiniPath::listDirectories( const string& s )
 std::list<string> MiniPath::listFiles( const string& s, string filter )
 {
 #if defined(_WIN32)
-    using namespace experimental::filesystem::v1;
+    // using namespace experimental::filesystem::v1;
+    using namespace filesystem;
+
     list<string> files;
 
 

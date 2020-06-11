@@ -203,7 +203,7 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
     // we are looping over sources first, so we're computing the next nunk *columns* in the A matrix
 
     // store separate pointers for each of the nunk columns
-    size_t jptr[snunk];
+    std::vector<size_t> jptr;
     for (size_t i=0; i<snunk; ++i) jptr[i] = (j*snunk + i) * (ntarg*tnunk);
 
     // source triangular panel stays the same
