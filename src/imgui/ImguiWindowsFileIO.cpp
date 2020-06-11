@@ -6,7 +6,8 @@
 #include <iostream>
 #include <filesystem>
 
-#if defined(_WIN32) || defined(_WIN64)  #include <windows.h>
+#if defined(_WIN32) || defined(_WIN64)
+  #include <windows.h>
   #include <direct.h>
   #include <tchar.h>
   #include <IO.h>
