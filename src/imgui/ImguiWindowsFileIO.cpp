@@ -241,7 +241,8 @@ bool MiniPath::isAbsoluteFilePath( const string& s )
 std::list<string> MiniPath::listDirectories( const string& s )
 {
 #if defined(_WIN32) || defined(_WIN64)
-	using namespace filesystem;    list<string> directories;
+	using namespace filesystem;
+    list<string> directories;
 
     struct _finddata_t c_file;
     intptr_t hFile;
