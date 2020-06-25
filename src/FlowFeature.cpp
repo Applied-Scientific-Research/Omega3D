@@ -92,6 +92,7 @@ SingleParticle::from_json(const nlohmann::json j) {
   m_sx = s[0];
   m_sy = s[1];
   m_sz = s[2];
+  m_enabled = j.value("enabled", true);
 }
 
 nlohmann::json
@@ -100,6 +101,7 @@ SingleParticle::to_json() const {
   j["type"] = "single particle";
   j["center"] = {m_x, m_y, m_z};
   j["strength"] = {m_sx, m_sy, m_sz};
+  j["enabled"] = m_enabled;
   return j;
 }
 
@@ -196,6 +198,7 @@ VortexBlob::from_json(const nlohmann::json j) {
   m_sz = s[2];
   m_rad = j["rad"];
   m_softness = j["softness"];
+  m_enabled = j.value("enabled", true);
 }
 
 nlohmann::json
@@ -206,6 +209,7 @@ VortexBlob::to_json() const {
   j["radius"] = m_rad;
   j["softness"] = m_softness;
   j["strength"] = {m_sx, m_sy, m_sz};
+  j["enabled"] = m_enabled;
   return j;
 }
 
@@ -274,6 +278,7 @@ BlockOfRandom::from_json(const nlohmann::json j) {
   m_zsize = s[2];
   m_maxstr = j["max strength"];
   m_num = j["num"];
+  m_enabled = j.value("enabled", true);
 }
 
 nlohmann::json
@@ -284,6 +289,7 @@ BlockOfRandom::to_json() const {
   j["size"] = {m_xsize, m_ysize, m_zsize};
   j["max strength"] = m_maxstr;
   j["num"] = m_num;
+  j["enabled"] = m_enabled;
   return j;
 }
 
@@ -325,6 +331,7 @@ ParticleEmitter::from_json(const nlohmann::json j) {
   m_sx = s[0];
   m_sy = s[1];
   m_sz = s[2];
+  m_enabled = j.value("enabled", true);
 }
 
 nlohmann::json
@@ -333,6 +340,7 @@ ParticleEmitter::to_json() const {
   j["type"] = "particle emitter";
   j["center"] = {m_x, m_y, m_z};
   j["strength"] = {m_sx, m_sy, m_sz};
+  j["enabled"] = m_enabled;
   return j;
 }
 
@@ -409,6 +417,7 @@ SingularRing::from_json(const nlohmann::json j) {
   m_nz = n[2];
   m_majrad = j["major radius"];
   m_circ = j["circulation"];
+  m_enabled = j.value("enabled", true);
 }
 
 nlohmann::json
@@ -419,6 +428,7 @@ SingularRing::to_json() const {
   j["normal"] = {m_nx, m_ny, m_nz};
   j["major radius"] = m_majrad;
   j["circulation"] = m_circ;
+  j["enabled"] = m_enabled;
   return j;
 }
 
@@ -532,6 +542,7 @@ ThickRing::from_json(const nlohmann::json j) {
   m_majrad = j["major radius"];
   m_minrad = j["minor radius"];
   m_circ = j["circulation"];
+  m_enabled = j.value("enabled", true);
 }
 
 nlohmann::json
@@ -543,6 +554,7 @@ ThickRing::to_json() const {
   j["major radius"] = m_majrad;
   j["minor radius"] = m_minrad;
   j["circulation"] = m_circ;
+  j["enabled"] = m_enabled;
   return j;
 }
 
