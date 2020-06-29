@@ -308,7 +308,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
       const Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
 
       #pragma omp parallel for
-      for (size_t i=0; i<targ.get_n(); ++i) {
+      for (int32_t i=0; i<(int32_t)targ.get_n(); ++i) {
         const StoreVec txv = tx[0][i];
         const StoreVec tyv = tx[1][i];
         const StoreVec tzv = tx[2][i];
@@ -627,7 +627,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
       if (env.get_instrs() == cpu_vc) {
 
         #pragma omp parallel for
-        for (int32_t i=0; i<ntarg; ++i) {
+        for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
           const StoreVec tzv(tx[2][i]);
@@ -685,7 +685,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
 
       {
         #pragma omp parallel for
-        for (int32_t i=0; i<ntarg; ++i) {
+        for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
           A accumux = 0.0; A accumvx = 0.0; A accumwx = 0.0;
           A accumuy = 0.0; A accumvy = 0.0; A accumwy = 0.0;
@@ -750,7 +750,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
       if (env.get_instrs() == cpu_vc) {
 
         #pragma omp parallel for
-        for (int32_t i=0; i<ntarg; ++i) {
+        for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
           const StoreVec tzv(tx[2][i]);
@@ -791,7 +791,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
       #endif  // Vc
       {
         #pragma omp parallel for
-        for (int32_t i=0; i<ntarg; ++i) {
+        for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
           if (havess) {
             for (size_t j=0; j<src.get_npanels(); ++j) {
@@ -850,7 +850,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
       if (env.get_instrs() == cpu_vc) {
 
         #pragma omp parallel for
-        for (int32_t i=0; i<ntarg; ++i) {
+        for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
           const StoreVec tzv(tx[2][i]);
@@ -910,7 +910,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
       #endif  // Vc
       {
         #pragma omp parallel for
-        for (int32_t i=0; i<ntarg; ++i) {
+        for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
           A accumux = 0.0; A accumvx = 0.0; A accumwx = 0.0;
           A accumuy = 0.0; A accumvy = 0.0; A accumwy = 0.0;
@@ -976,7 +976,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
       if (env.get_instrs() == cpu_vc) {
 
         #pragma omp parallel for
-        for (int32_t i=0; i<ntarg; ++i) {
+        for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
           const StoreVec tzv(tx[2][i]);
@@ -1018,7 +1018,7 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
       #endif  // Vc
       {
         #pragma omp parallel for
-        for (int32_t i=0; i<ntarg; ++i) {
+        for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
           if (havess) {
             for (size_t j=0; j<src.get_npanels(); ++j) {
