@@ -166,6 +166,10 @@ string MiniPath::extension() const
     return name.substr (name.find_last_of ('.')+1);
 }
 
+void MiniPath::addExtension(const string ext) {
+   name += '.'+ext;
+}
+
 string MiniPath::getCurrentDir()
 {
     char cCurrentPath[FILENAME_MAX];
@@ -242,7 +246,8 @@ bool MiniPath::isAbsoluteFilePath( const string& s )
 std::list<string> MiniPath::listDirectories( const string& s )
 {
 #if defined(_WIN32) || defined(_WIN64)
-	using namespace filesystem;    list<string> directories;
+	using namespace filesystem;
+    list<string> directories;
 
     struct _finddata_t c_file;
     intptr_t hFile;
@@ -444,7 +449,7 @@ bool fileIOWindow(
     if( current_folder == "x" )
         current_folder = MiniPath::getCurrentDir();
 
-    static char current_file[ 256 ] = "select_a_file";
+    static char current_file[ 256 ] = "select_a_file.json";
     static int  file_type_selected = 0;
     static int  file_selected = 0;
     static int  directory_selected = 0;
@@ -628,16 +633,9 @@ bool fileIOWindow(
     if( Button( button_text.c_str() ) )
     {
         vector<string> ext_filter_v = stringSplit( extension_cstrings[file_type_selected], '.');
-        if( ext_filter_v.size() == 2 &&
-                ext_filter_v[1] != "*" )
-        {
-            string ext_filter = ext_filter_v[1];
-            if( current_mini_path.extension() == ext_filter )
+        if (current_mini_path.extension() != ext_filter_v[1]) { current_mini_path.addExtension(ext_filter_v[1]); }
                 file_path = current_mini_path.filePath();
-        } else {
-            file_path = current_mini_path.filePath();
-        }
-
+        std::cout << file_path << std::endl;
         if( ensure_file_exists )
         {
             if( MiniPath::pathExists( file_path ) )
