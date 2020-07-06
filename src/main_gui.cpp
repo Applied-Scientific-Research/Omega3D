@@ -318,7 +318,7 @@ int main(int argc, char const *argv[]) {
 
   // Load file names and paths of pre-stored sims
   std::vector<nlohmann::json> sims;
-  std::vector<std::string> descriptions = {"Select a Simulation"};
+  std::vector<std::string> descriptions = {"Select a simulation"};
   LoadJsonSims(sims, descriptions, EXAMPLES_DIR);
 
   // Main loop
@@ -366,6 +366,8 @@ int main(int argc, char const *argv[]) {
         std::cout << std::endl << "ERROR: " << sim_err_msg;
         // stop the run
         sim_is_running = false;
+        // and reset
+        sim.reset();
       }
 
       begin_single_step = false;
@@ -674,112 +676,9 @@ int main(int argc, char const *argv[]) {
         ImGui::Text("Add flow or boundry features (like vortex blobs and solid objects) here, then click RUN.");
       }
 
-
       ImGui::Spacing();
 
-      // button and modal window for adding new flow structures
-      if (ImGui::Button("Add flow")) ImGui::OpenPopup("New flow structure");
-      ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiCond_FirstUseEver);
-      if (ImGui::BeginPopupModal("New flow structure"))
-      {
-        static int item = 1;
-        const char* items[] = { "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
-        ImGui::Combo("type", &item, items, 4);
-
-        static float xc[3] = {0.0f, 0.0f, 0.0f};	// a center
-        //static float rad = 5.0 * sim.get_ips();	// a major radius
-        static float rad = 1.0;				// a major radius
-        static float soft = sim.get_ips();		// a softness or minor radius
-        static float vstr[3] = {0.0f, 0.0f, 1.0f};	// a vectorial strength
-        static float strmag = 1.0f;			// a scalar strength
-        static float circ = 1.0f;			// a circulation
-        static int npart = 1000;
-        static float xs[3] = {2.0f, 2.0f, 2.0f};	// a size
-        int guess_n = 0;
-
-        // always ask for center
-        ImGui::InputFloat3("center", xc);
-
-        // show different inputs based on what is selected
-        switch(item) {
-          case 0: {
-            // a blob of multiple vortons
-            ImGui::InputFloat3("strength", vstr);
-            ImGui::SliderFloat("radius", &rad, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
-            ImGui::SliderFloat("softness", &soft, sim.get_ips(), rad, "%.4f");
-            guess_n = 4.1888f * std::pow((2.0f*rad+soft)/sim.get_ips(), 3);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
-            ImGui::Spacing();
-            if (ImGui::Button("Add vortex blob")) {
-              ffeatures.emplace_back(std::make_unique<VortexBlob>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft));
-              std::cout << "Added " << (*ffeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            // it would be nice to be able to put this all in
-            //SingleParticle::draw_creation_gui();
-            } break;
-
-          case 1: {
-            // random particles in a block
-            ImGui::SliderInt("number", &npart, 10, 100000);
-            ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
-            ImGui::SliderFloat("strength magnitude", &strmag, 0.01f, 10.0f, "%.3f", 2.0f);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add %d particles", npart);
-            ImGui::Spacing();
-            if (ImGui::Button("Add random vorticies")) {
-              ffeatures.emplace_back(std::make_unique<BlockOfRandom>(xc[0],xc[1],xc[2], xs[0],xs[1],xs[2], strmag, npart));
-              std::cout << "Added " << (*ffeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-
-          case 2: {
-            // oriented singular vortex ring
-            ImGui::InputFloat3("direction", vstr);
-            ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
-            ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
-            guess_n = 1 + (2.0f * 3.1416f * rad / sim.get_ips());
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
-            ImGui::Spacing();
-            if (ImGui::Button("Add singular vortex ring")) {
-              ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
-              std::cout << "Added " << (*ffeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-
-          case 3: {
-            // oriented thick-cored vortex ring
-            ImGui::InputFloat3("direction", vstr);
-            ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
-            ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
-            ImGui::SliderFloat("thickness", &soft, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
-            guess_n = (1 + (2.0f * 3.1416f * rad / sim.get_ips())) * std::pow(soft / sim.get_ips(), 2);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
-            ImGui::Spacing();
-            if (ImGui::Button("Add thick vortex ring")) {
-              ffeatures.emplace_back(std::make_unique<ThickRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft, circ));
-              std::cout << "Added " << (*ffeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-        }
-
-        if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
-        ImGui::EndPopup();
-      } // end popup new flow structures
-
-
       // button and modal window for adding new boundary objects
-      ImGui::SameLine();
       if (ImGui::Button("Add boundary")) show_bdry_create_window = true;
       if (show_bdry_create_window)
       {
@@ -978,6 +877,108 @@ int main(int argc, char const *argv[]) {
         if (ImGui::Button("Cancel", ImVec2(120,0))) { show_bdry_create_window = false; }
         ImGui::End();
       }
+
+
+      // button and modal window for adding new flow structures
+      ImGui::SameLine();
+      if (ImGui::Button("Add vortex")) ImGui::OpenPopup("New flow structure");
+      ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiCond_FirstUseEver);
+      if (ImGui::BeginPopupModal("New flow structure"))
+      {
+        static int item = 1;
+        const char* items[] = { "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
+        ImGui::Combo("type", &item, items, 4);
+
+        static float xc[3] = {0.0f, 0.0f, 0.0f};	// a center
+        //static float rad = 5.0 * sim.get_ips();	// a major radius
+        static float rad = 1.0;				// a major radius
+        static float soft = sim.get_ips();		// a softness or minor radius
+        static float vstr[3] = {0.0f, 0.0f, 1.0f};	// a vectorial strength
+        static float strmag = 1.0f;			// a scalar strength
+        static float circ = 1.0f;			// a circulation
+        static int npart = 1000;
+        static float xs[3] = {2.0f, 2.0f, 2.0f};	// a size
+        int guess_n = 0;
+
+        // always ask for center
+        ImGui::InputFloat3("center", xc);
+
+        // show different inputs based on what is selected
+        switch(item) {
+          case 0: {
+            // a blob of multiple vortons
+            ImGui::InputFloat3("strength", vstr);
+            ImGui::SliderFloat("radius", &rad, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
+            ImGui::SliderFloat("softness", &soft, sim.get_ips(), rad, "%.4f");
+            guess_n = 4.1888f * std::pow((2.0f*rad+soft)/sim.get_ips(), 3);
+            ImGui::Spacing();
+            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            ImGui::Spacing();
+            if (ImGui::Button("Add vortex blob")) {
+              ffeatures.emplace_back(std::make_unique<VortexBlob>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft));
+              std::cout << "Added " << (*ffeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            // it would be nice to be able to put this all in
+            //SingleParticle::draw_creation_gui();
+            } break;
+
+          case 1: {
+            // random particles in a block
+            ImGui::SliderInt("number", &npart, 10, 100000);
+            ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
+            ImGui::SliderFloat("strength magnitude", &strmag, 0.01f, 10.0f, "%.3f", 2.0f);
+            ImGui::Spacing();
+            ImGui::TextWrapped("This feature will add %d particles", npart);
+            ImGui::Spacing();
+            if (ImGui::Button("Add random vorticies")) {
+              ffeatures.emplace_back(std::make_unique<BlockOfRandom>(xc[0],xc[1],xc[2], xs[0],xs[1],xs[2], strmag, npart));
+              std::cout << "Added " << (*ffeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            } break;
+
+          case 2: {
+            // oriented singular vortex ring
+            ImGui::InputFloat3("direction", vstr);
+            ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
+            ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
+            guess_n = 1 + (2.0f * 3.1416f * rad / sim.get_ips());
+            ImGui::Spacing();
+            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            ImGui::Spacing();
+            if (ImGui::Button("Add singular vortex ring")) {
+              ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
+              std::cout << "Added " << (*ffeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            } break;
+
+          case 3: {
+            // oriented thick-cored vortex ring
+            ImGui::InputFloat3("direction", vstr);
+            ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
+            ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
+            ImGui::SliderFloat("thickness", &soft, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
+            guess_n = (1 + (2.0f * 3.1416f * rad / sim.get_ips())) * std::pow(soft / sim.get_ips(), 2);
+            ImGui::Spacing();
+            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
+            ImGui::Spacing();
+            if (ImGui::Button("Add thick vortex ring")) {
+              ffeatures.emplace_back(std::make_unique<ThickRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft, circ));
+              std::cout << "Added " << (*ffeatures.back()) << std::endl;
+              ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            } break;
+        }
+
+        if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+      } // end popup new flow structures
 
 
       // button and modal window for adding new measurement objects
@@ -1200,9 +1201,7 @@ int main(int argc, char const *argv[]) {
 
     // Solver parameters, under its own header
     ImGui::Spacing();
-    if (ImGui::CollapsingHeader("Solver parameters (advanced)")) {
-      sim.draw_advanced();
-    }
+    if (ImGui::CollapsingHeader("Solver parameters (advanced)")) { sim.draw_advanced(); }
 
     // Output buttons, under a header
     ImGui::Spacing();
@@ -1251,7 +1250,6 @@ int main(int argc, char const *argv[]) {
         }
       }
     }
-
     nframes++;
 
     // check vs. end conditions, if present
@@ -1311,7 +1309,7 @@ int main(int argc, char const *argv[]) {
       if (ImGui::Button("ImGui Samples")) show_demo_window ^= 1;
       // use ASCII table for number: http://www.asciitable.com/
       // but use CAPITAL letter for a letter, jesus, really?!?
-      if (ImGui::IsKeyPressed(84) and not show_file_output_window) show_demo_window ^= 1;
+      //if (ImGui::IsKeyPressed(84) and not show_file_output_window) show_demo_window ^= 1;
 
       //ImGui::Text("Draw frame rate: %.2f ms/frame (%.1f FPS)",
       //            1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
