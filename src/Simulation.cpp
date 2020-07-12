@@ -758,12 +758,6 @@ void Simulation::step() {
     }
   }
 
-  // debug stuff
-  //static size_t idx = 1;
-  //std::vector<std::string> dummy;
-  //write_vtk_files<float>(vort, 100*idx+10, dummy);
-  //idx++;
-
   // update strengths for coloring purposes (eventually should be taken care of automatically)
   //vort.update_max_str();
 
@@ -944,24 +938,51 @@ void Simulation::add_fldpts(std::vector<float> _invec, const bool _moves) {
     fldpt.push_back(Points<float>(_invec, inert, move_type, nullptr));
 
 #ifdef USE_OGL_COMPUTE
-    // tell it where the compute shader vao is
-    {
+    { // tell the new collection where the compute shader vao is
       Points<float>& pts = std::get<Points<float>>(fldpt.back());
       pts.set_opengl_compute_state(cgl);
     }
 #endif
 
-  } else {
-    // THIS MUST USE A VISITOR
-    // HACK - add all particles to first collection
-    //std::visit([&](auto& elem) { elem.add_new(_invec); }, fldpt.back());
-    auto& coll = fldpt.back();
-    // eventually we will want to check every collection for matching element and move types
-    // only proceed if the collection is Points
-    if (std::holds_alternative<Points<float>>(coll)) {
-      Points<float>& pts = std::get<Points<float>>(coll);
-      pts.add_new(_invec);
+  } else if (move_type == lagrangian) {
+    // add this to the existing collection of tracers (keep them together)
+
+    // loop over all collections looking for a match
+    bool was_added = false;
+    for (auto &coll : fldpt) {
+      //std::visit([&](auto& elem) { elem.add_new(_invec); }, fldpt.back());
+      // eventually we will want to check every collection for matching element and move types
+      // only proceed if the collection is Points
+      if (std::holds_alternative<Points<float>>(coll)) {
+        Points<float>& pts = std::get<Points<float>>(coll);
+        if (pts.get_movet() == lagrangian) {
+          pts.add_new(_invec);
+          was_added = true;
+          break;
+        }
+      }
     }
+
+    if (not was_added) {
+      fldpt.push_back(Points<float>(_invec, inert, move_type, nullptr));
+#ifdef USE_OGL_COMPUTE
+      { // tell the new collection where the compute shader vao is
+        Points<float>& pts = std::get<Points<float>>(fldpt.back());
+        pts.set_opengl_compute_state(cgl);
+      }
+#endif
+    }
+
+  } else {
+    // bodybound or fixed
+    // always create this as a new collection (keep separate)
+    fldpt.push_back(Points<float>(_invec, inert, move_type, nullptr));
+#ifdef USE_OGL_COMPUTE
+    { // tell the new collection where the compute shader vao is
+      Points<float>& pts = std::get<Points<float>>(fldpt.back());
+      pts.set_opengl_compute_state(cgl);
+    }
+#endif
   }
 }
 
