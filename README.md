@@ -1,6 +1,9 @@
 # Omega3D
 3D flow solver with GUI using vortex particle and boundary element methods
 
+*NOTE: This program currrently uses O(N^2) calculations for velocity, so runs more slowly than desired. A O(N log N) treecode is being prepared to alleviate this.*
+
+![startupvideo](media/IntroSphere1.gif?raw=true "Session sample")
 
 ## Overview
 [Computational Fluid Dynamics (CFD)](https://en.wikipedia.org/wiki/Computational_fluid_dynamics) encompasses a wide variety of methods to aid in the numerical simulation of fluid flows on digital computers. Most methods rely on the subdivision of the fluid domain into small, stationary cells, such as tetrahedra, and solve the [Navier-Stokes equations](https://en.wikipedia.org/wiki/Navier%E2%80%93Stokes_equations) on each Eulerian (not moving) cell. In contrast, vortex methods rely on a Lagrangian (moving with the flow) description of the only the [vorticity](https://en.wikipedia.org/wiki/Vorticity)-containing region of the fluid domain and any solid boundaries present. This eliminates many of the difficulties present in traditional CFD. In addition, the form of the equations used also removes the pressure term from the Navier-Stokes equations, which is a large source of instability and extra effort in traditional CFD. This is why many new flow solvers for unsteady momentum-dominated flows (non-microscopic in scale) are implemented using vortex methods.
@@ -88,7 +91,6 @@ Tasks to consider or implement:
 * Allow general rectangles - use the ips to scale panel sizes
 * Use Eigen's Quaternion to represent rotations internally, but load them in as axis-angle
 * Consider using [libigl](https://libigl.github.io/tutorial/#closest-points) to find point-mesh closest point queries
-* Add some pics, maybe aGIF, to this readme
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
 * Add arcball rotation to the viewport - see [here](https://www.3dgep.com/understanding-the-view-matrix/) for some glm code
 * Add other repos as submodules, or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
