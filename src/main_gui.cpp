@@ -1351,20 +1351,10 @@ int main(int argc, char const *argv[]) {
     }
 
     // Show the simulation stats in the corner
-    if (show_stats_window) {
-      // there's no way to have this appear in the output png without the rest of the GUI
-      const int numrows = 4 + (sim.get_npanels()>0 ? 1 : 0) + (sim.get_nfldpts()>0 ? 1 : 0);
-      ImGui::SetNextWindowSize(ImVec2(10+fontSize*11, 10+1.1*fontSize*numrows));
-      ImGui::SetNextWindowPos(ImVec2(20, display_h-fontSize*(1.1*numrows+1)));
-      ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-      ImGui::Begin("Statistics", &show_stats_window, window_flags);
-      ImGui::Text("Step %13ld", sim.get_nstep());
-      ImGui::Text("Time %13.4f", sim.get_time());
-      if (sim.get_npanels() > 0) ImGui::Text("Panels %11ld", sim.get_npanels());
-      ImGui::Text("Particles %8ld", sim.get_nparts());
-      if (sim.get_nfldpts() > 0) ImGui::Text("Field Pts %8ld", sim.get_nfldpts());
-      ImGui::End();
-    }
+    //if (nframes < 10){ std::cout << "show_stats_window: " << show_stats_window << std::endl; }
+    if (show_stats_window) { draw_stats_window(sim.get_npanels(), sim.get_nfldpts(), sim.get_nstep(), 
+                                               sim.get_time(), sim.get_nparts(), &show_stats_window,
+                                               fontSize, display_h); }
 
     // Show the terminal output of the program
     if (show_terminal_window) {
