@@ -43,137 +43,6 @@
 #include <vector>
 #include <iomanip>	// for setfill, setw
 
-static void error_callback(int error, const char* description) {
-  fprintf(stderr, "Error %d: %s\n", error, description);
-}
-
-//static void keyboard_callback(int key, int action) {
-//  printf("%d %d\n", key, action);
-//}
-
-//
-// this is NOT a GLFW callback, but my own, and it needs the
-// ImGuiIO data structure for information on the mouse state
-//
-void mouse_callback(GLFWwindow* /*_thiswin*/,
-                    ImGuiIO& io,
-                    float*   _cx,
-                    float*   _cy,
-                    float*   _size) {
-
-  // first, use left-click and drag to move the data
-  static bool lbutton_down = false;
-
-  if (io.MouseClicked[0]) lbutton_down = true;
-  if (io.MouseReleased[0]) lbutton_down = false;
-
-  if (lbutton_down) {
-    //std::cout << "free mouse moved " << io.MouseDelta.x << " " << io.MouseDelta.y << std::endl;
-    // do your drag here
-
-    // this worked on Linux:
-    //int display_w, display_h;
-    //glfwGetFramebufferSize(_thiswin, &display_w, &display_h);
-    //(*_cx) -= 2.0f * (*_size) * (float)io.MouseDelta.x / (float)display_w;
-    //(*_cy) += 2.0f * (*_size) * (float)io.MouseDelta.y / (float)display_w;
-
-    // this works on a Retina display:
-    (*_cx) -= 2.0f * (*_size) * (float)io.MouseDelta.x / io.DisplaySize.x;
-    (*_cy) += 2.0f * (*_size) * (float)io.MouseDelta.y / io.DisplaySize.x;
-  }
-
-  // then, use scroll wheel to zoom!
-  //std::cout << "free mouse wheel " << io.MouseWheel << std::endl;
-  if (io.MouseWheel != 0) {
-    // do your drag here
-    //int display_w, display_h;
-    //glfwGetFramebufferSize(_thiswin, &display_w, &display_h);
-
-    // change the size
-    const float oldsize = (*_size);
-    (*_size) *= std::pow(1.1f, io.MouseWheel);
-
-    // and adjust the center such that the zoom occurs about the pointer!
-    //const float ar = (float)display_h / (float)display_w;
-    const float ar = io.DisplaySize.y / io.DisplaySize.x;
-
-    // this only scales around world origin
-    //(*_cx) += 2.0f * ((float)io.MousePos.x / (float)display_w - 0.5f) * (oldsize - (*_size));
-    //(*_cy) += 2.0f * (0.5f - (float)io.MousePos.y / (float)display_h) * (oldsize - (*_size)) * ar;
-    (*_cx) += 2.0f * ((float)io.MousePos.x / io.DisplaySize.x - 0.5f) * (oldsize - (*_size));
-    (*_cy) += 2.0f * (0.5f - (float)io.MousePos.y / io.DisplaySize.y) * (oldsize - (*_size)) * ar;
-  }
-}
-
-//
-// Helper routine to determine orthographic projection matrix
-// given coords at screen center and a measure of size
-// Also changes overall pixels-to-length scale
-//
-void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
-                            const float         _cx,
-                            const float         _cy,
-                            float*              _size,
-                            std::vector<float>& _projmat) {
-
-  // track changes in window!
-  static int last_w, last_h = -1;
-
-  // get current window size
-  int display_w, display_h;
-  glfwGetFramebufferSize(_thiswin, &display_w, &display_h);
-
-  // compare window size to previous call
-  if (last_h != -1) {
-    if (last_h != display_h or last_w != display_w) {
-      // window aspect ratio changed, adjust _size
-      (*_size) *= sqrt(  ((float)last_h   /(float)last_w   )
-                       / ((float)display_h/(float)display_w));
-    }
-  }
-
-  const float vsx = (*_size);
-  const float vsy = (*_size) * (float)display_h / (float)display_w;
-  _projmat =
-    { 1.0f/vsx, 0.0f,     0.0f, 0.0f,
-      0.0f,     1.0f/vsy, 0.0f, 0.0f,
-      0.0f,     0.0f,    -1.0f, 0.0f,
-     -_cx/vsx, -_cy/vsy,  0.0f, 1.0f };
-
-  // save window size for next call
-  last_w = display_w;
-  last_h = display_h;
-}
-
-//
-// resize a window and framebuffer programmatically
-//
-void resize_to_resolution(GLFWwindow* window, const int new_w, const int new_h) {
-
-  // get framebuffer size
-  int fb_w, fb_h;
-  glfwGetFramebufferSize(window, &fb_w, &fb_h);
-  //std::cout << "Framebuffer size is " << fb_w << " x " << fb_h << std::endl;
-
-  // get window size
-  int ws_w, ws_h;
-  glfwGetWindowSize(window, &ws_w, &ws_h);
-  //std::cout << "Window size is " << ws_w << " x " << ws_h << std::endl;
-
-  // on normal monitors, these numbers should be the same; on retina displays, they may not
-
-  // check and resize
-  if (fb_w != new_w or fb_h != new_h) {
-    // on a retina display...do anything different?
-
-    glfwSetWindowSize(window, new_w, new_h);
-    std::cout << "Resizing window/framebuffer to " << new_w << " x " << new_h << std::endl;
-  }
-}
-
-
-// execution starts here
-
 int main(int argc, char const *argv[]) {
   std::cout << std::endl << "Omega3D GUI" << std::endl;
 
@@ -213,9 +82,6 @@ int main(int argc, char const *argv[]) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#endif
-#if defined USE_OGL_COMPUTE && !defined __APPLE__
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 #endif
   GLFWwindow* window = glfwCreateWindow(1280, 720, "Omega3D GUI", nullptr, nullptr);
   if (!window) { 
@@ -1331,22 +1197,7 @@ int main(int argc, char const *argv[]) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Show the welcome window
-    if (show_welcome_window) {
-      ImGui::OpenPopup("Welcome!");
-      ImGui::SetNextWindowSize(ImVec2(500,300));
-      ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f,0.5f));
-      ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-      if (ImGui::BeginPopupModal("Welcome!", NULL, window_flags)) {
-        //ImGui::Begin("Welcome", &show_welcome_window);
-        ImGui::TextWrapped("Welcome to Omega3D! Select a simulation from the drop-down, load from a file, or manually set your simulation global properites and add one or more flow, boundary, or measurement structures. Space bar starts and stops the run, Reset clears and loads new simulation properties. Left mouse button drags the frame around, mouse scroll wheel zooms. Save your flow set-up to json or your flow image to png or vtu. Have fun!");
-        ImGui::Spacing();
-        //if (ImGui::Button("Got it.", ImVec2(120,0))) { show_welcome_window = false; }
-        //ImGui::End();
-        // const float xwid = ImGui::GetWindowContentRegionWidth();
-        if (ImGui::Button("Got it", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); show_welcome_window = false; }
-        ImGui::EndPopup();
-      }
-    }
+    if (show_welcome_window) { show_welcome_window = draw_welcome_window(io.DisplaySize.x, io.DisplaySize.y); }
 
     // Show the simulation stats in the corner
     //if (nframes < 10){ std::cout << "show_stats_window: " << show_stats_window << std::endl; }

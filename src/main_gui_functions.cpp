@@ -12,7 +12,7 @@
 #ifdef USE_IMGUI
 #include <GLFW/glfw3.h>
 #include "imgui/imgui.h"
-/*
+
 static void error_callback(int error, const char* description) {
   fprintf(stderr, "Error %d: %s\n", error, description);
 }
@@ -25,7 +25,7 @@ static void error_callback(int error, const char* description) {
 // this is NOT a GLFW callback, but my own, and it needs the
 // ImGuiIO data structure for information on the mouse state
 //
-void mouse_callback(GLFWwindow*, _thiswin,
+void mouse_callback(GLFWwindow* _thiswin,
                     ImGuiIO& io,
                     float*   _cx,
                     float*   _cy,
@@ -140,7 +140,7 @@ void resize_to_resolution(GLFWwindow* window, const int new_w, const int new_h) 
     std::cout << "Resizing window/framebuffer to " << new_w << " x " << new_h << std::endl;
   }
 }
-*/
+
 void LoadJsonSims(std::vector<nlohmann::json> &sims, std::vector<std::string> &descriptions, const std::string dirPath) {
   std::list<std::string> fileNames = MiniPath::listFiles(dirPath, "*.json");
   std::string sysDelim = MiniPath::getSystemDelim();
@@ -150,7 +150,7 @@ void LoadJsonSims(std::vector<nlohmann::json> &sims, std::vector<std::string> &d
     descriptions.push_back(sims.back()["description"]);
   }
 }
-/*
+
 void obj_movement_gui(int &mitem, char* strx, char* stry, char* strrad) {
   // fixed to ground      - this geometry is fixed (attached to inertial)
   // attached to previous - this geometry is attached to the previous geometry
@@ -191,7 +191,7 @@ void draw_render_gui(RenderParams &rp) {
   }
   // add button to recenter on all vorticity?
 }
-*/
+
 void draw_stats_window(const long int numPanels, const long int numFieldPts, const long int step, const float time,
                        const long int numParticles, bool* showStatsWindow, const int fontSize, const float displayH) {
   // std::cout << "Creating stats window: " << std::endl;
@@ -218,7 +218,7 @@ void draw_stats_window(const long int numPanels, const long int numFieldPts, con
   if (numFieldPts > 0) { ImGui::Text("Field Pts %8ld", numFieldPts); }
   ImGui::End();
 }
-/*
+
 bool draw_welcome_window(const float displayW, const float displayH) {
   bool show = true;
   ImGui::OpenPopup("Welcome!");
@@ -240,5 +240,5 @@ bool draw_welcome_window(const float displayW, const float displayH) {
   }
   return show;
 }
-*/
+
 #endif
