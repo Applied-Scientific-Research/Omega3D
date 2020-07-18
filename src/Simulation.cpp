@@ -2,7 +2,7 @@
  * Simulation.cpp - a class to control a 3D vortex particle sim
  *
  * (c)2017-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #include "Simulation.h"
@@ -535,9 +535,9 @@ std::vector<std::string> Simulation::write_vtk(const int _index) {
   }
 
   // ask Vtk to write files for each collection
-  write_vtk_files<float>(vort, stepnum, files);
-  write_vtk_files<float>(fldpt, stepnum, files);
-  write_vtk_files<float>(bdry, stepnum, files);
+  write_vtk_files<float>(vort, stepnum, time, files);
+  write_vtk_files<float>(fldpt, stepnum, time, files);
+  write_vtk_files<float>(bdry, stepnum, time, files);
 
   return files;
 }
