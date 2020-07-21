@@ -116,7 +116,6 @@ int main(int argc, char const *argv[]) {
   ImGuiIO& io = ImGui::GetIO();
   io.IniFilename = ".omega3d.ini";
   std::vector<std::string> recent_json_files;
-  std::vector<std::string> recent_geom_files;
   //sim.set_status_file_name("status.dat");
 
   // Load Fonts
@@ -157,11 +156,9 @@ int main(int argc, char const *argv[]) {
   bool show_stats_window = true;
   bool show_welcome_window = true;
   bool show_terminal_window = false;
-  bool show_geom_input_window = false;
   bool show_demo_window = false;
   bool show_json_input_window = false;
   bool show_file_output_window = false;
-  bool show_bdry_create_window = false;
   //static bool show_origin = true;
   static bool is_viscous = false;
 
@@ -545,205 +542,14 @@ int main(int argc, char const *argv[]) {
       ImGui::Spacing();
 
       // button and modal window for adding new boundary objects
-      if (ImGui::Button("Add boundary")) show_bdry_create_window = true;
-      if (show_bdry_create_window)
-      {
-        ImGui::SetNextWindowSize(ImVec2(400,275), ImGuiCond_FirstUseEver);
-        ImGui::Begin("New boundary structure", &show_bdry_create_window);
-
-        // define movement first
-        static int mitem = 0;
-        const char* mitems[] = { "fixed", "attached to previous", "according to formula" };
-        //const char* mitems[] = { "fixed", "attached to previous", "according to formula", "dynamic" };
-        ImGui::Combo("movement", &mitem, mitems, 3);
-        static char strx[512] = "0.0*t";
-        static char stry[512] = "0.0*t";
-        static char strz[512] = "0.0*t";
-        static char strrx[512] = "0.0*t";
-        static char strry[512] = "0.0*t";
-        static char strrz[512] = "0.0*t";
-
-        // show different inputs based on what is selected
-        switch(mitem) {
-          case 0:
-            // this geometry is fixed (attached to inertial)
-            break;
-          case 1:
-            // this geometry is attached to the previous geometry
-            break;
-          case 2:
-            // this geometry is attached to a new moving body
-            ImGui::InputText("x position", strx, 512);
-            ImGui::SameLine();
-            ShowHelpMarker("Position as constant or function of time t. Use C-style expressions: + - / * % ^ ( ) pi e abs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
-            ImGui::InputText("y position", stry, 512);
-            ImGui::InputText("z position", strz, 512);
-            ImGui::InputText("x rotation", strrx, 512);
-            ImGui::SameLine();
-            ShowHelpMarker("Rotation as axis times angle (in radians) as constant or function of time t. Use C-style expressions: + - / * % ^ ( ) pi e abs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
-            ImGui::InputText("y rotation", strry, 512);
-            ImGui::InputText("z rotation", strrz, 512);
-            break;
+      if (ImGui::Button("Add boundary")) ImGui::OpenPopup("New boundary structure");
+      ImGui::SetNextWindowSize(ImVec2(400,275), ImGuiCond_FirstUseEver);
+      if (ImGui::BeginPopupModal("New boundary structure")) {
+        if (BoundaryFeature::draw_creation_gui(bfeatures, sim)) {
+          // Eventually draw figure pre-sim
         }
-
-        // define geometry second
-        static int item = 0;
-        const char* items[] = { "sphere", "rectangle", "from file" };
-        ImGui::Spacing();
-        ImGui::Combo("geometry type", &item, items, 3);
-
-        static bool external_flow = true;
-
-        static float xc[3] = {0.0f, 0.0f, 0.0f};
-        //static float rotdeg = 0.0f;
-        static float scale = 1.0;
-
-        // show different inputs based on what is selected
-        switch(item) {
-          case 0: {
-            // create a solid sphere
-            ImGui::InputFloat3("center", xc);
-            ImGui::SliderFloat("diameter", &scale, 0.01f, 10.0f, "%.4f", 2.0);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add a solid spherical body centered at the given coordinates");
-            ImGui::Spacing();
-            if (ImGui::Button("Add spherical body")) {
-              std::shared_ptr<Body> bp;
-              switch(mitem) {
-                case 0:
-                  // this geometry is fixed (attached to inertial)
-                  bp = sim.get_pointer_to_body("ground");
-                  break;
-                case 1:
-                  // this geometry is attached to the previous geometry (or ground)
-                  bp = sim.get_last_body();
-                  break;
-                case 2:
-                  // this geometry is attached to a new moving body
-                  bp = std::make_shared<Body>();
-                  bp->set_pos(0, std::string(strx));
-                  bp->set_pos(1, std::string(stry));
-                  bp->set_pos(2, std::string(strz));
-                  bp->set_rot(0, std::string(strrx));
-                  bp->set_rot(1, std::string(strry));
-                  bp->set_rot(2, std::string(strrz));
-                  bp->set_name("sphere");
-                  sim.add_body(bp);
-                  break;
-              }
-              bfeatures.emplace_back(std::make_unique<Ovoid>(bp, external_flow, xc[0], xc[1], xc[2], scale, scale, scale));
-              std::cout << "Added " << (*bfeatures.back()) << std::endl;
-              show_bdry_create_window = false;
-            }
-            ImGui::SameLine();
-            } break;
-
-          case 1: {
-            // create a solid rectangle
-            ImGui::InputFloat3("center", xc);
-            static float xs[3] = {1.0f, 1.0f, 1.0f};
-            ImGui::InputFloat3("side lengths", xs);
-            //ImGui::SliderFloat("orientation", &rotdeg, 0.0f, 89.0f, "%.0f");
-            //ImGui::SliderAngle("orientation", &rotdeg);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add a solid rectangular body centered at the given coordinates");
-            ImGui::Spacing();
-            if (ImGui::Button("Add rectangular body")) {
-              std::shared_ptr<Body> bp;
-              switch(mitem) {
-                case 0:
-                  // this geometry is fixed (attached to inertial)
-                  bp = sim.get_pointer_to_body("ground");
-                  break;
-                case 1:
-                  // this geometry is attached to the previous geometry (or ground)
-                  bp = sim.get_last_body();
-                  break;
-                case 2:
-                  // this geometry is attached to a new moving body
-                  bp = std::make_shared<Body>();
-                  bp->set_pos(0, std::string(strx));
-                  bp->set_pos(1, std::string(stry));
-                  bp->set_pos(2, std::string(strz));
-                  bp->set_rot(0, std::string(strrx));
-                  bp->set_rot(1, std::string(strry));
-                  bp->set_rot(2, std::string(strrz));
-                  bp->set_name("rectangle");
-                  sim.add_body(bp);
-                  break;
-              }
-              bfeatures.emplace_back(std::make_unique<SolidRect>(bp, external_flow, xc[0], xc[1], xc[2], xs[0], xs[1], xs[2]));
-              std::cout << "Added " << (*bfeatures.back()) << std::endl;
-              show_bdry_create_window = false;
-            }
-            ImGui::SameLine();
-            } break;
-
-          case 2: {
-            // load a geometry file
-            static std::string infile = "input.obj";
-            static std::string shortname = infile;
-            if (ImGui::Button("Geometry file", ImVec2(200,0))) show_geom_input_window = true;
-
-            if (show_geom_input_window) {
-              bool try_it = false;
-
-              if (fileIOWindow( try_it, infile, recent_geom_files, "Open", {"*.obj", "*.stl", "*.ply", "*.*"}, true, ImVec2(500,250))) {
-                show_geom_input_window = false;
-
-                if (try_it and !infile.empty()) {
-                  // remember
-                  recent_geom_files.push_back( infile );
-
-                  // now remove the leading directories from the string
-                  const size_t lastchar = infile.find_last_of("/\\");
-                  shortname = infile.substr(lastchar+1);
-                }
-              }
-            }
-            ImGui::SameLine();
-            ImGui::Text(shortname.c_str());
-            ImGui::InputFloat3("center", xc);
-            ImGui::SliderFloat("scale", &scale, 0.01f, 10.0f, "%.4f", 2.0);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
-            ImGui::Spacing();
-            if (ImGui::Button("Add geometry from file")) {
-              std::shared_ptr<Body> bp;
-              switch(mitem) {
-                case 0:
-                  // this geometry is fixed (attached to inertial)
-                  bp = sim.get_pointer_to_body("ground");
-                  break;
-                case 1:
-                  // this geometry is attached to the previous geometry (or ground)
-                  bp = sim.get_last_body();
-                  break;
-                case 2:
-                  // this geometry is attached to a new moving body
-                  bp = std::make_shared<Body>();
-                  bp->set_pos(0, std::string(strx));
-                  bp->set_pos(1, std::string(stry));
-                  bp->set_pos(2, std::string(strz));
-                  bp->set_rot(0, std::string(strrx));
-                  bp->set_rot(1, std::string(strry));
-                  bp->set_rot(2, std::string(strrz));
-                  bp->set_name("geom from file");
-                  sim.add_body(bp);
-                  break;
-              }
-              bfeatures.emplace_back(std::make_unique<ExteriorFromFile>(bp, external_flow, xc[0], xc[1], xc[2], scale, scale, scale, infile));
-              std::cout << "Added " << (*bfeatures.back()) << std::endl;
-              show_bdry_create_window = false;
-            }
-            ImGui::SameLine();
-            } break;
-        }
-
-        if (ImGui::Button("Cancel", ImVec2(120,0))) { show_bdry_create_window = false; }
-        ImGui::End();
+        ImGui::EndPopup();
       }
-
 
       // button and modal window for adding new flow structures
       ImGui::SameLine();
