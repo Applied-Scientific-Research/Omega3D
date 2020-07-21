@@ -35,7 +35,10 @@ public:
   virtual nlohmann::json to_json() const = 0;
   virtual std::vector<float> init_particles(float) const = 0;
   virtual std::vector<float> step_particles(float) const = 0;
-
+#ifdef USE_IMGUI
+  static void draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
+  virtual bool draw_info_gui(const std::string, const float) = 0;
+#endif
   // emit particles as vector of float4
 
 protected:
@@ -75,6 +78,10 @@ public:
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
+#ifdef USE_IMGUI
+  // This currently does nothing and returns false
+  bool draw_info_gui(const std::string, const float) override;
+#endif
 
 protected:
   float m_sx, m_sy, m_sz;
@@ -105,6 +112,9 @@ public:
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string, const float) override;
+#endif
 
 protected:
   float m_rad;
@@ -139,6 +149,9 @@ public:
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string, const float) override;
+#endif
 
 protected:
   float m_xsize;
@@ -169,6 +182,10 @@ public:
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
+#ifdef USE_IMGUI
+  // This currently does nothing and returns false
+  bool draw_info_gui(const std::string, const float) override;
+#endif
 
 protected:
 };
@@ -201,6 +218,9 @@ public:
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string, const float) override;
+#endif
 
 protected:
   float m_nx;
@@ -235,6 +255,9 @@ public:
   nlohmann::json to_json() const override;
   std::vector<float> init_particles(float) const override;
   std::vector<float> step_particles(float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string, const float) override;
+#endif
 
 protected:
   float m_minrad;
