@@ -728,7 +728,7 @@ int main(int argc, char const *argv[]) {
         ImGui::SetNextWindowSize(ImVec2(400,275), ImGuiCond_FirstUseEver);
         if (ImGui::BeginPopupModal("Edit measure feature")) {
           bool fin = false;
-          if (mfeatures[edit_item_index]->draw_info_gui("Edit", rparams.tracer_scale, sim.get_ips())) {
+          if (mfeatures[edit_item_index]->draw_info_gui("Edit", sim.get_ips(), rparams.tracer_scale)) {
               fin = true;
           }
           ImGui::SameLine();
