@@ -11,7 +11,7 @@
 #include "Body.h"
 #include "ElementPacket.h"
 #include "Feature.h"
-
+#include "Simulation.h"
 #include "json/json.hpp"
 
 #include <iostream>
@@ -40,11 +40,17 @@ public:
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
+  virtual std::string to_short_string() const = 0;
   virtual void from_json(const nlohmann::json) = 0;
   virtual nlohmann::json to_json() const = 0;
   virtual ElementPacket<float> init_elements(const float) const = 0;
   //virtual std::vector<float> step_elements(const float) const = 0;
   std::shared_ptr<Body> get_body() { return m_bp; }
+#ifdef USE_IMGUI
+  static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
+  static bool draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
+  virtual bool draw_info_gui(const std::string) = 0;
+#endif
 
 protected:
   std::shared_ptr<Body> m_bp;
@@ -84,9 +90,14 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  std::string to_short_string() const override { return "ovoid"; }
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   ElementPacket<float> init_elements(const float) const override;
+#ifdef USE_IMGUI
+  // this currently does nothing and returns false;
+  bool draw_info_gui(const std::string) override;
+#endif
 
 protected:
   float m_sx;
@@ -116,9 +127,13 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  std::string to_short_string() const override { return "rectangular prism"; }
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   ElementPacket<float> init_elements(const float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string) override;
+#endif
 
 protected:
   float m_sx;
@@ -165,9 +180,13 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  std::string to_short_string() const override { return "rectangular plane"; }
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   ElementPacket<float> init_elements(const float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(std::string) override;
+#endif
 
 protected:
   float m_x1, m_y1, m_z1;
@@ -190,7 +209,7 @@ public:
                    float _sx = 1.0,
                    float _sy = 1.0,
                    float _sz = 1.0,
-                   std::string _infile = "")
+                   std::string _infile = "input.obj")
     : BoundaryFeature(_bp, _ext, _x, _y, _z),
       m_sx(_sx),
       m_sy(_sy),
@@ -200,9 +219,13 @@ public:
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
+  std::string to_short_string() const override { return "file mesh"; }
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   ElementPacket<float> init_elements(const float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string) override;
+#endif
 
 protected:
   float m_sx;

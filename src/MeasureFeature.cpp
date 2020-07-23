@@ -6,6 +6,7 @@
  */
 
 #include "MeasureFeature.h"
+#include "imgui/imgui.h"
 
 #include <cmath>
 #include <iostream>
@@ -47,6 +48,51 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
   std::cout << "  found " << ftype << std::endl;
 }
 
+#ifdef USE_IMGUI
+void MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &mfs, const float ips, const float &tracerScale) {
+  static int item = 0;
+  const char* items[] = { "single point/tracer", "streakline", "circle of tracers", "line of tracers", "measurement line", "2D grid" };
+  ImGui::Combo("type", &item, items, 6);
+
+  // show different inputs based on what is selected
+  std::unique_ptr<MeasureFeature> mf = nullptr;
+  switch(item) {
+    case 0: {
+      mf = std::make_unique<SinglePoint>();
+    } break;
+    case 1: {
+      mf = std::make_unique<TracerEmitter>();
+    } break;
+    case 2: {
+      mf = std::make_unique<TracerBlob>();
+    } break;
+    case 3: {
+      mf = std::make_unique<TracerLine>();
+    } break;
+    case 4: {
+      mf = std::make_unique<MeasurementLine>();
+    } break;
+    case 5: {
+      mf = std::make_unique<Grid2dPoints>();
+    } break;
+  }
+
+  if (mf->draw_info_gui("Add", tracerScale, ips)) {
+    //std::cout << "Added " << mf << std::endl;
+    mfs.emplace_back(std::move(mf));
+    mf = nullptr;
+    ImGui::CloseCurrentPopup();
+  }
+
+  ImGui::SameLine();
+  if (ImGui::Button("Cancel", ImVec2(120,0))) {
+    mf = nullptr;
+    ImGui::CloseCurrentPopup();
+  }
+
+  ImGui::EndPopup();
+}
+#endif
 
 //
 // Create a single measurement point
@@ -92,8 +138,27 @@ SinglePoint::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool SinglePoint::draw_info_gui(const std::string action, const float ips, const float &tracerScale) {
+  static float xc[3] = {m_x, m_y, m_z};
+  static bool lagrangian = m_is_lagrangian;
+  const std::string buttonText = action+" single point";
+  bool add = false;
 
-//
+  ImGui::InputFloat3("position", xc);
+  ImGui::Checkbox("Point follows flow", &lagrangian);
+  ImGui::TextWrapped("This feature will add 1 point");
+  if (ImGui::Button(buttonText.c_str())) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    add = true;
+  }
+
+  return add;
+}
+#endif
+
 // Create a single, stable point which emits Lagrangian points
 //
 std::vector<float>
@@ -147,6 +212,25 @@ TracerEmitter::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool TracerEmitter::draw_info_gui(const std::string action, const float ips,
+                                      const float &tracer_scale) {
+  static float xc[3] = {m_x, m_y, m_z};
+  const std::string buttonText = action+" streakline";
+  bool add = false;
+  
+  ImGui::InputFloat3("position", xc);
+  ImGui::TextWrapped("This feature will add 1 tracer emitter");
+  if (ImGui::Button("Add streakline")) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    add = true;
+  }
+
+  return add;
+}
+#endif
 
 //
 // Create a blob of tracer points
@@ -224,6 +308,29 @@ TracerBlob::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool TracerBlob::draw_info_gui(const std::string action, const float ips,
+                               const float &tracerScale) {
+  static float xc[3] = {m_x, m_y, m_z};
+  static float rad = m_rad;
+  const std::string buttonText = action+" circle of tracers";
+  bool add = false;
+
+  ImGui::InputFloat3("center", xc);
+  ImGui::SliderFloat("radius", &rad, 0.5f*ips, 0.5f, "%.4f");
+  ImGui::TextWrapped("This feature will add about %d field points",
+                     (int)(0.6*std::pow(2*rad/(tracerScale*ips), 3)));
+  if (ImGui::Button("Add circle of tracers")) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_rad = rad;
+    add = true;
+  }
+
+  return add;
+}
+#endif
 
 //
 // Create a line of tracer points
@@ -294,6 +401,30 @@ TracerLine::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool TracerLine::draw_info_gui(const std::string action, const float ips, const float &tracerScale) {
+  static float xc[3] = {m_x, m_y, m_z};
+  static float xf[3] = {m_xf, m_yf, m_zf};
+  const std::string buttonText = action+" line of tracers";
+  bool add = false;
+
+  ImGui::InputFloat3("start", xc);
+  ImGui::InputFloat3("finish", xf);
+  ImGui::TextWrapped("This feature will add about %d field points",
+                     1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(tracerScale*ips)));
+  if (ImGui::Button(buttonText.c_str())) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_xf = xf[0];
+    m_yf = xf[1];
+    m_zf = xf[2];
+    add = true;
+  }
+
+  return add;
+}
+#endif
 
 //
 // Create a line of static measurement points
@@ -364,6 +495,30 @@ MeasurementLine::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool MeasurementLine::draw_info_gui(const std::string action, const float ips, const float &tracerScale) {
+  static float xc[3] = {m_x, m_y, m_z};
+  static float xf[3] = {m_xf, m_yf, m_zf};
+  const std::string buttonText = action+" line of measurement points";
+  bool add = false;
+  
+  ImGui::InputFloat3("start", xc);
+  ImGui::InputFloat3("finish", xf);
+  ImGui::TextWrapped("This feature will add about %d field points",
+                     1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(tracerScale*ips)));
+  if (ImGui::Button(buttonText.c_str())) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_xf = xf[0];
+    m_yf = xf[1];
+    m_zf = xf[2];
+    add = true;
+  }
+
+  return add;
+}
+#endif
 
 //
 // Create a 2D grid of static measurement points
@@ -443,3 +598,35 @@ Grid2dPoints::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool Grid2dPoints::draw_info_gui(const std::string action, const float ips, const float &tracerScale) {
+  static float xc[3] = {m_x, m_y, m_z};
+  static float xs[3] = {m_xs, m_ys, m_zs};
+  static float xt[3] = {m_xt, m_yt, m_zt};
+  static float dx[2] = {m_ds, m_dt};
+  const std::string buttonText = action+" 2D grid of measurement points";
+  bool add = false;
+  
+  ImGui::InputFloat3("corner", xc);
+  ImGui::InputFloat3("axis 1", xs);
+  ImGui::InputFloat3("axis 2", xt);
+  ImGui::InputFloat2("dx", dx);
+  ImGui::TextWrapped("This feature will add about %d field points",
+                     1+(int)(std::sqrt(xs[0]*xs[0]+xs[1]*xs[1]+xs[2]*xs[2])*
+                             std::sqrt(xt[0]*xt[0]+xt[1]*xt[1]+xt[2]*xt[2])/
+                             (dx[0]*dx[1])));
+  if (ImGui::Button("Add 2D grid of measurement points")) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_xs = xs[0];
+    m_ys = xs[1];
+    m_zs = xs[2];
+    m_ds = dx[0];
+    m_dt = dx[1];
+    add = true;
+  }
+
+  return add;
+}
+#endif

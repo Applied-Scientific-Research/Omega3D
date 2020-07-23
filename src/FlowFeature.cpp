@@ -7,6 +7,7 @@
 
 #include "FlowFeature.h"
 #include "MathHelper.h"
+#include "imgui/imgui.h"
 
 #include <cmath>
 #include <iostream>
@@ -48,6 +49,39 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
   std::cout << "  found " << ftype << std::endl;
 }
 
+#ifdef USE_IMGUI
+void FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
+  static int item = 1;
+  const char* items[] = { "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
+  ImGui::Combo("type", &item, items, 4);
+
+  // show different inputs based on what is selected
+  static std::unique_ptr<FlowFeature> ff = nullptr;
+  switch(item) {
+    case 0: {
+      ff = std::make_unique<VortexBlob>();
+    } break;
+    case 1: {
+      ff = std::make_unique<BlockOfRandom>();
+    } break;
+    case 2: {
+      ff = std::make_unique<SingularRing>();
+    } break;
+    case 3: {
+      ff = std::make_unique<ThickRing>();
+    } break;
+  }
+
+  if (ff->draw_info_gui("Add", ips)) {
+    ffs.emplace_back(std::move(ff));
+    ff = nullptr;
+    ImGui::CloseCurrentPopup();
+  }
+
+  ImGui::SameLine();
+  if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+}
+#endif
 
 //
 // important feature: convert flow feature definition into 1-D vector of values
@@ -105,6 +139,11 @@ SingleParticle::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool SingleParticle::draw_info_gui(const std::string action, const float ips) {
+  return false;
+}
+#endif
 
 //
 // make a circular vortex blob with soft transition
@@ -213,6 +252,38 @@ VortexBlob::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool VortexBlob::draw_info_gui(const std::string action, const float ips) {
+  static float xc[3] = {m_x, m_y, m_z};
+  static float vstr[3] = {m_sx, m_sy, m_sz};
+  static float rad = m_rad;
+  static float soft = m_softness;
+  static float guess_n = 4.1888f * std::pow((2.0f*rad+soft)/ips, 3);
+  std::string buttonText = action+" vortex blob";
+  bool add = false;
+
+  ImGui::InputFloat3("center", xc);
+  ImGui::InputFloat3("strength", vstr);
+  ImGui::SliderFloat("radius", &rad, ips, 10.0f*ips, "%.4f");
+  ImGui::SliderFloat("softness", &soft, ips, rad, "%.4f");
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add about %f particles", guess_n);
+  ImGui::Spacing();
+  if (ImGui::Button(buttonText.c_str())) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_sx = vstr[0];
+    m_sy = vstr[1];
+    m_sz = vstr[2];
+    m_rad = rad;
+    m_softness = soft;
+    add = true;
+  }
+
+  return add;
+}
+#endif
 
 //
 // make the block of randomly-placed and random-strength particles
@@ -293,6 +364,37 @@ BlockOfRandom::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool BlockOfRandom::draw_info_gui(const std::string action, const float ips) {
+  static int npart = m_num;
+  static float xs[3] = {m_xsize, m_ysize, m_zsize};
+  static float xc[3] = {m_x, m_y, m_z};
+  static float strmag = m_maxstr;
+  std::string buttonText = action+" random vorticies";
+  bool add = false;
+
+  ImGui::SliderInt("number", &npart, 10, 100000);
+  ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
+  ImGui::InputFloat3("center", xc);
+  ImGui::SliderFloat("strength magnitude", &strmag, 0.01f, 10.0f, "%.3f", 2.0f);
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add %d particles", npart);
+  ImGui::Spacing();
+  if (ImGui::Button(buttonText.c_str())) {
+    m_num = npart;
+    m_xsize = xs[0];
+    m_ysize = xs[1];
+    m_zsize = xs[2];
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_maxstr = strmag;
+    add = true;
+  }
+
+  return add;
+}
+#endif
 
 //
 // drop a single particle from the emitter
@@ -344,6 +446,11 @@ ParticleEmitter::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool ParticleEmitter::draw_info_gui(const std::string action, const float ips) {
+  return false;
+}
+#endif
 
 //
 // make a singular (one row) vortex ring
@@ -432,6 +539,38 @@ SingularRing::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool SingularRing::draw_info_gui(const std::string action, const float ips) {
+  static float xc[3] = {m_x, m_y, m_z};
+  static float vstr[3] = {m_nx, m_ny, m_nz};
+  static float circ = m_circ;
+  static float rad = m_majrad;
+  static float guess_n = 1 + (2.0f * 3.1416f * rad / ips);
+  std::string buttonText = action+" singular ring";
+  bool add = false;
+
+  ImGui::InputFloat3("center", xc);
+  ImGui::InputFloat3("direction", vstr);
+  ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
+  ImGui::SliderFloat("radius", &rad, 3.0f*ips, 10.0f, "%.3f");
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add about %f particles", guess_n);
+  ImGui::Spacing();
+  if (ImGui::Button("Add singular vortex ring")) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_nx = vstr[0];
+    m_ny = vstr[1];
+    m_nz = vstr[2];
+    m_circ = circ;
+    m_majrad = rad;
+    add = true;
+  }
+
+  return add;
+}
+#endif
 
 //
 // make a thick-cored vortex ring
@@ -558,27 +697,38 @@ ThickRing::to_json() const {
   return j;
 }
 
+#ifdef USE_IMGUI
+bool ThickRing::draw_info_gui(const std::string action, const float ips) {
+  static float xc[3] = {m_x, m_y, m_z};
+  static float vstr[3] = {m_nx, m_ny, m_nz};
+  static float circ = m_circ;
+  static float rad = m_majrad;
+  static float minrad = m_minrad;
+  static float guess_n = (1 + (2.0f * 3.1416f * rad / ips) * std::pow(minrad/ips, 2));
+  std::string buttonText = action+" thick vortex ring";
+  bool add = false;
 
-//
-// various GUI draw methods for the subclasses
-//
-/*
-void
-SingleParticle::draw_creation_gui(std::vector< std::unique_ptr<FlowFeature> >& features) {
-  static float xc[2] = {0.0f, 0.0f};
-  static float str = 1.0f;
-  ImGui::InputFloat2("center", xc);
-  ImGui::SliderFloat("strength", &str, -1.0f, 1.0f, "%.4f");
-  ImGui::TextWrapped("This feature will add 1 particle");
-  if (ImGui::Button("Add single particle")) {
-    // this is C++14
-    //features.emplace_back(std::make_unique<SingleParticle>(xc[0], xc[1], str));
-    // this is C++11
-    features.emplace_back(std::unique_ptr<SingleParticle>(new SingleParticle(xc[0], xc[1], str)));
-    std::cout << "Added " << (*features.back()) << std::endl;
-    ImGui::CloseCurrentPopup();
+  ImGui::InputFloat3("center", xc);
+  ImGui::InputFloat3("direction", vstr);
+  ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
+  ImGui::SliderFloat("radius", &rad, 3.0f*ips, 10.0f, "%.3f");
+  ImGui::SliderFloat("thickness", &minrad, ips, 10.0f*ips, "%.4f");
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add about %f particles", guess_n);
+  ImGui::Spacing();
+  if (ImGui::Button("Add thick vortex ring")) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_nx = vstr[0];
+    m_ny = vstr[1];
+    m_nz = vstr[2];
+    m_circ = circ;
+    m_majrad = rad;
+    m_minrad = minrad;
+    add = true;
   }
-  ImGui::SameLine();
-}
-*/
 
+  return add;
+}
+#endif

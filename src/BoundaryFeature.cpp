@@ -10,6 +10,7 @@
 #include "IglRefine.h"
 #include "Icosahedron.h"
 #include "Cube.h"
+#include "GuiHelper.h"
 
 #include <cmath>
 #include <iostream>
@@ -47,6 +48,114 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
   std::cout << "  found " << _flist.back()->to_string() << std::endl;
 }
 
+#ifdef USE_IMGUI
+int BoundaryFeature::obj_movement_gui(int &mitem, char* strx, char* stry, char* strz,
+                                       char* strrx, char* strry, char* strrz) {
+  const char* mitems[] = { "fixed to ground", "attached to previous", "according to formula" };
+  int changed = 0;
+  static int tmp = -1;
+  //const char* mitems [] = { "fixed", "attached to previous", "according to formula", "dynamic" };
+  ImGui::Combo("movement", &mitem, mitems, 3);
+  if (tmp != mitem) {
+    tmp = mitem;
+    changed += 1;
+  }
+
+  if (mitem == 2) {
+    ImGui::InputText("x position", strx, 512);
+    ImGui::SameLine();
+    ShowHelpMarker("Position as constant or function of time t. Use C-style expressions: + - / * % ^ ( ) pi e abs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
+    ImGui::InputText("y position", stry, 512);
+    ImGui::InputText("z position", strz, 512);
+    ImGui::InputText("x rotation", strrx, 512);
+    ImGui::SameLine();
+    ShowHelpMarker("Rotation as axis times angle (in radians) as constant or function of time t. Use C-style expressions: + - / * % ^ ( ) pi e abs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
+    ImGui::InputText("y rotation", strry, 512);
+    ImGui::InputText("z rotation", strrz, 512);
+  }
+
+  return changed;
+}
+
+bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &bfs, Simulation &sim) {
+  static int mitem = 0;
+  static char strx[512] = "0.0*t";
+  static char stry[512] = "0.0*t";
+  static char strz[512] = "0.0*t";
+  static char strrx[512] = "0.0*t";
+  static char strry[512] = "0.0*t";
+  static char strrz[512] = "0.0*t";
+  int changed = BoundaryFeature::obj_movement_gui(mitem, strx, stry, strz, strrx, strry, strrz);
+  static std::shared_ptr<Body> bp = nullptr; 
+  if (changed) {
+    switch(mitem) {
+      case 0:
+        // this geometry is fixed (attached to inertial)
+        bp = sim.get_pointer_to_body("ground");
+        break;
+      case 1:
+        // this geometry is attached to the previous geometry (or ground)
+        bp = sim.get_last_body();
+        break;
+      case 2:
+        // this geometry is attached to a new moving body
+        bp = std::make_shared<Body>();
+        bp->set_pos(0, std::string(strx));
+        bp->set_pos(1, std::string(stry));
+        bp->set_pos(2, std::string(strz));
+        bp->set_rot(0, std::string(strrx));
+        bp->set_rot(1, std::string(strry));
+        bp->set_rot(2, std::string(strrz));
+        bp->set_name("sphere");
+        sim.add_body(bp);
+        break;
+    }
+  }
+
+  // define geometry second
+  static int item = 0;
+  const int numItems = 3;
+  const char* items[] = { "sphere", "rectangle", "from file" };
+  ImGui::Spacing();
+  ImGui::Combo("geometry type", &item, items, numItems);
+
+
+  // show different inputs based on what is selected
+  bool created = false;
+  static std::unique_ptr<BoundaryFeature> bf = nullptr;
+  switch(item) {
+    case 0: {
+      // Need to create the object first
+      bf = std::make_unique<Ovoid>(bp);
+    } break;
+    case 1: {
+      bf = std::make_unique<SolidRect>(bp);
+    } break;
+    case 2: {
+      bf = std::make_unique<ExteriorFromFile>(bp);
+    } break;
+  }
+
+  if (bf->draw_info_gui("Add")) {
+    if (mitem == 2) {
+      bp->set_name(bf->to_short_string());
+      sim.add_body(bp);
+    }
+    bfs.emplace_back(std::move(bf));
+    bf = nullptr;
+    created = true;
+    ImGui::CloseCurrentPopup();
+  }
+
+  ImGui::SameLine();
+  if (ImGui::Button("Cancel", ImVec2(120,0))) {
+    ImGui::CloseCurrentPopup();
+    created = false;
+  }
+
+  return created;
+}
+#endif
 
 //
 // Create a closed spherical/ovoid object from a icosahedron
@@ -157,6 +266,32 @@ Ovoid::to_json() const {
   return mesh;
 }
 
+#ifdef USE_IMGUI
+bool Ovoid::draw_info_gui(const std::string action) {
+  //static bool external_flow = true;
+  static float xc[3] = {m_x, m_y, m_z};
+  //static float rotdeg = 0.0f;
+  static float scale = m_sx;
+  std::string buttonText = action+" spherical body";
+  bool added = false;
+
+  // create a solid sphere
+  ImGui::InputFloat3("center", xc);
+  ImGui::SliderFloat("diameter", &scale, 0.01f, 10.0f, "%.4f", 2.0);
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add a solid spherical body centered at the given coordinates");
+  ImGui::Spacing();
+  if (ImGui::Button(buttonText.c_str())) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_sx = m_sy = m_sz = scale;
+    added = true;
+  }
+
+  return added;
+}
+#endif
 
 //
 // Create a closed rectangular object
@@ -253,7 +388,36 @@ SolidRect::to_json() const {
   return mesh;
 }
 
+#ifdef USE_IMGUI
+bool SolidRect::draw_info_gui(const std::string action) {
+  //static bool external_flow = true;
+  static float xc[3] = {m_x, m_y, m_z};
+  static float xs[3] = {m_sx, m_sy, m_sz};
+  //static float rotdeg = 0.0f;
+  std::string buttonText = action+" rectangular body";
+  bool added = false;
+  
+  // create a solid rectangle
+  ImGui::InputFloat3("center", xc);
+  ImGui::InputFloat3("side lengths", xs);
+  //ImGui::SliderFloat("orientation", &rotdeg, 0.0f, 89.0f, "%.0f");
+  //ImGui::SliderAngle("orientation", &rotdeg);
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add a solid rectangular body centered at the given coordinates");
+  ImGui::Spacing();
+  if (ImGui::Button(buttonText.c_str())) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_sx = xs[0];
+    m_sy = xs[1];
+    m_sz = xs[2];
+    added = true;
+  }
 
+  return added;
+}
+#endif
 //
 // Create a triangulated quad of a solid boundary
 //
@@ -381,6 +545,11 @@ BoundaryQuad::to_json() const {
   return mesh;
 }
 
+#ifdef USE_IMGUI
+bool BoundaryQuad::draw_info_gui(const std::string action) {
+  return false;
+}
+#endif
 
 //
 // Create a closed object from a geometry file (fluid is outside)
@@ -468,3 +637,54 @@ ExteriorFromFile::to_json() const {
   return mesh;
 }
 
+#ifdef USE_IMGUI
+bool ExteriorFromFile::draw_info_gui(const std::string action) {
+  // load a geometry file
+  static std::string infile = m_infile;
+  static std::string shortname = infile;
+  static std::vector<std::string> recent_geom_files;
+  static bool show_geom_input_window = false;
+  if (ImGui::Button("Geometry file", ImVec2(200,0))) show_geom_input_window = true;
+
+  if (show_geom_input_window) {
+    bool try_it = false;
+
+    if (fileIOWindow( try_it, infile, recent_geom_files, "Open", {"*.obj", "*.stl", "*.ply", "*.*"}, true, ImVec2(500,250))) {
+      show_geom_input_window = false;
+
+      if (try_it and !infile.empty()) {
+        // remember
+        recent_geom_files.push_back( infile );
+
+        // now remove the leading directories from the string
+        const size_t lastchar = infile.find_last_of("/\\");
+        shortname = infile.substr(lastchar+1);
+      }
+    }
+  }
+  
+  //static bool external_flow = true;
+  static float xc[3] = {m_x, m_y, m_z};
+  //static float rotdeg = 0.0f;
+  static float scale = m_sx;
+  std::string buttonText = action+" geometry from file";
+  bool added = false;
+  
+  ImGui::SameLine();
+  ImGui::Text(shortname.c_str());
+  ImGui::InputFloat3("center", xc);
+  ImGui::SliderFloat("scale", &scale, 0.01f, 10.0f, "%.4f", 2.0);
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
+  ImGui::Spacing();
+  if (ImGui::Button(buttonText.c_str())) {
+    m_x = xc[0];
+    m_y = xc[1];
+    m_z = xc[2];
+    m_sx = m_sy = m_sz = scale;
+    added = true;
+  }
+
+  return added;
+}
+#endif

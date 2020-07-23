@@ -116,7 +116,6 @@ int main(int argc, char const *argv[]) {
   ImGuiIO& io = ImGui::GetIO();
   io.IniFilename = ".omega3d.ini";
   std::vector<std::string> recent_json_files;
-  std::vector<std::string> recent_geom_files;
   //sim.set_status_file_name("status.dat");
 
   // Load Fonts
@@ -157,11 +156,9 @@ int main(int argc, char const *argv[]) {
   bool show_stats_window = true;
   bool show_welcome_window = true;
   bool show_terminal_window = false;
-  bool show_geom_input_window = false;
   bool show_demo_window = false;
   bool show_json_input_window = false;
   bool show_file_output_window = false;
-  bool show_bdry_create_window = false;
   //static bool show_origin = true;
   static bool is_viscous = false;
 
@@ -545,205 +542,14 @@ int main(int argc, char const *argv[]) {
       ImGui::Spacing();
 
       // button and modal window for adding new boundary objects
-      if (ImGui::Button("Add boundary")) show_bdry_create_window = true;
-      if (show_bdry_create_window)
-      {
-        ImGui::SetNextWindowSize(ImVec2(400,275), ImGuiCond_FirstUseEver);
-        ImGui::Begin("New boundary structure", &show_bdry_create_window);
-
-        // define movement first
-        static int mitem = 0;
-        const char* mitems[] = { "fixed", "attached to previous", "according to formula" };
-        //const char* mitems[] = { "fixed", "attached to previous", "according to formula", "dynamic" };
-        ImGui::Combo("movement", &mitem, mitems, 3);
-        static char strx[512] = "0.0*t";
-        static char stry[512] = "0.0*t";
-        static char strz[512] = "0.0*t";
-        static char strrx[512] = "0.0*t";
-        static char strry[512] = "0.0*t";
-        static char strrz[512] = "0.0*t";
-
-        // show different inputs based on what is selected
-        switch(mitem) {
-          case 0:
-            // this geometry is fixed (attached to inertial)
-            break;
-          case 1:
-            // this geometry is attached to the previous geometry
-            break;
-          case 2:
-            // this geometry is attached to a new moving body
-            ImGui::InputText("x position", strx, 512);
-            ImGui::SameLine();
-            ShowHelpMarker("Position as constant or function of time t. Use C-style expressions: + - / * % ^ ( ) pi e abs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
-            ImGui::InputText("y position", stry, 512);
-            ImGui::InputText("z position", strz, 512);
-            ImGui::InputText("x rotation", strrx, 512);
-            ImGui::SameLine();
-            ShowHelpMarker("Rotation as axis times angle (in radians) as constant or function of time t. Use C-style expressions: + - / * % ^ ( ) pi e abs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
-            ImGui::InputText("y rotation", strry, 512);
-            ImGui::InputText("z rotation", strrz, 512);
-            break;
+      if (ImGui::Button("Add boundary")) ImGui::OpenPopup("New boundary structure");
+      ImGui::SetNextWindowSize(ImVec2(400,275), ImGuiCond_FirstUseEver);
+      if (ImGui::BeginPopupModal("New boundary structure")) {
+        if (BoundaryFeature::draw_creation_gui(bfeatures, sim)) {
+          // Eventually draw figure pre-sim
         }
-
-        // define geometry second
-        static int item = 0;
-        const char* items[] = { "sphere", "rectangle", "from file" };
-        ImGui::Spacing();
-        ImGui::Combo("geometry type", &item, items, 3);
-
-        static bool external_flow = true;
-
-        static float xc[3] = {0.0f, 0.0f, 0.0f};
-        //static float rotdeg = 0.0f;
-        static float scale = 1.0;
-
-        // show different inputs based on what is selected
-        switch(item) {
-          case 0: {
-            // create a solid sphere
-            ImGui::InputFloat3("center", xc);
-            ImGui::SliderFloat("diameter", &scale, 0.01f, 10.0f, "%.4f", 2.0);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add a solid spherical body centered at the given coordinates");
-            ImGui::Spacing();
-            if (ImGui::Button("Add spherical body")) {
-              std::shared_ptr<Body> bp;
-              switch(mitem) {
-                case 0:
-                  // this geometry is fixed (attached to inertial)
-                  bp = sim.get_pointer_to_body("ground");
-                  break;
-                case 1:
-                  // this geometry is attached to the previous geometry (or ground)
-                  bp = sim.get_last_body();
-                  break;
-                case 2:
-                  // this geometry is attached to a new moving body
-                  bp = std::make_shared<Body>();
-                  bp->set_pos(0, std::string(strx));
-                  bp->set_pos(1, std::string(stry));
-                  bp->set_pos(2, std::string(strz));
-                  bp->set_rot(0, std::string(strrx));
-                  bp->set_rot(1, std::string(strry));
-                  bp->set_rot(2, std::string(strrz));
-                  bp->set_name("sphere");
-                  sim.add_body(bp);
-                  break;
-              }
-              bfeatures.emplace_back(std::make_unique<Ovoid>(bp, external_flow, xc[0], xc[1], xc[2], scale, scale, scale));
-              std::cout << "Added " << (*bfeatures.back()) << std::endl;
-              show_bdry_create_window = false;
-            }
-            ImGui::SameLine();
-            } break;
-
-          case 1: {
-            // create a solid rectangle
-            ImGui::InputFloat3("center", xc);
-            static float xs[3] = {1.0f, 1.0f, 1.0f};
-            ImGui::InputFloat3("side lengths", xs);
-            //ImGui::SliderFloat("orientation", &rotdeg, 0.0f, 89.0f, "%.0f");
-            //ImGui::SliderAngle("orientation", &rotdeg);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add a solid rectangular body centered at the given coordinates");
-            ImGui::Spacing();
-            if (ImGui::Button("Add rectangular body")) {
-              std::shared_ptr<Body> bp;
-              switch(mitem) {
-                case 0:
-                  // this geometry is fixed (attached to inertial)
-                  bp = sim.get_pointer_to_body("ground");
-                  break;
-                case 1:
-                  // this geometry is attached to the previous geometry (or ground)
-                  bp = sim.get_last_body();
-                  break;
-                case 2:
-                  // this geometry is attached to a new moving body
-                  bp = std::make_shared<Body>();
-                  bp->set_pos(0, std::string(strx));
-                  bp->set_pos(1, std::string(stry));
-                  bp->set_pos(2, std::string(strz));
-                  bp->set_rot(0, std::string(strrx));
-                  bp->set_rot(1, std::string(strry));
-                  bp->set_rot(2, std::string(strrz));
-                  bp->set_name("rectangle");
-                  sim.add_body(bp);
-                  break;
-              }
-              bfeatures.emplace_back(std::make_unique<SolidRect>(bp, external_flow, xc[0], xc[1], xc[2], xs[0], xs[1], xs[2]));
-              std::cout << "Added " << (*bfeatures.back()) << std::endl;
-              show_bdry_create_window = false;
-            }
-            ImGui::SameLine();
-            } break;
-
-          case 2: {
-            // load a geometry file
-            static std::string infile = "input.obj";
-            static std::string shortname = infile;
-            if (ImGui::Button("Geometry file", ImVec2(200,0))) show_geom_input_window = true;
-
-            if (show_geom_input_window) {
-              bool try_it = false;
-
-              if (fileIOWindow( try_it, infile, recent_geom_files, "Open", {"*.obj", "*.stl", "*.ply", "*.*"}, true, ImVec2(500,250))) {
-                show_geom_input_window = false;
-
-                if (try_it and !infile.empty()) {
-                  // remember
-                  recent_geom_files.push_back( infile );
-
-                  // now remove the leading directories from the string
-                  const size_t lastchar = infile.find_last_of("/\\");
-                  shortname = infile.substr(lastchar+1);
-                }
-              }
-            }
-            ImGui::SameLine();
-            ImGui::Text(shortname.c_str());
-            ImGui::InputFloat3("center", xc);
-            ImGui::SliderFloat("scale", &scale, 0.01f, 10.0f, "%.4f", 2.0);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
-            ImGui::Spacing();
-            if (ImGui::Button("Add geometry from file")) {
-              std::shared_ptr<Body> bp;
-              switch(mitem) {
-                case 0:
-                  // this geometry is fixed (attached to inertial)
-                  bp = sim.get_pointer_to_body("ground");
-                  break;
-                case 1:
-                  // this geometry is attached to the previous geometry (or ground)
-                  bp = sim.get_last_body();
-                  break;
-                case 2:
-                  // this geometry is attached to a new moving body
-                  bp = std::make_shared<Body>();
-                  bp->set_pos(0, std::string(strx));
-                  bp->set_pos(1, std::string(stry));
-                  bp->set_pos(2, std::string(strz));
-                  bp->set_rot(0, std::string(strrx));
-                  bp->set_rot(1, std::string(strry));
-                  bp->set_rot(2, std::string(strrz));
-                  bp->set_name("geom from file");
-                  sim.add_body(bp);
-                  break;
-              }
-              bfeatures.emplace_back(std::make_unique<ExteriorFromFile>(bp, external_flow, xc[0], xc[1], xc[2], scale, scale, scale, infile));
-              std::cout << "Added " << (*bfeatures.back()) << std::endl;
-              show_bdry_create_window = false;
-            }
-            ImGui::SameLine();
-            } break;
-        }
-
-        if (ImGui::Button("Cancel", ImVec2(120,0))) { show_bdry_create_window = false; }
-        ImGui::End();
+        ImGui::EndPopup();
       }
-
 
       // button and modal window for adding new flow structures
       ImGui::SameLine();
@@ -751,101 +557,9 @@ int main(int argc, char const *argv[]) {
       ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiCond_FirstUseEver);
       if (ImGui::BeginPopupModal("New flow structure"))
       {
-        static int item = 1;
-        const char* items[] = { "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
-        ImGui::Combo("type", &item, items, 4);
-
-        static float xc[3] = {0.0f, 0.0f, 0.0f};	// a center
-        //static float rad = 5.0 * sim.get_ips();	// a major radius
-        static float rad = 1.0;				// a major radius
-        static float soft = sim.get_ips();		// a softness or minor radius
-        static float vstr[3] = {0.0f, 0.0f, 1.0f};	// a vectorial strength
-        static float strmag = 1.0f;			// a scalar strength
-        static float circ = 1.0f;			// a circulation
-        static int npart = 1000;
-        static float xs[3] = {2.0f, 2.0f, 2.0f};	// a size
-        int guess_n = 0;
-
-        // always ask for center
-        ImGui::InputFloat3("center", xc);
-
-        // show different inputs based on what is selected
-        switch(item) {
-          case 0: {
-            // a blob of multiple vortons
-            ImGui::InputFloat3("strength", vstr);
-            ImGui::SliderFloat("radius", &rad, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
-            ImGui::SliderFloat("softness", &soft, sim.get_ips(), rad, "%.4f");
-            guess_n = 4.1888f * std::pow((2.0f*rad+soft)/sim.get_ips(), 3);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
-            ImGui::Spacing();
-            if (ImGui::Button("Add vortex blob")) {
-              ffeatures.emplace_back(std::make_unique<VortexBlob>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft));
-              std::cout << "Added " << (*ffeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            // it would be nice to be able to put this all in
-            //SingleParticle::draw_creation_gui();
-            } break;
-
-          case 1: {
-            // random particles in a block
-            ImGui::SliderInt("number", &npart, 10, 100000);
-            ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
-            ImGui::SliderFloat("strength magnitude", &strmag, 0.01f, 10.0f, "%.3f", 2.0f);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add %d particles", npart);
-            ImGui::Spacing();
-            if (ImGui::Button("Add random vorticies")) {
-              ffeatures.emplace_back(std::make_unique<BlockOfRandom>(xc[0],xc[1],xc[2], xs[0],xs[1],xs[2], strmag, npart));
-              std::cout << "Added " << (*ffeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-
-          case 2: {
-            // oriented singular vortex ring
-            ImGui::InputFloat3("direction", vstr);
-            ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
-            ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
-            guess_n = 1 + (2.0f * 3.1416f * rad / sim.get_ips());
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
-            ImGui::Spacing();
-            if (ImGui::Button("Add singular vortex ring")) {
-              ffeatures.emplace_back(std::make_unique<SingularRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, circ));
-              std::cout << "Added " << (*ffeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-
-          case 3: {
-            // oriented thick-cored vortex ring
-            ImGui::InputFloat3("direction", vstr);
-            ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
-            ImGui::SliderFloat("radius", &rad, 3.0f*sim.get_ips(), 10.0f, "%.3f");
-            ImGui::SliderFloat("thickness", &soft, sim.get_ips(), 10.0f*sim.get_ips(), "%.4f");
-            guess_n = (1 + (2.0f * 3.1416f * rad / sim.get_ips())) * std::pow(soft / sim.get_ips(), 2);
-            ImGui::Spacing();
-            ImGui::TextWrapped("This feature will add about %d particles", guess_n);
-            ImGui::Spacing();
-            if (ImGui::Button("Add thick vortex ring")) {
-              ffeatures.emplace_back(std::make_unique<ThickRing>(xc[0],xc[1],xc[2], vstr[0],vstr[1],vstr[2], rad, soft, circ));
-              std::cout << "Added " << (*ffeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-        }
-
-        if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+        FlowFeature::draw_creation_gui(ffeatures, sim.get_ips());
         ImGui::EndPopup();
-      } // end popup new flow structures
-
+      }
 
       // button and modal window for adding new measurement objects
       ImGui::SameLine();
@@ -853,103 +567,8 @@ int main(int argc, char const *argv[]) {
       ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiCond_FirstUseEver);
       if (ImGui::BeginPopupModal("New measurement structure"))
       {
-        static int item = 0;
-        const char* items[] = { "single point/tracer", "streakline", "circle of tracers", "line of tracers", "measurement line", "2D grid" };
-        ImGui::Combo("type", &item, items, 6);
-
-        static float xc[3] = {0.0f, 0.0f, 0.0f};
-        static float xf[3] = {0.0f, 1.0f, 0.0f};
-        static bool is_lagrangian = true;
-        static float rad = 2.0 * sim.get_ips();
-
-        // show different inputs based on what is selected
-        switch(item) {
-          case 0: {
-            // a single measurement point
-            ImGui::InputFloat3("position", xc);
-            ImGui::Checkbox("Point follows flow", &is_lagrangian);
-            ImGui::TextWrapped("This feature will add 1 point");
-            if (ImGui::Button("Add single point")) {
-              mfeatures.emplace_back(std::make_unique<SinglePoint>(xc[0], xc[1], xc[2], is_lagrangian));
-              std::cout << "Added " << (*mfeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-          case 1: {
-            // a tracer emitter
-            ImGui::InputFloat3("position", xc);
-            ImGui::TextWrapped("This feature will add 1 tracer emitter");
-            if (ImGui::Button("Add streakline")) {
-              mfeatures.emplace_back(std::make_unique<TracerEmitter>(xc[0], xc[1], xc[2]));
-              std::cout << "Added " << (*mfeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-          case 2: {
-            // a tracer circle
-            ImGui::InputFloat3("center", xc);
-            ImGui::SliderFloat("radius", &rad, 0.5f*sim.get_ips(), 0.5f, "%.4f");
-            ImGui::TextWrapped("This feature will add about %d field points",
-                               (int)(0.6*std::pow(2*rad/(rparams.tracer_scale*sim.get_ips()), 3)));
-            if (ImGui::Button("Add circle of tracers")) {
-              mfeatures.emplace_back(std::make_unique<TracerBlob>(xc[0], xc[1], xc[2], rad));
-              std::cout << "Added " << (*mfeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-          case 3: {
-            // a tracer line
-            ImGui::InputFloat3("start", xc);
-            ImGui::InputFloat3("finish", xf);
-            ImGui::TextWrapped("This feature will add about %d field points",
-                               1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(rparams.tracer_scale*sim.get_ips())));
-            if (ImGui::Button("Add line of tracers")) {
-              mfeatures.emplace_back(std::make_unique<TracerLine>(xc[0], xc[1], xc[2], xf[0], xf[1], xf[2]));
-              std::cout << "Added " << (*mfeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-          case 4: {
-            // a static, measurement line
-            ImGui::InputFloat3("start", xc);
-            ImGui::InputFloat3("finish", xf);
-            ImGui::TextWrapped("This feature will add about %d field points",
-                               1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(rparams.tracer_scale*sim.get_ips())));
-            if (ImGui::Button("Add line of measurement points")) {
-              mfeatures.emplace_back(std::make_unique<MeasurementLine>(xc[0], xc[1], xc[2], xf[0], xf[1], xf[2]));
-              std::cout << "Added " << (*mfeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-          case 5: {
-            // a static, 2d measurement grid
-            static float xg[3] = {1.0f, 0.0f, 0.0f};
-            static float dx[2] = {0.1f, 0.1f};
-            ImGui::InputFloat3("corner", xc);
-            ImGui::InputFloat3("axis 1", xf);
-            ImGui::InputFloat3("axis 2", xg);
-            ImGui::InputFloat2("dx", dx);
-            ImGui::TextWrapped("This feature will add about %d field points",
-                               1+(int)(std::sqrt(xf[0]*xf[0]+xf[1]*xf[1]+xf[2]*xf[2])*
-                                       std::sqrt(xg[0]*xg[0]+xg[1]*xg[1]+xg[2]*xg[2])/
-                                       (dx[0]*dx[1])));
-            if (ImGui::Button("Add 2D grid of measurement points")) {
-              mfeatures.emplace_back(std::make_unique<Grid2dPoints>(xc[0], xc[1], xc[2], xf[0], xf[1], xf[2], xg[0], xg[1], xg[2], dx[0], dx[1]));
-              std::cout << "Added " << (*mfeatures.back()) << std::endl;
-              ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            } break;
-        }
-
-        if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
-        ImGui::EndPopup();
-        } // end measurement structures 
+        MeasureFeature::draw_creation_gui(mfeatures, sim.get_ips(), rparams.tracer_scale);
+      } // end measurement structures 
 
       ImGui::Spacing();
       int buttonIDs = 10;
