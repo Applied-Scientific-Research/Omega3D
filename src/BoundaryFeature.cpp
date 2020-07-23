@@ -1,8 +1,9 @@
 /*
  * BoundaryFeature.cpp - GUI-side descriptions of boundary features
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
 #include "BoundaryFeature.h"
