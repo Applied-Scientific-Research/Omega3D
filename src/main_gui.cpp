@@ -72,9 +72,14 @@ int main(int argc, char const *argv[]) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#elif _WIN32
+  #undef USE_OGL_COMPUTE
+#elif defined (_WIN32) || defined (__linux__)
   const char* glsl_version = "#version 330 core";
+#ifdef USE_OGL_COMPUTE
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+#else
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+#endif
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #else
@@ -82,6 +87,7 @@ int main(int argc, char const *argv[]) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  #undef USE_OGL_COMPUTE
 #endif
   GLFWwindow* window = glfwCreateWindow(1280, 720, "Omega3D GUI", nullptr, nullptr);
   if (!window) { 
