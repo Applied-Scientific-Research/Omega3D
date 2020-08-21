@@ -56,8 +56,9 @@ If you were able to build and install Vc, then you should set `-DUSE_VC=ON` in t
 On OSX, to get OpenMP parallelization of the solver, you may need to install GCC with brew (as above), and add a few more arguments to the `cmake` command:
 
     brew install gcc
-    cmake -DCMAKE_C_COMPILER=/usr/local/bin/gcc-9 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-9 ..
-
+    cmake -DCMAKE_C_COMPILER=/usr/local/bin/gcc-x -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-x ..
+    
+where x is the latest version on your machine (you can check this by going to /usr/local/bin).
 
 ## Run a simulation in the GUI
 If you were able to build the software, you should be able to run
