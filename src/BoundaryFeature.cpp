@@ -267,6 +267,10 @@ Ovoid::to_json() const {
   return mesh;
 }
 
+void Ovoid::generate_draw_geom() {
+  m_draw = init_elements(1);
+}
+
 #ifdef USE_IMGUI
 bool Ovoid::draw_info_gui(const std::string action) {
   //static bool external_flow = true;
@@ -419,6 +423,11 @@ bool SolidRect::draw_info_gui(const std::string action) {
   return added;
 }
 #endif
+
+void SolidRect::generate_draw_geom() {
+  m_draw = init_elements(1);
+}
+
 //
 // Create a triangulated quad of a solid boundary
 //
@@ -551,6 +560,10 @@ bool BoundaryQuad::draw_info_gui(const std::string action) {
   return false;
 }
 #endif
+
+void BoundaryQuad::generate_draw_geom() {
+  m_draw = init_elements(1);
+}
 
 //
 // Create a closed object from a geometry file (fluid is outside)
@@ -689,3 +702,6 @@ bool ExteriorFromFile::draw_info_gui(const std::string action) {
   return added;
 }
 #endif
+
+void ExteriorFromFile::generate_draw_geom() {
+}

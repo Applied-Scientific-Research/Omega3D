@@ -37,7 +37,11 @@ public:
       m_y(_y),
       m_z(_z)
     {}
-  virtual ~BoundaryFeature() {}
+
+  virtual ~BoundaryFeature() = default;
+  virtual BoundaryFeature* copy() const = 0;
+
+  std::shared_ptr<Body> get_body() { return m_bp; }
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
@@ -46,7 +50,9 @@ public:
   virtual nlohmann::json to_json() const = 0;
   virtual ElementPacket<float> init_elements(const float) const = 0;
   //virtual std::vector<float> step_elements(const float) const = 0;
-  std::shared_ptr<Body> get_body() { return m_bp; }
+  void set_body(std::shared_ptr<Body> _bp) { m_bp = _bp; }
+  virtual void generate_draw_geom() = 0;
+  virtual ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
   static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
   static bool draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
@@ -59,6 +65,7 @@ protected:
   float m_x;
   float m_y;
   float m_z;
+  ElementPacket<float> m_draw;
 };
 
 std::ostream& operator<<(std::ostream& os, BoundaryFeature const& ff);
@@ -88,6 +95,7 @@ public:
       m_sy(_sy),
       m_sz(_sz)
     {}
+  Ovoid* copy() const override { return new Ovoid(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
@@ -95,15 +103,18 @@ public:
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
   ElementPacket<float> init_elements(const float) const override;
+  ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
   // this currently does nothing and returns false;
   bool draw_info_gui(const std::string) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
   float m_sx;
   float m_sy;
   float m_sz;
+  ElementPacket<float> m_draw;
 };
 
 
@@ -125,6 +136,7 @@ public:
       m_sy(_sy),
       m_sz(_sz)
     {}
+  SolidRect* copy() const override { return new SolidRect(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
@@ -135,7 +147,7 @@ public:
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string) override;
 #endif
-
+  void generate_draw_geom() override;
 protected:
   float m_sx;
   float m_sy;
@@ -178,6 +190,7 @@ public:
       m_bcy(_bcy),
       m_bcz(_bcz)
     {}
+  BoundaryQuad* copy() const override { return new BoundaryQuad(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
@@ -188,6 +201,7 @@ public:
 #ifdef USE_IMGUI
   bool draw_info_gui(std::string) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
   float m_x1, m_y1, m_z1;
@@ -217,7 +231,8 @@ public:
       m_sz(_sz),
       m_infile(_infile)
     {}
-
+  ExteriorFromFile* copy() const override { return new ExteriorFromFile(*this); }
+  
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
   std::string to_short_string() const override { return "file mesh"; }
@@ -227,6 +242,7 @@ public:
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
   float m_sx;
