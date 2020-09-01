@@ -11,6 +11,7 @@
 #include "Omega3D.h"
 #include "Body.h"
 #include "GlComputeState.h"
+#include "ElementPacket.h"
 
 #include <Eigen/Geometry>
 

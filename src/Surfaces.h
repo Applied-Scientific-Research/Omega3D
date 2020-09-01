@@ -202,6 +202,14 @@ public:
     }
   }
 
+  // delegating constructor
+  Surfaces(const ElementPacket<S>& _elems,
+           const elem_t _e,
+           const move_t _m,
+           std::shared_ptr<Body> _bp)
+    : Surfaces(_elems.x, _elems.idx, _elems.val, _e, _m, _bp)
+  { }
+
   size_t                         get_npanels()     const { return np; }
   const S                        get_vol()         const { return vol; }
   const std::array<S,Dimensions> get_geom_center() const { return tc; }

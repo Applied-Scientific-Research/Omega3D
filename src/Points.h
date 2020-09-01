@@ -112,6 +112,70 @@ public:
     }
   }
 
+  // alternate constructor - accepting ElementPacket
+  Points(const ElementPacket<S>& _in,
+         const elem_t _e,
+         const move_t _m,
+         std::shared_ptr<Body> _bp,
+         const float _vd)
+    : ElementBase<S>(0, _e, _m, _bp),
+      max_strength(-1.0) {
+
+    // ensure that this packet really is Points
+    assert(_in.idx.size() == 0 && "Input ElementPacket is not Points");
+    assert(_in.ndim == 0 && "Input ElementPacket is not Points");
+
+    // and that it has the right number of values per particle
+    if (_e == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
+    else if (_e == reactive) assert(false && "Input ElementPacket with reactive points is unsupported");
+    else assert(_in.val.size() == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
+
+    // tell the world that we're legit
+    std::cout << "  new collection with " << (_in.nelem);
+    std::cout << ((_e == inert) ? " tracer" : " vortex") << " elems" << std::endl;
+    //std::cout << "  contains " << std::endl;
+    //for (size_t i=0; i<_in.nelem; ++i) {
+    //  std::cout << "    " << _in.x[2*i] << " " << _in.x[2*i+1] << " " << _in.val[2*i] << " " << _in.val[2*i+1] << std::endl;
+    //}
+
+    // need to reset the base class n, because this gets run before the base ctor
+    this->n = _in.nelem;
+
+    // this initialization specific to Points - is it, though?
+    for (size_t d=0; d<Dimensions; ++d) {
+      this->x[d].resize(this->n);
+      for (size_t i=0; i<this->n; ++i) {
+        this->x[d][i] = _in.x[Dimensions*i+d];
+      }
+    }
+
+    // save untransformed positions if we are given a Body pointer
+    if (_bp) {
+      this->ux = this->x;
+    }
+
+    if (_e == inert) {
+      // field points need neither radius nor strength
+
+    } else {
+      // active vortons need radius
+      r.resize(this->n);
+      std::fill(r.begin(), r.end(), _vd);
+
+      // optional strength in base class
+      // need to assign it a vector first!
+      Vector<S> new_s;
+      new_s.resize(this->n);
+      std::copy(_in.val.begin(), _in.val.end(), new_s.begin());
+      this->s = std::move(new_s);
+    }
+
+    // velocity in base class
+    for (size_t d=0; d<Dimensions; ++d) {
+      this->u[d].resize(this->n);
+    }
+  }
+
   const Vector<S>& get_elong() const { return elong; }
   Vector<S>&       get_elong()       { return elong; }
   const std::optional<std::array<Vector<S>,Dimensions*Dimensions>>& get_velgrad() const { return ug; }
