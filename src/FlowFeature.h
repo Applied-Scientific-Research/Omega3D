@@ -8,7 +8,7 @@
 #pragma once
 
 #include "Feature.h"
-
+#include "ElementPacket.h"
 #include "json/json.hpp"
 
 #include <iostream>
@@ -33,18 +33,22 @@ public:
   virtual std::string to_string() const = 0;
   virtual void from_json(const nlohmann::json) = 0;
   virtual nlohmann::json to_json() const = 0;
-  virtual std::vector<float> init_particles(float) const = 0;
-  virtual std::vector<float> step_particles(float) const = 0;
+  virtual ElementPacket<float> init_elements(float) const = 0;
+  virtual ElementPacket<float> step_elements(float) const = 0;
+  virtual void generate_draw_geom() = 0;
+  virtual ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
   static void draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
   virtual bool draw_info_gui(const std::string, const float) = 0;
 #endif
+  virtual void generate_draw_geom() = 0;
   // emit particles as vector of float4
 
 protected:
   float m_x;
   float m_y;
   float m_z;
+  ElementPacket<float> m_draw;
 };
 
 std::ostream& operator<<(std::ostream& os, FlowFeature const& ff);
@@ -76,12 +80,13 @@ public:
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
 #ifdef USE_IMGUI
   // This currently does nothing and returns false
   bool draw_info_gui(const std::string, const float) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
   float m_sx, m_sy, m_sz;
@@ -110,11 +115,12 @@ public:
   std::string to_string() const override;
   void from_json(nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string, const float) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
   float m_rad;
@@ -147,11 +153,12 @@ public:
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string, const float) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
   float m_xsize;
@@ -180,12 +187,13 @@ public:
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
 #ifdef USE_IMGUI
   // This currently does nothing and returns false
   bool draw_info_gui(const std::string, const float) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
 };
@@ -216,11 +224,12 @@ public:
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string, const float) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
   float m_nx;
@@ -253,11 +262,12 @@ public:
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string, const float) override;
 #endif
+  void generate_draw_geom() override;
 
 protected:
   float m_minrad;
@@ -273,4 +283,3 @@ protected:
 // Parser for converting json object to new feature
 //
 void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>&, const nlohmann::json);
-

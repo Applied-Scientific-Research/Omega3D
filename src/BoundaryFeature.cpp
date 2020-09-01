@@ -286,14 +286,11 @@ bool Ovoid::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid spherical body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_sx = m_sy = m_sz = scale;
-    added = true;
-  }
-
+  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = m_sy = m_sz = scale;
   return added;
 }
 #endif
@@ -410,16 +407,13 @@ bool SolidRect::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid rectangular body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_sx = xs[0];
-    m_sy = xs[1];
-    m_sz = xs[2];
-    added = true;
-  }
-
+  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = xs[0];
+  m_sy = xs[1];
+  m_sz = xs[2];
   return added;
 }
 #endif
@@ -691,14 +685,11 @@ bool ExteriorFromFile::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_sx = m_sy = m_sz = scale;
-    added = true;
-  }
-
+  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = m_sy = m_sz = scale;
   return added;
 }
 #endif

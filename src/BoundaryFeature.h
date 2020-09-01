@@ -105,7 +105,6 @@ public:
   ElementPacket<float> init_elements(const float) const override;
   ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
-  // this currently does nothing and returns false;
   bool draw_info_gui(const std::string) override;
 #endif
   void generate_draw_geom() override;
