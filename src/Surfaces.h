@@ -499,6 +499,23 @@ public:
     }
   }
 
+  // append nodes and panels to this collection
+  void add_new(const ElementPacket<float>& _in) {
+
+    // ensure that this packet really is Surfaces
+    assert(_in.idx.size() != 0 && "Input ElementPacket is not Surfaces");
+    assert(_in.ndim == 1 && "Input ElementPacket is not Surfaces");
+
+    // and that it has the right number of values per particle
+    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with inert Surfaces has nonzero val array");
+    else assert(_in.val.size() == _in.nelem && "Input ElementPacket with Surfaces has bad val array size");
+
+    // must explicitly call the method in the base class first - this pulls out positions and strengths
+    //ElementBase<S>::add_new(_in);
+    (void) add_new(_in.x, _in.idx, _in.val);
+  }
+
+
   void add_body_motion(const S _factor, const double _time) {
     // no need to call base class now
     //ElementBase<S>::add_body_motion(_factor);

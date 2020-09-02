@@ -3,13 +3,19 @@
  *
  * (c)2018-20 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
 #pragma once
 
 #include "Omega3D.h"
 
+#include <algorithm>
+#if _WIN32
+  #include <functional>
+#endif
 #include <vector>
+#include <iostream>
 
 // Helper class for passing arbitrary elements around
 template<class S>
