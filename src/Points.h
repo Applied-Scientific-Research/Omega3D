@@ -165,9 +165,11 @@ public:
       // optional strength in base class
       // need to assign it a vector first!
       std::array<Vector<S>,Dimensions> new_s;
-      for (size_t i = 0; i < Dimensions; i++) {
+      for (int i = 0; i < 3; i++) {
         new_s[i].resize(this->n);
-        std::copy(_in.val.begin(), _in.val.end(), new_s[i].begin());
+        for (int j = i; j < this->n; j += 4) {
+          new_s[i][j] = _in.val[j];
+        }
       }
       
       this->s = std::move(new_s);

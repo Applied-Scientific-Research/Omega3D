@@ -130,9 +130,11 @@ public:
       assert(_in.val.size() >= nnew && "Input ElementPacket does not have enough values in val");
       const size_t nper = _in.val.size() / nnew;
       // must dereference s to get the actual vector
-      (*s).resize(n+nnew);
-      for (size_t i=0; i<nnew; ++i) {
-        (*s)[n+i] = _in.val[nper*i+0];
+      for (int i = 0; i < 3; i++) {
+        (*s)[i].resize(n+nnew);
+        for (size_t i=0; i<nnew; ++i) {
+          (*s)[i][n+i] = _in.val[nper*i+0];
+        }
       }
     }
 
@@ -383,7 +385,7 @@ protected:
 
   // state vector
   std::array<Vector<S>,Dimensions> x;                   // position of nodes
-  std::optional<std::array<Vector<S>,Dimensions>> s;    // strength at nodes
+  std::optional<std::array<Vector<S>,3>> s;    // strength at nodes
 
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity at nodes
