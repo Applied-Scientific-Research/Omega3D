@@ -38,10 +38,9 @@ public:
   virtual void generate_draw_geom() = 0;
   virtual ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
-  static void draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
+  static bool draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
   virtual bool draw_info_gui(const std::string, const float) = 0;
 #endif
-  virtual void generate_draw_geom() = 0;
   // emit particles as vector of float4
 
 protected:

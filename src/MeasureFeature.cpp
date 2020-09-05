@@ -5,6 +5,7 @@
  *            Mark J Stock <markjstock@gmail.com>
  */
 
+#include "BoundaryFeature.h"
 #include "MeasureFeature.h"
 #include "imgui/imgui.h"
 
@@ -37,7 +38,7 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
   else if (ftype == "tracer blob") {      _flist.emplace_back(std::make_unique<MeasurementBlob>()); }
   else if (ftype == "tracer line") {      _flist.emplace_back(std::make_unique<MeasurementLine>(0.0, 0.0, false, true)); }
   else if (ftype == "measurement line") { _flist.emplace_back(std::make_unique<MeasurementLine>()); }
-  else if (ftype == "measurement grid") { _flist.emplace_back(std::make_unique<GridPoints>()); }
+  else if (ftype == "measurement grid") { _flist.emplace_back(std::make_unique<Grid2dPoints>()); }
   else {
     std::cout << "  type " << ftype << " does not name an available measurement feature, ignoring" << std::endl;
     return;
@@ -50,7 +51,7 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
 }
 
 #ifdef USE_IMGUI
-void MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &mfs, const float ips, const float &tracerScale) {
+bool MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &mfs, const float ips, const float &tracerScale) {
   static int item = 0;
   static int oldItem = -1;
   const char* items[] = { "single point", "measurement circle", "measurement line", "2d grid" };
@@ -70,7 +71,7 @@ void MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeatur
         mf = std::make_unique<MeasurementLine>();
       } break;
       case 3: {
-        mf = std::make_unique<GridPoints>();
+        mf = std::make_unique<Grid2dPoints>();
       } break;
     }
     oldItem = item;
@@ -156,7 +157,7 @@ SinglePoint::to_string() const {
   } else {
     ss << "stationary";
   }
-  ss << " point at " << m_x << " " << m_y << " " m_z;
+  ss << " point at " << m_x << " " << m_y << " " << m_z;
   return ss.str();
 }
 
@@ -184,12 +185,13 @@ SinglePoint::to_json() const {
 
 void SinglePoint::generate_draw_geom() {
   const float diam = 0.02;
-  std::unique_ptr<SolidCircle> tmp = std::make_unique<SolidCircle>(nullptr, true, m_x, m_y, m_z, diam);
+  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
   m_draw = tmp->init_elements(diam/25.0);
 }
 
 #ifdef USE_IMGUI
-bool SinglePoint::draw_info_gui(const std::string action, const float ips, const float &tracerScale) {
+bool SinglePoint::draw_info_gui(const std::string action, const float &tracerScale,
+                                const float ips) {
   static float xc[3] = {m_x, m_y, m_z};
   const std::string buttonText = action+" single point";
   bool add = false;
@@ -243,6 +245,7 @@ MeasurementBlob::init_elements(float _ips) const {
       x.emplace_back(m_y + _ips*((float)j+zmean_dist(gen)));
       x.emplace_back(m_z + _ips*((float)k+zmean_dist(gen)));
     }
+  }
   }
   }
   
@@ -303,7 +306,7 @@ MeasurementBlob::from_json(const nlohmann::json j) {
 }
 
 nlohmann::json
-TracerBlob::to_json() const {
+MeasurementBlob::to_json() const {
   nlohmann::json j;
   j["type"] = "tracer blob";
   j["center"] = {m_x, m_y, m_z};
@@ -315,18 +318,18 @@ TracerBlob::to_json() const {
 }
 
 void MeasurementBlob::generate_draw_geom() {
-  std::unique_ptr<SolidCircle> tmp = std::make_unique<SolidCircle>(nullptr, true, m_x, m_y, m_z, m_rad*2.0);
-  m_draw = tmp->init_elements(m_rad/12.5);
+  //std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2.0, m_rad*2.0, m_rad*2.0);
+  //m_draw = tmp->init_elements(m_rad/12.5);
 }
 
 #ifdef USE_IMGUI
-bool MeasurementBlob::draw_info_gui(const std::string action, const float &tracerScale, float ips) {
+bool MeasurementBlob::draw_info_gui(const std::string _action, const float &_tracerScale, float _ips) {
   float xc[3] = {m_x, m_y, m_z};
-  const std::string buttonText = action+" circle of tracers";
+  const std::string buttonText = _action+" circle of tracers";
   bool add = false;
 
   ImGui::InputFloat3("center", xc);
-  ImGui::SliderFloat("radius", &m_rad, 0.5f*ips, 0.5f, "%.4f");
+  ImGui::SliderFloat("radius", &m_rad, 0.5f*_ips, 0.5f, "%.4f");
   if (!m_emits) {
     ImGui::Checkbox("Point follows flow", &m_is_lagrangian);
   }
@@ -334,7 +337,7 @@ bool MeasurementBlob::draw_info_gui(const std::string action, const float &trace
     ImGui::Checkbox("Point emits particles", &m_emits);
   }
   ImGui::TextWrapped("This feature will add about %d field points",
-                     (int)(0.6*std::pow(2*rad/(tracerScale*ips), 3)));
+                     (int)(0.6*std::pow(2*m_rad/(_tracerScale*_ips), 3)));
   if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
@@ -403,100 +406,6 @@ MeasurementLine::debug(std::ostream& os) const {
 std::string
 MeasurementLine::to_string() const {
   std::stringstream ss;
-  ss << "tracer line from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << " " << m_zf;
-  return ss.str();
-}
-
-void
-MeasurementLine::from_json(const nlohmann::json j) {
-  const std::vector<float> c = j["center"];
-  m_x = c[0];
-  m_y = c[1];
-  m_z = c[2];
-  const std::vector<float> e = j["end"];
-  m_xf = e[0];
-  m_yf = e[1];
-  m_zf = e[2];
-}
-
-nlohmann::json
-TracerLine::to_json() const {
-  nlohmann::json j;
-  j["type"] = "tracer line";
-  j["center"] = {m_x, m_y, m_z};
-  j["end"] = {m_xf, m_yf, m_zf};
-  return j;
-}
-
-#ifdef USE_IMGUI
-bool TracerLine::draw_info_gui(const std::string action, const float ips, const float &tracerScale) {
-  static float xc[3] = {m_x, m_y, m_z};
-  static float xf[3] = {m_xf, m_yf, m_zf};
-  const std::string buttonText = action+" line of tracers";
-  bool add = false;
-
-  ImGui::InputFloat3("start", xc);
-  ImGui::InputFloat3("finish", xf);
-  ImGui::TextWrapped("This feature will add about %d field points",
-                     1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(tracerScale*ips)));
-  if (ImGui::Button(buttonText.c_str())) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_xf = xf[0];
-    m_yf = xf[1];
-    m_zf = xf[2];
-    add = true;
-  }
-
-  return add;
-}
-#endif
-
-//
-// Create a line of static measurement points
-//
-std::vector<float>
-MeasurementLine::init_particles(float _ips) const {
-
-  // create a new vector to pass on
-  std::vector<float> x;
-
-  if (not this->is_enabled()) return x;
-
-  // how many points do we need?
-  float llen = std::sqrt( std::pow(m_xf-m_x, 2) + std::pow(m_yf-m_y, 2) + std::pow(m_zf-m_z, 2));
-  int ilen = 1 + llen / _ips;
-
-  // loop over integer indices
-  for (int i=0; i<ilen; ++i) {
-
-    // how far along the line?
-    float frac = (float)i / (float)(ilen-1);
-
-    // create a particle here
-    x.emplace_back((1.0-frac)*m_x + frac*m_xf);
-    x.emplace_back((1.0-frac)*m_y + frac*m_yf);
-    x.emplace_back((1.0-frac)*m_z + frac*m_zf);
-  }
-
-  return x;
-}
-
-std::vector<float>
-MeasurementLine::step_particles(float _ips) const {
-  // does not emit
-  return std::vector<float>();
-}
-
-void
-MeasurementLine::debug(std::ostream& os) const {
-  os << to_string();
-}
-
-std::string
-MeasurementLine::to_string() const {
-  std::stringstream ss;
   if (m_emits) {
     ss << "emiter";
   } else if (m_is_lagrangian) {
@@ -538,13 +447,13 @@ MeasurementLine::to_json() const {
 }
 
 void MeasurementLine::generate_draw_geom() {
-  std::unique_ptr<BoundarySegment> tmp = std::make_unique<BoundarySegment>(nullptr, true, m_x, m_y, m_z
-                                                                           m_xf, m_yf, m_zf, 0.0, 0.0);
-  m_draw = tmp->init_elements(1.0);
+  //std::unique_ptr<BoundarySegment> tmp = std::make_unique<BoundarySegment>(nullptr, true, m_x, m_y, m_z
+    //                                                                       m_xf, m_yf, m_zf, 0.0, 0.0);
+  //m_draw = tmp->init_elements(1.0);
 }
 
 #ifdef USE_IMGUI
-bool MeasurementLine::draw_info_gui(const std::string action, const float ips, const float &tracerScale) {
+bool MeasurementLine::draw_info_gui(const std::string action, const float &tracerScale, float ips) {
   static float xc[3] = {m_x, m_y, m_z};
   static float xf[3] = {m_xf, m_yf, m_zf};
   const std::string buttonText = action+" line of measurement points";
@@ -570,7 +479,7 @@ bool MeasurementLine::draw_info_gui(const std::string action, const float ips, c
 // Create a 2D grid of static measurement points
 //
 ElementPacket<float>
-Grid2dPoints::init_particles(float _ips) const {
+Grid2dPoints::init_elements(float _ips) const {
 
   // create a new vector to pass on
   std::vector<float> x;
@@ -581,15 +490,15 @@ Grid2dPoints::init_particles(float _ips) const {
 
   // calculate length of two axes
   const float dist_s = std::sqrt( std::pow(m_xs, 2) + std::pow(m_ys, 2) + std::pow(m_zs, 2));
-  const float dist_t = std::sqrt( std::pow(m_xt, 2) + std::pow(m_yt, 2) + std::pow(m_zt, 2));
+  const float dist_t = std::sqrt( std::pow(m_xf, 2) + std::pow(m_yf, 2) + std::pow(m_zf, 2));
 
   // loop over integer indices
   for (float sp=0.5*m_ds/dist_s; sp<1.0+0.01*m_ds/dist_s; sp+=m_ds/dist_s) {
-    for (float tp=0.5*m_dt/dist_t; tp<1.0+0.01*m_dt/dist_t; tp+=m_dt/dist_t) {
+    for (float tp=0.5*m_df/dist_t; tp<1.0+0.01*m_df/dist_t; tp+=m_df/dist_t) {
       // create a field point here
-      x.emplace_back(m_x + m_xs*sp + m_xt*tp);
-      x.emplace_back(m_y + m_ys*sp + m_yt*tp);
-      x.emplace_back(m_z + m_zs*sp + m_zt*tp);
+      x.emplace_back(m_x + m_xs*sp + m_xf*tp);
+      x.emplace_back(m_y + m_ys*sp + m_yf*tp);
+      x.emplace_back(m_z + m_zs*sp + m_zf*tp);
     }
   }
 
@@ -615,7 +524,7 @@ Grid2dPoints::debug(std::ostream& os) const {
 std::string
 Grid2dPoints::to_string() const {
   std::stringstream ss;
-  ss << "measurement plane at " << m_x << " " << m_y << " " << m_z << " with ds,dt " << m_ds << " " << m_dt;
+  ss << "measurement plane at " << m_x << " " << m_y << " " << m_z << " with ds,df " << m_ds << " " << m_df;
   return ss.str();
 }
 
@@ -635,7 +544,7 @@ Grid2dPoints::from_json(const nlohmann::json j) {
   m_zf = f[2];
   const std::vector<float> d = j["dx"];
   m_ds = d[0];
-  m_dfß = d[1];
+  m_df = d[1];
   m_enabled = j.value("enabled", true);
   m_is_lagrangian = j.value("lagrangian", m_is_lagrangian);
   m_emits= j.value("emits", m_emits);
@@ -647,8 +556,8 @@ Grid2dPoints::to_json() const {
   j["type"] = "measurement plane";
   j["start"] = {m_x, m_y, m_z};
   j["axis1"] = {m_xs, m_ys, m_zs};
-  j["axis2"] = {m_xt, m_yt, m_zt};
-  j["dx"] = {m_ds, m_dt};
+  j["axis2"] = {m_xf, m_yf, m_zf};
+  j["dx"] = {m_ds, m_df};
   j["enabled"] = m_enabled;
   j["lagrangian"] = m_is_lagrangian;
   j["emits"] = m_emits;
@@ -665,7 +574,7 @@ void Grid2dPoints::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool Grid2dPoints::draw_info_gui(const std::string action, const float ips, const float &tracerScale) {
+bool Grid2dPoints::draw_info_gui(const std::string action, const float &tracer_scale, const float ips) {
   static float xc[3] = {m_x, m_y, m_z};
   static float xs[3] = {m_xs, m_ys, m_zs};
   static float xf[3] = {m_xf, m_yf, m_zf};

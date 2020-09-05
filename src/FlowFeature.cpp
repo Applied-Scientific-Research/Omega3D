@@ -5,6 +5,7 @@
  *            Mark J Stock <markjstock@gmail.com>
  */
 
+#include "BoundaryFeature.h"
 #include "FlowFeature.h"
 #include "MathHelper.h"
 #include "imgui/imgui.h"
@@ -50,7 +51,7 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 }
 
 #ifdef USE_IMGUI
-void FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
+bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
   static int item = 1;
   static int oldItem = -1;
   const char* items[] = { "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
@@ -165,7 +166,7 @@ SingleParticle::to_json() const {
 void SingleParticle::generate_draw_geom() {
   //const float diam = 0.01;
   //std::unique_ptr<Ovoid> tmp = std::make_unique<SolidCircle>(nullptr, true, m_x, m_y, m_z,
-                                                             diam, diam, diam);
+  //                                                           diam, diam, diam);
   //m_draw = tmp->init_elements(diam/25.0);
   //std::fill(m_draw.val.begin(), m_draw.val.end(), m_str);
 }
@@ -290,24 +291,24 @@ VortexBlob::to_json() const {
 }
 
 void VortexBlob::generate_draw_geom() {
-  std::unique_ptr<SolidCircle> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2,
+  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2,
                                                              m_rad*2, m_rad*2);
   m_draw = tmp->init_elements(m_rad/12.5);
   //std::fill(m_draw.val.begin(), m_draw.val.end(), m_str);
 }
 
 #ifdef USE_IMGUI
-bool VortexBlob::draw_info_gui(const std::string action, const float ips) {
+bool VortexBlob::draw_info_gui(const std::string _action, const float _ips) {
   static float xc[3] = {m_x, m_y, m_z};
   static float vstr[3] = {m_sx, m_sy, m_sz};
-  static float guess_n = 4.1888f * std::pow((2.0f*rad+soft)/ips, 3);
-  std::string buttonText = action+" vortex blob";
+  static float guess_n = 4.1888f * std::pow((2.0f*m_rad+m_softness)/_ips, 3);
+  std::string buttonText = _action+" vortex blob";
   bool add = false;
 
   ImGui::InputFloat3("center", xc);
   ImGui::InputFloat3("strength", vstr);
-  ImGui::SliderFloat("radius", &m_rad, ips, 10.0f*ips, "%.4f");
-  ImGui::SliderFloat("softness", &m_softness, ips, m_rad, "%.4f");
+  ImGui::SliderFloat("radius", &m_rad, _ips, 10.0f*_ips, "%.4f");
+  ImGui::SliderFloat("softness", &m_softness, _ips, m_rad, "%.4f");
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add about %f particles", guess_n);
   ImGui::Spacing();
@@ -414,7 +415,7 @@ BlockOfRandom::to_json() const {
 }
 
 void BlockOfRandom::generate_draw_geom() {
-  std::unique_ptr<SolidRect> tmp = std::make_unique<SolidOval>(nullptr, true, m_x, m_y, m_z, m_xsize, m_ysize, m_zsize);
+  std::unique_ptr<SolidRect> tmp = std::make_unique<SolidRect>(nullptr, true, m_x, m_y, m_z, m_xsize, m_ysize, m_zsize);
   m_draw = tmp->init_elements(1);
   std::fill(m_draw.val.begin(), m_draw.val.end(), m_maxstr);
 }
@@ -455,8 +456,8 @@ ParticleEmitter::init_elements(float _ips) const {
 ElementPacket<float>
 ParticleEmitter::step_elements(float _ips) const {
   std::vector<float> x = {m_x, m_y, m_z};
-  std::vector<Int> idx = {m_sx, m_sy, m_sz, 0.0};
-  std::vector<float> vals;
+  std::vector<Int> idx;
+  std::vector<float> vals = {m_sx, m_sy, m_sz, 0.0};
   ElementPacket<float> packet(x, idx, vals, x.size()/3, 0);
 
   if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
@@ -504,7 +505,7 @@ ParticleEmitter::to_json() const {
 
 void ParticleEmitter::generate_draw_geom() {
   const float diam = 0.01;
-  std::unique_ptr<SolidCircle> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_sx, m_sy, m_sz);
+  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_sx, m_sy, m_sz);
   m_draw = tmp->init_elements(diam/25.0);
   //std::fill(m_draw.val.begin(), m_draw.val.end(), m_str);
 }
@@ -554,8 +555,8 @@ SingularRing::init_elements(float _ips) const {
     vals.emplace_back(0.0f);
   }
 
-  ElementPacket<float> packet({x, idx, vals, (size_t)(isize*jsize), 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 3)) {
+  ElementPacket<float> packet({x, idx, vals, (size_t)(ndiam/Dimensions), 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 1)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -612,17 +613,17 @@ void SingularRing::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool SingularRing::draw_info_gui(const std::string action, const float ips) {
+bool SingularRing::draw_info_gui(const std::string _action, const float _ips) {
   static float xc[3] = {m_x, m_y, m_z};
   static float vstr[3] = {m_nx, m_ny, m_nz};
-  static float guess_n = 1 + (2.0f * 3.1416f * rad / ips);
-  std::string buttonText = action+" singular ring";
+  static float guess_n = 1 + (2.0f * 3.1416f * m_majrad / _ips);
+  std::string buttonText = _action+" singular ring";
   bool add = false;
 
   ImGui::InputFloat3("center", xc);
   ImGui::InputFloat3("direction", vstr);
   ImGui::SliderFloat("circulation", &m_circ, 0.001f, 10.0f, "%.3f");
-  ImGui::SliderFloat("radius", &m_majrad, 3.0f*ips, 10.0f, "%.3f");
+  ImGui::SliderFloat("radius", &m_majrad, 3.0f*_ips, 10.0f, "%.3f");
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add about %f particles", guess_n);
   ImGui::Spacing();
