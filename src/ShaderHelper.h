@@ -4,8 +4,8 @@
  * These methods are from https://solarianprogrammer.com/2013/05/13/opengl-101-drawing-primitives/
  * and https://github.com/sol-prog/OpenGL-101
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Written by Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -21,6 +21,8 @@
 #endif // APIENTRY
 
 #include "glad.h"
+
+#include <string>
 
 // Create a render program from two shaders (vertex and fragment)
 GLuint create_draw_blob_program();

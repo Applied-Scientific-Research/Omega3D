@@ -159,11 +159,16 @@ int main(int argc, char const *argv[]) {
   std::string sim_err_msg;
 
   // GUI and drawing parameters
-  bool export_vtk_this_frame = false;	// write a vtk with the current data
+  bool save_all_bdry = false;		// save Boundary Features every step
+  bool save_all_flow = false;		// save Flow Features every step
+  bool save_all_meas = false;		// save Measure Features every step
+  bool save_all_vtus = false;		// save all collections the coming step
+  bool export_vtk_this_frame = false;	// write set of vtu files with the current data
   std::vector<std::string> vtk_out_files; // list of just-output files
-  bool draw_this_frame = false;		// draw the frame as soon as its done
+  bool save_all_imgs = false;		// save screenshot every step
+  bool export_png_when_ready = false;	// write frame to png as soon as its done
+  bool write_png_immediately = false;	// write frame to png right now
   std::string png_out_file;		// the name of the recently-written png
-  bool record_all_frames = false;	// save a frame when a new one is ready
   bool show_stats_window = true;
   bool show_welcome_window = true;
   bool show_terminal_window = false;
@@ -213,17 +218,31 @@ int main(int argc, char const *argv[]) {
 
       // initialize particle distributions
       for (auto const& ff: ffeatures) {
-        if (ff->is_enabled()) sim.add_particles( ff->init_particles(sim.get_ips()) );
+        //if (ff->is_enabled()) sim.add_particles( ff->init_particles(sim.get_ips()) );
+        if (ff->is_enabled()) {
+          ElementPacket<float> newpacket = ff->init_elements(sim.get_ips());
+          sim.add_elements( newpacket, active, lagrangian, ff->get_body() );
+        }
       }
 
       // initialize solid objects
       for (auto const& bf : bfeatures) {
-        if (bf->is_enabled()) sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
+        //if (bf->is_enabled()) sim.add_boundary( bf->get_body(), bf->init_elements(sim.get_ips()) );
+        if (bf->is_enabled()) {
+          ElementPacket<float> newpacket = bf->init_elements(sim.get_ips());
+          const move_t newMoveType = (bf->get_body() ? bodybound : fixed);
+          sim.add_elements(newpacket, reactive, newMoveType, bf->get_body() );
+        }
       }
 
       // initialize measurement features
       for (auto const& mf: mfeatures) {
-        if (mf->is_enabled()) sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
+        //if (mf->is_enabled()) sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
+        if (mf->is_enabled()) {
+          ElementPacket<float> newpacket = mf->init_elements(rparams.tracer_scale*sim.get_ips());
+          const move_t newMoveType = (mf->get_is_lagrangian() ? lagrangian : fixed);
+          sim.add_elements(newpacket, inert, newMoveType, mf->get_body() );
+        }
       }
 
       sim.set_initialized();
@@ -256,7 +275,20 @@ int main(int argc, char const *argv[]) {
 
     // before we start again, write the vtu output
     if (is_ready and export_vtk_this_frame) {
+
+      // split on which to write
+      if (save_all_vtus) {
+        // default is to save all collections to vtu files
       vtk_out_files = sim.write_vtk();
+        // and don't do this next time
+        save_all_vtus = false;
+
+      } else if (save_all_bdry or save_all_flow or save_all_meas) {
+        // only write select vtu files and don't echo
+        (void) sim.write_vtk(-1, save_all_bdry, save_all_flow, save_all_meas);
+      }
+
+      // tell this routine next time around not to print
       export_vtk_this_frame = false;
     }
 
@@ -286,19 +318,23 @@ int main(int argc, char const *argv[]) {
     // see if we should start a new step
     if (is_ready and (sim_is_running || begin_single_step)) {
 
+      if (save_all_bdry or save_all_flow or save_all_meas) export_vtk_this_frame = true;
+      if (save_all_imgs) export_png_when_ready = true;
+
       // check flow for blow-up or dynamic errors
       sim_err_msg = sim.check_simulation();
 
       if (sim_err_msg.empty()) {
         // the last simulation step was fine, OK to continue
-
         // generate new particles from emitters
         for (auto const& ff : ffeatures) {
           if (ff->is_enabled()) {
             ElementPacket<float> newpacket = ff->step_elements(sim.get_ips());
             // echo any errors
              sim.add_elements( newpacket, active, lagrangian, ff->get_body() );
+          }
         }
+
         for (auto const& mf : mfeatures) {
           //if (mf->is_enabled()) sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
           if (mf->is_enabled()) {
@@ -328,7 +364,7 @@ int main(int argc, char const *argv[]) {
       ImGui::SetNextWindowSize(ImVec2(400,200), ImGuiCond_FirstUseEver);
       if (ImGui::BeginPopupModal("Simulation error occurred")) {
         ImGui::Spacing();
-        ImGui::TextWrapped(sim_err_msg.c_str());
+        ImGui::TextWrapped("%s", sim_err_msg.c_str());
         ImGui::Spacing();
         if (ImGui::Button("Got it.", ImVec2(120,0))) {
           // clear out the error message first
@@ -383,7 +419,6 @@ int main(int argc, char const *argv[]) {
 
       if(currentItemIndex) {
         sim.reset();
-        sim.clear_bodies();
         bfeatures.clear();
         ffeatures.clear();
         mfeatures.clear();
@@ -607,6 +642,7 @@ int main(int argc, char const *argv[]) {
       ImGui::SetNextWindowSize(ImVec2(400,275), ImGuiCond_FirstUseEver);
       if (ImGui::BeginPopupModal("New boundary structure")) {
         if (BoundaryFeature::draw_creation_gui(bfeatures, sim)) {
+          bdraw.add_elements( bfeatures.back()->get_draw_packet(), bfeatures.back()->is_enabled() );
         }
         ImGui::EndPopup();
       }
@@ -619,6 +655,7 @@ int main(int argc, char const *argv[]) {
       {
         if (FlowFeature::draw_creation_gui(ffeatures, sim.get_ips())) {
           fdraw.add_elements( ffeatures.back()->get_draw_packet(), ffeatures.back()->is_enabled() );
+        }
       }
 
       // button and modal window for adding new measurement objects
@@ -643,7 +680,7 @@ int main(int argc, char const *argv[]) {
       for (int i=0; i<(int)ffeatures.size(); ++i) {
 
         ImGui::PushID(++buttonIDs);
-        ImGui::Checkbox("", ffeatures[i]->addr_enabled());
+        if (ImGui::Checkbox("", ffeatures[i]->addr_enabled())) { redrawF = true; }
         ImGui::PopID();
         
         // add an "edit" button after the checkbox (so it's not easy to accidentally hit remove)
@@ -717,7 +754,7 @@ int main(int argc, char const *argv[]) {
       for (int i=0; i<(int)bfeatures.size(); ++i) {
 
         ImGui::PushID(++buttonIDs);
-        ImGui::Checkbox("", bfeatures[i]->addr_enabled());
+        if (ImGui::Checkbox("", bfeatures[i]->addr_enabled())) { redrawB = true; }
         ImGui::PopID();
       
         ImGui::SameLine(); 
@@ -844,6 +881,7 @@ int main(int argc, char const *argv[]) {
       if (del_this_measure > -1) {
         std::cout << "Asked to delete measurement feature " << del_this_measure << std::endl;
         mfeatures.erase(mfeatures.begin()+del_this_measure);
+        redrawM = true;
       }
 
       if (redrawM) {
@@ -859,24 +897,7 @@ int main(int argc, char const *argv[]) {
 
     // Rendering parameters, under a header
     ImGui::Spacing();
-    if (ImGui::CollapsingHeader("Rendering controls")) {
-      ImGui::ColorEdit3("positive circulation", rparams.pos_circ_color);
-      ImGui::ColorEdit3("negative circulation", rparams.neg_circ_color);
-      ImGui::ColorEdit3("feature color",        rparams.default_color);
-      ImGui::ColorEdit3("background color",     rparams.clear_color);
-      //ImGui::Checkbox("show origin", &show_origin);
-      ImGui::SliderFloat("particle brightness", &(rparams.circ_density), 0.0001f, 1.0f, "%.4f", 4.0f);
-      ImGui::SliderFloat("particle scale", &(rparams.vorton_scale), 0.01f, 1.5f, "%.2f", 2.0f);
-
-      if (ImGui::Button("Recenter")) {
-        // put everything back to center
-        rparams.vcx = -0.5f;
-        rparams.vcy = 0.0f;
-        rparams.vsize = 2.0f;
-      }
-
-      // add button to recenter on all vorticity?
-    }
+    if (ImGui::CollapsingHeader("Rendering controls")) { draw_render_gui(rparams); }
 
     // Solver parameters, under its own header
     ImGui::Spacing();
@@ -886,27 +907,36 @@ int main(int argc, char const *argv[]) {
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Save output")) {
 
-      // save the simulation to a JSON or VTK file
+      // save setup
       ImGui::Spacing();
       ImGui::Text("Save simulation setup:");
       ImGui::SameLine();
-      // PNG output of the render frame
-      if (ImGui::Button("Save screenshot to PNG", ImVec2(20+12*fontSize,0))) draw_this_frame = true;
+      if (ImGui::Button("to JSON", ImVec2(10+4*fontSize,0))) show_file_output_window = true;
+      
+      // save current data
+      ImGui::Separator();
+      ImGui::Spacing();
+      ImGui::Text("Save current step:");
 
-      // next line: VTK output and record
-      if (ImGui::Button("Save parts to VTU", ImVec2(20+12*fontSize,0))) export_vtk_this_frame = true;
       ImGui::SameLine();
-      if (record_all_frames) {
-        if (ImGui::Button("STOP RECORDING", ImVec2(20+12*fontSize,0))) {
-          record_all_frames = false;
-          sim_is_running = false;
+      if (ImGui::Button("All to VTU", ImVec2(10+7*fontSize,0))) {
+        save_all_vtus = true;
+        export_vtk_this_frame = true;
         }
-      } else {
-        if (ImGui::Button("RECORD to PNG", ImVec2(20+12*fontSize,0))) {
-          record_all_frames = true;
-          sim_is_running = true;
-        }
-      }
+      ImGui::SameLine();
+      if (ImGui::Button("Screenshot to PNG", ImVec2(10+10*fontSize,0))) write_png_immediately = true;
+
+      // save data regularly
+      ImGui::Separator();
+      ImGui::Spacing();
+      ImGui::Text("Save every step:");
+
+      ImGui::Indent();
+      ImGui::Checkbox("Boundary features (to VTU)", &save_all_bdry);
+      ImGui::Checkbox("Flow features (to VTU)", &save_all_flow);
+      ImGui::Checkbox("Measure features (to VTU)", &save_all_meas);
+      ImGui::Checkbox("Window screenshot (to PNG)", &save_all_imgs);
+      ImGui::Unindent();
     }
 
     if (show_file_output_window) {
@@ -940,7 +970,7 @@ int main(int argc, char const *argv[]) {
       if (sim.quitonstop()) {
         if (is_ready) {
           // this simulation step has finished, write png and exit
-          draw_this_frame = true;
+          write_png_immediately = true;
 
           // tell glfw to close the window next time around
           glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -1063,7 +1093,7 @@ int main(int argc, char const *argv[]) {
     }
 
     // here is where we write the buffer to a file
-    if ((is_ready and record_all_frames and sim_is_running) or draw_this_frame) {
+    if ((is_ready and export_png_when_ready) or write_png_immediately) {
       static int frameno = 0;
       std::stringstream pngfn;
       pngfn << "img_" << std::setfill('0') << std::setw(5) << frameno << ".png";
