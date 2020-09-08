@@ -13,11 +13,6 @@
 #include <vector>
 #include <cassert>
 
-const std::string vert_shader_source =
-#include "shaders/elempack.vert";
-const std::string frag_shader_source =
-#include "shaders/elempack.frag";
-
 // Control storage and drawing of features before Simulation takes over
 
 // empty out element packet
@@ -115,7 +110,7 @@ void FeatureDraw::initGL(std::vector<float>& _projmat,
 
   // Load and create the line-drawing shader program
   //m_gl->spo[0] = create_draw_surface_line_prog();
-  m_gl->spo[0] = create_vertfrag_prog(vert_shader_source, frag_shader_source);
+  m_gl->spo[0] = create_draw_surface_tri_prog();
 
   // Now do the two arrays
   prepare_opengl_buffer(m_gl->spo[0], 0, "pos", 2);

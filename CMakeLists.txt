@@ -13,6 +13,7 @@ ENDIF ()
 SET (CMAKE_BUILD_TYPE "Release" CACHE STRING "Select which configuration to build" )
 SET (BUILD_GUI TRUE CACHE BOOL "Build the GUI version")
 SET (BUILD_BATCH TRUE CACHE BOOL "Build the batch (no GUI) version")
+SET (CMAKE_INSTALL_PREFIX CACHE PATH "Installation location for binaries, sample inputs, and licenses")
 SET (USE_OMP FALSE CACHE BOOL "Use OpenMP multithreading")
 SET (USE_VC FALSE CACHE BOOL "Use Vc for vector arithmetic")
 SET (USE_OGL_COMPUTE FALSE CACHE BOOL "Use OpenGL compute shaders")
@@ -62,6 +63,11 @@ ENDIF ()
 
 # Split on operating system
 IF( WIN32 )
+  # because clang is stupid
+  IF (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+  ENDIF ()
+
   SET( GL_LIBS_HOME "C:/Lib" CACHE PATH "Location of support libraries" )
   SET( GLFW3_ROOT "${GL_LIBS_HOME}/glfw-3.3.bin.WIN32" CACHE STRING "GLFW3 root" )
   INCLUDE_DIRECTORIES( "${GLFW3_ROOT}/include" )
@@ -105,6 +111,11 @@ IF( WIN32 )
   SET_PROPERTY(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Omega3D)
 
 ELSEIF( APPLE )
+  # because clang is stupid
+  IF (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+  ENDIF ()
+
   INCLUDE_DIRECTORIES ( /System/Library/Frameworks )
   FIND_LIBRARY(COCOA_LIBRARY Cocoa)
   FIND_LIBRARY(IOKIT_LIBRARY IOKit)
@@ -138,6 +149,11 @@ ELSEIF( APPLE )
   SET( GUI_LIBS ${FRAMEWORK_LIBS} ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${COREVIDEO_LIBRARY} ${OpenGL_LIBRARY} )
 
 ELSEIF( UNIX )
+  # because clang is stupid
+  IF (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
+  ENDIF ()
+
   # glfw finds opengl
   # this works for CentOS 7
   #FIND_PACKAGE( glfw3 3.0 REQUIRED )
@@ -219,8 +235,7 @@ FILE(GLOB IMGUISOURCES "src/imgui/*.cpp" )
 INCLUDE_DIRECTORIES( "src/tinyxml2" )
 INCLUDE_DIRECTORIES( "src/tinyexpr" )
 INCLUDE_DIRECTORIES( "src/cppcodec" )
-INCLUDE_DIRECTORIES( "src/stb" )
-INCLUDE_DIRECTORIES( "src/igl" )
+INCLUDE_DIRECTORIES( "src/miniz" )
 INCLUDE_DIRECTORIES( "src" )
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
@@ -244,7 +259,9 @@ SET(SOURCES ${HEADERS}
             "src/tinyexpr/tinyexpr.c" )
 SET(GUI_SOURCES "src/glad/glad.c"
                 "src/ShaderHelper.cpp"
-                "src/stb/FrameBufferToImage.cpp" )
+                "src/FeatureDraw.cpp"
+                "src/miniz/miniz.c"
+                "src/miniz/FrameBufferToImage.cpp" )
 
 # create a binary for the GUI version
 IF( BUILD_GUI )
