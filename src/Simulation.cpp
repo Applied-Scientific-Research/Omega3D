@@ -509,7 +509,10 @@ void Simulation::clear_bodies() {
 }
 
 // Write a set of vtu files for the particles and panels
-std::vector<std::string> Simulation::write_vtk(const int _index) {
+std::vector<std::string> Simulation::write_vtk(const int _index,
+                                               const bool _do_bdry,
+                                               const bool _do_flow,
+                                               const bool _do_measure) {
 
   // solve the BEM (before any VTK or status file output)
   //std::cout << "Updating element vels" << std::endl;
@@ -517,9 +520,10 @@ std::vector<std::string> Simulation::write_vtk(const int _index) {
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
   //clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
   solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
-  conv.find_vels(thisfs, vort, bdry, vort);
-  conv.find_vels(thisfs, vort, bdry, fldpt);
-  conv.find_vels(thisfs, vort, bdry, bdry);
+
+  if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort);
+  if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt);
+  if (_do_bdry)    conv.find_vels(thisfs, vort, bdry, bdry);
 #endif
 
   // may eventually want to avoid clobbering by maintaining an internal count of the
@@ -535,9 +539,9 @@ std::vector<std::string> Simulation::write_vtk(const int _index) {
   }
 
   // ask Vtk to write files for each collection
-  write_vtk_files<float>(vort, stepnum, time, files);
-  write_vtk_files<float>(fldpt, stepnum, time, files);
-  write_vtk_files<float>(bdry, stepnum, time, files);
+  if (_do_flow)    write_vtk_files<float>(vort, stepnum, time, files);
+  if (_do_measure) write_vtk_files<float>(fldpt, stepnum, time, files);
+  if (_do_bdry)    write_vtk_files<float>(bdry, stepnum, time, files);
 
   return files;
 }
