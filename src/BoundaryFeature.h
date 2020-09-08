@@ -48,6 +48,7 @@ public:
   virtual std::string to_short_string() const = 0;
   virtual void from_json(const nlohmann::json) = 0;
   virtual nlohmann::json to_json() const = 0;
+  virtual void create() = 0;
   virtual ElementPacket<float> init_elements(const float) const = 0;
   //virtual std::vector<float> step_elements(const float) const = 0;
   void set_body(std::shared_ptr<Body> _bp) { m_bp = _bp; }
@@ -102,6 +103,7 @@ public:
   std::string to_short_string() const override { return "ovoid"; }
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
+  void create() override { }
   ElementPacket<float> init_elements(const float) const override;
   ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
@@ -142,6 +144,7 @@ public:
   std::string to_short_string() const override { return "rectangular prism"; }
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
+  void create() override { }
   ElementPacket<float> init_elements(const float) const override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string) override;
@@ -196,6 +199,7 @@ public:
   std::string to_short_string() const override { return "rectangular plane"; }
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
+  void create() override { }
   ElementPacket<float> init_elements(const float) const override;
 #ifdef USE_IMGUI
   bool draw_info_gui(std::string) override;
@@ -237,6 +241,7 @@ public:
   std::string to_short_string() const override { return "file mesh"; }
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
+  void create() override { }
   ElementPacket<float> init_elements(const float) const override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string) override;
