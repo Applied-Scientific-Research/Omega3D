@@ -385,7 +385,7 @@ protected:
 
   // state vector
   std::array<Vector<S>,Dimensions> x;                   // position of nodes
-  std::optional<std::array<Vector<S>,3>> s;    // strength at nodes
+  std::optional<std::array<Vector<S>,numStrenPerNode>> s;    // strength at nodes
 
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity at nodes

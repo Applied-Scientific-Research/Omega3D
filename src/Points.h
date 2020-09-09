@@ -85,7 +85,7 @@ public:
 
       // optional strength in base class
       // need to assign it a vector first!
-      std::array<Vector<S>,3> new_s;
+      std::array<Vector<S>,numStrenPerNode> new_s;
       for (size_t d=0; d<3; ++d) {
         new_s[d].resize(this->n);
         for (size_t i=0; i<this->n; ++i) {
@@ -164,7 +164,7 @@ public:
 
       // optional strength in base class
       // need to assign it a vector first!
-      std::array<Vector<S>,Dimensions> new_s;
+      std::array<Vector<S>, numStrenPerNode> new_s;
       for (int i = 0; i < 3; i++) {
         new_s[i].resize(this->n);
         for (int j = i; j < this->n; j += 4) {
