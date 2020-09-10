@@ -126,9 +126,10 @@ public:
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
     // and that it has the right number of values per particle
+    std::cout << _in.val.size()/(numStrenPerNode+1) << " " << _in.nelem << std::endl;
     if (_e == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
     else if (_e == reactive) assert(false && "Input ElementPacket with reactive points is unsupported");
-    else assert(_in.val.size() == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
+    else assert(_in.val.size()/(numStrenPerNode+1) == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
 
     // tell the world that we're legit
     std::cout << "  new collection with " << (_in.nelem);
@@ -162,6 +163,12 @@ public:
       r.resize(this->n);
       std::fill(r.begin(), r.end(), _vd);
 
+      // and elongation
+      this->elong.resize(this->n);
+      for (size_t i=0; i<this->n; ++i) {
+        this->elong[i] = 1.0;
+      }
+      
       // optional strength in base class
       // need to assign it a vector first!
       std::array<Vector<S>, numStrenPerNode> new_s;
@@ -241,7 +248,7 @@ public:
     // and that it has the right number of values per particle
     if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
     else if (this->E == reactive) assert("Input ElementPacket with reactive points is unsupported");
-    else assert(_in.val.size() == _in.nelem && "Input ElementPacket with vortons has bad sized val array");
+    else assert(_in.val.size()/numStrenPerNode == _in.nelem && "Input ElementPacket with vortons has bad sized val array");
 
     // remember old size and incoming size (note that Points nelems = nnodes)
     const size_t nold = this->n;
@@ -486,7 +493,7 @@ public:
         S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
         if (thisstr > thismax) thismax = thisstr;
 
-        if (false) {
+        if (VERBOSE) {
         //if (i == 0) {
         //if (i == this->n - 1) {
           //std::array<S,3> thisx = {this->x[0][i], this->x[1][i], this->x[2][i]};
@@ -498,7 +505,7 @@ public:
           std::cout << "  " << this_ug[6] << " " << this_ug[7] << " " << this_ug[8];// << std::endl;
           std::cout << "  wdu " << wdu[0] << " " << wdu[1] << " " << wdu[2];// << std::endl;
           std::cout << "  s " << (*this->s)[0][i] << " " << (*this->s)[1][i] << " " << (*this->s)[2][i];// << std::endl;
-          //std::cout << "  elong " << elong[i];
+          std::cout << "  elong " << elong[i];
           std::cout << std::endl;
         }
       }
@@ -519,7 +526,11 @@ public:
   S get_max_elong() {
     // max_element returns an iterator
     auto imax = std::max_element(this->elong.begin(), this->elong.end());
-    //std::cout << "  max elong " << *imax << std::endl;
+    if (VERBOSE) {
+      std::cout << "  elong.size() " << this->elong.size() << std::endl;
+      std::cout  << "   max elong " << *imax << std::endl;
+    }
+    assert(*imax && "ERROR with elong in points");
     return *imax;
   }
 
