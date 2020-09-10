@@ -555,8 +555,8 @@ SingularRing::init_elements(float _ips) const {
     vals.emplace_back(0.0f);
   }
 
-  ElementPacket<float> packet({x, idx, vals, (size_t)(ndiam/Dimensions), 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 1)) {
+  ElementPacket<float> packet({x, idx, vals, (size_t)ndiam, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
     return packet;
   } else {
     return ElementPacket<float>();

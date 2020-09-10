@@ -83,7 +83,7 @@ public:
     // strength
     if (s and nper==7) {
       // must dereference s to get the actual vector
-      for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t d=0; d<numStrenPerNode; ++d) {
         (*s)[d].resize(n+nnew);
         for (size_t i=0; i<nnew; ++i) {
           (*s)[d][n+i] = _in[7*i+d+3];
@@ -130,10 +130,10 @@ public:
       assert(_in.val.size() >= nnew && "Input ElementPacket does not have enough values in val");
       const size_t nper = _in.val.size() / nnew;
       // must dereference s to get the actual vector
-      for (int i = 0; i < 3; i++) {
-        (*s)[i].resize(n+nnew);
+      for (int j = 0; j < numStrenPerNode; j++) {
+        (*s)[j].resize(n+nnew);
         for (size_t i=0; i<nnew; ++i) {
-          (*s)[i][n+i] = _in.val[nper*i+0];
+          (*s)[j][n+i] = _in.val[nper*i+0];
         }
       }
     }
@@ -166,7 +166,7 @@ public:
 
     // strength
     if (s) {
-      for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t d=0; d<numStrenPerNode; ++d) {
         const size_t thisn = (*s)[d].size();
         (*s)[d].resize(_nnew);
         for (size_t i=thisn; i<_nnew; ++i) {
@@ -205,7 +205,7 @@ public:
 
   void zero_strengths() {
     if (s) {
-      for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t d=0; d<numStrenPerNode; ++d) {
         std::fill((*s)[d].begin(), (*s)[d].end(), 0.0);
       }
     }
@@ -309,7 +309,7 @@ public:
       // this is the c++17 way
       //return std::reduce(std::execution::par, s->begin(), s->end());
       // this is the c++11 way
-      for (size_t d=0; d<3; ++d) {
+      for (size_t d=0; d<numStrenPerNode; ++d) {
         circ[d] = std::accumulate((*s)[d].begin(), (*s)[d].end(), 0.0);
       }
     }

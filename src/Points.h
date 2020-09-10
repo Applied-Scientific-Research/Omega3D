@@ -246,9 +246,10 @@ public:
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
     // and that it has the right number of values per particle
-    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
-    else if (this->E == reactive) assert("Input ElementPacket with reactive points is unsupported");
-    else assert(_in.val.size()/numStrenPerNode == _in.nelem && "Input ElementPacket with vortons has bad sized val array");
+    if (VERBOSE) { std::cout << "  val size " << _in.val.size() << std::endl; }
+    if (this->E == inert) { assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array"); }
+    else if (this->E == reactive) { assert("Input ElementPacket with reactive points is unsupported"); }
+    else { assert(_in.val.size()/(numStrenPerNode+1) == _in.nelem && "Input ElementPacket with vortons has bad sized val array"); }
 
     // remember old size and incoming size (note that Points nelems = nnodes)
     const size_t nold = this->n;
@@ -265,6 +266,11 @@ public:
     } else {
       r.resize(nold+nnew);
       std::fill(r.begin()+nold, r.end(), _vd);
+      
+      elong.resize(nold+nnew);
+      for (size_t i=nold; i<nold+nnew; ++i) {
+        elong[i] = 1.0;
+      }
     }
 
     // save the new untransformed positions if we have a Body pointer
@@ -371,8 +377,8 @@ public:
         for (size_t d=0; d<Dimensions*Dimensions; ++d) {
           this_ug[d] = (*ug)[d][i];
         }
-        std::array<S,Dimensions> this_s = {0.0};
-        for (size_t d=0; d<Dimensions; ++d) {
+        std::array<S,numStrenPerNode> this_s = {0.0};
+        for (size_t d=0; d<numStrenPerNode; ++d) {
           this_s[d] = (*this->s)[d][i];
         }
 
@@ -400,7 +406,7 @@ public:
         S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
         if (thisstr > thismax) thismax = thisstr;
 
-        if (false) {
+        if (VERBOSE) {
         //if (i == 0) {
         //if (i < 10) {
           std::cout << "  x " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i];// << std::endl;
@@ -443,9 +449,9 @@ public:
       for (size_t i=0; i<this->n; ++i) {
 
         // set up some convenient temporaries
-        std::array<S,Dimensions> this_s = {0.0};
+        std::array<S,numStrenPerNode> this_s = {0.0};
         std::array<S,Dimensions*Dimensions> this_ug = {0.0};
-        for (size_t d=0; d<Dimensions; ++d) {
+        for (size_t d=0; d<numStrenPerNode; ++d) {
           this_s[d] = (*this->s)[d][i];
         }
         auto& optug1 = _u1.ug;

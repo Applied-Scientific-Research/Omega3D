@@ -746,16 +746,16 @@ void Simulation::step() {
       //std::cout << std::endl;
 
       // none of these are passed as const, because both may be extended with new particles
-      std::array<Vector<float>,Dimensions>& x = pts.get_pos();
-      Vector<float>&                        r = pts.get_rad();
-      Vector<float>&                    elong = pts.get_elong();
-      std::array<Vector<float>,Dimensions>& s = pts.get_str();
+      std::array<Vector<float>,Dimensions>&       x = pts.get_pos();
+      Vector<float>&                              r = pts.get_rad();
+      Vector<float>&                              elong = pts.get_elong();
+      std::array<Vector<float>, numStrenPerNode>& s = pts.get_str();
 
       // last two arguments are: relative distance, allow variable core radii
       (void)split_elongated<float>(x[0], x[1], x[2], r, elong, s[0], s[1], s[2],
-                               diff.get_core_func(),
-                               diff.get_particle_overlap(),
-                               1.2);
+                                   diff.get_core_func(),
+                                   diff.get_particle_overlap(),
+                                   1.2);
 
       // we probably have a different number of particles now, resize the u, ug, elong arrays
       pts.resize(r.size());
@@ -1138,7 +1138,6 @@ void Simulation::file_elements(std::vector<Collection>& _collvec,
       surf.add_new(_elems);
     }
   }
-
 }
 
 // add a new Body with the given name
