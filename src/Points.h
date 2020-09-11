@@ -172,10 +172,11 @@ public:
       // optional strength in base class
       // need to assign it a vector first!
       std::array<Vector<S>, numStrenPerNode> new_s;
-      for (int i = 0; i < 3; i++) {
-        new_s[i].resize(this->n);
-        for (int j = i; j < this->n; j += 4) {
-          new_s[i][j] = _in.val[j];
+      const size_t nper = _in.val.size() / this->n;
+      for (size_t j = 0; j < numStrenPerNode; j++) {
+        new_s[j].resize(this->n);
+        for (size_t i = 0; i < this->n; i++) {
+          new_s[j][i] = _in.val[i*nper+j];
         }
       }
       

@@ -133,7 +133,7 @@ public:
       for (int j = 0; j < numStrenPerNode; j++) {
         (*s)[j].resize(n+nnew);
         for (size_t i=0; i<nnew; ++i) {
-          (*s)[j][n+i] = _in.val[nper*i+0];
+          (*s)[j][n+i] = _in.val[nper*i+j];
         }
       }
     }
