@@ -672,10 +672,12 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
     b(25) = fourth_moment / 3.0;
     b(32) = fourth_moment / 3.0;
   }
-  //std::cout << "  Here is the matrix A^T:\n" << A.transpose() << std::endl;
-  //std::cout << "  Here is the right hand side b:\n\t" << b.transpose() << std::endl;
-  //std::cout << "  Here is the solution vector:\n\t" << fractions.transpose() << std::endl;
-
+  
+  if (VERBOSE) {
+    std::cout << "  Here is the matrix A^T:\n" << A.transpose() << std::endl;
+    std::cout << "  Here is the right hand side b:\n\t" << b.transpose() << std::endl;
+    std::cout << "  Here is the solution vector:\n\t" << fractions.transpose() << std::endl;
+  }
 
   if (use_solver == nnls) {
     //std::cout << "    using NNLS solver\n" << std::endl;

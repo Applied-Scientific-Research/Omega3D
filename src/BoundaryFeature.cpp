@@ -170,7 +170,7 @@ Ovoid::init_elements(const float _ips) const {
   std::vector<float>   x = ico0;
   std::vector<Int>   idx = ico0idx;
   std::vector<float> val;
-  ElementPacket<float> epack {x, idx, val};
+  ElementPacket<float> epack {x, idx, val, x.size()/Dimensions, 2};
 
   // estimate the triangle spacing for the scaled ovoid
   float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
@@ -184,7 +184,7 @@ Ovoid::init_elements(const float _ips) const {
     refine_geometry(epack);
 
     // re-sphericalize (r=0.5)
-    for (size_t i=0; i<epack.x.size()/3; ++i) {
+    for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
       const float rad = std::sqrt( std::pow(epack.x[3*i], 2) +
                                    std::pow(epack.x[3*i+1], 2) +
                                    std::pow(epack.x[3*i+2], 2));
@@ -307,7 +307,7 @@ SolidRect::init_elements(const float _ips) const {
   std::vector<float>   x = cube0;
   std::vector<Int>   idx = cube0idx;
   std::vector<float> val;
-  ElementPacket<float> epack {x, idx, val};
+  ElementPacket<float> epack {x, idx, val, x.size()/Dimensions, 2};
 
   // estimate the triangle spacing for the scaled rectangle
   float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
@@ -428,8 +428,6 @@ void SolidRect::generate_draw_geom() {
 ElementPacket<float>
 BoundaryQuad::init_elements(const float _ips) const {
 
-  if (not this->is_enabled()) return ElementPacket<float>();
-
   // how many panels?
   const float side1 = 0.5 * (std::sqrt(std::pow(m_x1-m_x,2)  + std::pow(m_y1-m_y,2)  + std::pow(m_z1-m_z,2))
                             +std::sqrt(std::pow(m_x3-m_x2,2) + std::pow(m_y3-m_y2,2) + std::pow(m_z3-m_z2,2)));
@@ -490,7 +488,7 @@ BoundaryQuad::init_elements(const float _ips) const {
     val[3*i+2] = m_bcz;
   }
 
-  return ElementPacket<float>({x, idx, val});
+  return ElementPacket<float>({x, idx, val, val.size()/Dimensions, 2});
 }
 
 void
@@ -501,7 +499,7 @@ BoundaryQuad::debug(std::ostream& os) const {
 std::string
 BoundaryQuad::to_string() const {
   std::stringstream ss;
-  ss << "quad at " << m_x << " " << m_y << " " << m_x;
+  ss << "quad at " << m_x << " " << m_y << " " << m_z;
   if (std::abs(m_bcx)+std::abs(m_bcy)+std::abs(m_bcz) > std::numeric_limits<float>::epsilon()) {
     ss << " with vel " << m_bcx << " " << m_bcy << " " << m_bcz;
   }
