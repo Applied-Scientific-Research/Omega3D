@@ -170,7 +170,7 @@ Ovoid::init_elements(const float _ips) const {
   std::vector<float>   x = ico0;
   std::vector<Int>   idx = ico0idx;
   std::vector<float> val;
-  ElementPacket<float> epack {x, idx, val, x.size()/Dimensions, 2};
+  ElementPacket<float> epack {x, idx, val, val.size()/Dimensions, 2};
 
   // estimate the triangle spacing for the scaled ovoid
   float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
@@ -185,13 +185,13 @@ Ovoid::init_elements(const float _ips) const {
 
     // re-sphericalize (r=0.5)
     for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
-      const float rad = std::sqrt( std::pow(epack.x[3*i], 2) +
-                                   std::pow(epack.x[3*i+1], 2) +
-                                   std::pow(epack.x[3*i+2], 2));
+      const float rad = std::sqrt( std::pow(epack.x[Dimensions*i], 2) +
+                                   std::pow(epack.x[Dimensions*i+1], 2) +
+                                   std::pow(epack.x[Dimensions*i+2], 2));
       const float scale = 0.5 / rad;
-      epack.x[3*i]   *= scale;
-      epack.x[3*i+1] *= scale;
-      epack.x[3*i+2] *= scale;
+      epack.x[Dimensions*i]   *= scale;
+      epack.x[Dimensions*i+1] *= scale;
+      epack.x[Dimensions*i+2] *= scale;
     }
 
     meansize *= 0.5;
@@ -199,21 +199,22 @@ Ovoid::init_elements(const float _ips) const {
   std::cout << " panels" << std::endl;
 
   // scale and translate here
-  for (size_t i=0; i<epack.x.size()/3; ++i) {
-    const float in_x = epack.x[3*i];
-    const float in_y = epack.x[3*i+1];
-    const float in_z = epack.x[3*i+2];
+  for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
+    const float in_x = epack.x[Dimensions*i];
+    const float in_y = epack.x[Dimensions*i+1];
+    const float in_z = epack.x[Dimensions*i+2];
 
     // first scale, then translate
-    epack.x[3*i]   = in_x * m_sx + m_x;
-    epack.x[3*i+1] = in_y * m_sy + m_y;
-    epack.x[3*i+2] = in_z * m_sz + m_z;
+    epack.x[Dimensions*i]   = in_x * m_sx + m_x;
+    epack.x[Dimensions*i+1] = in_y * m_sy + m_y;
+    epack.x[Dimensions*i+2] = in_z * m_sz + m_z;
   }
 
   // finally, assume standard behavior: reactive, zero-flow panels
-  const size_t nsurfs = epack.idx.size() / 3;
-  epack.val.resize(3*nsurfs);
+  const size_t nsurfs = epack.idx.size() / Dimensions;
+  epack.val.resize(Dimensions*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
+  epack.nelem = epack.val.size()/Dimensions;
 
   return epack;
 }
@@ -301,13 +302,11 @@ bool Ovoid::draw_info_gui(const std::string action) {
 ElementPacket<float>
 SolidRect::init_elements(const float _ips) const {
 
-  if (not this->is_enabled()) return ElementPacket<float>();
-
   // first, make 12-triangle rectangle
   std::vector<float>   x = cube0;
   std::vector<Int>   idx = cube0idx;
   std::vector<float> val;
-  ElementPacket<float> epack {x, idx, val, x.size()/Dimensions, 2};
+  ElementPacket<float> epack {x, idx, val, val.size()/Dimensions, 2};
 
   // estimate the triangle spacing for the scaled rectangle
   float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
@@ -322,21 +321,22 @@ SolidRect::init_elements(const float _ips) const {
   std::cout << " panels" << std::endl;
 
   // scale and translate here
-  for (size_t i=0; i<epack.x.size()/3; ++i) {
-    const float in_x = epack.x[3*i];
-    const float in_y = epack.x[3*i+1];
-    const float in_z = epack.x[3*i+2];
+  for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
+    const float in_x = epack.x[Dimensions*i];
+    const float in_y = epack.x[Dimensions*i+1];
+    const float in_z = epack.x[Dimensions*i+2];
 
     // first scale, then translate
-    epack.x[3*i]   = in_x * m_sx + m_x;
-    epack.x[3*i+1] = in_y * m_sy + m_y;
-    epack.x[3*i+2] = in_z * m_sz + m_z;
+    epack.x[Dimensions*i]   = in_x * m_sx + m_x;
+    epack.x[Dimensions*i+1] = in_y * m_sy + m_y;
+    epack.x[Dimensions*i+2] = in_z * m_sz + m_z;
   }
 
   // finally, assume standard behavior: reactive, zero-flow panels
-  const size_t nsurfs = epack.idx.size() / 3;
-  epack.val.resize(3*nsurfs);
+  const size_t nsurfs = epack.idx.size() / Dimensions;
+  epack.val.resize(Dimensions*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
+  epack.nelem = epack.val.size()/Dimensions;
 
   return epack;
 }
@@ -441,9 +441,9 @@ BoundaryQuad::init_elements(const float _ips) const {
   std::cout << "  " << to_string() << std::endl;
 
   // created once
-  std::vector<float>   x(3*(num1+1)*(num2+1));
-  std::vector<Int>   idx(num_panels*3);
-  std::vector<float> val(num_panels*3);
+  std::vector<float>   x(Dimensions*(num1+1)*(num2+1));
+  std::vector<Int>   idx(num_panels*Dimensions);
+  std::vector<float> val(num_panels*Dimensions);
 
   // when quad nodes appear in CCW order, the viewer is "outside" the object (inside the fluid)
   // so go CW around the body
@@ -469,23 +469,23 @@ BoundaryQuad::init_elements(const float _ips) const {
     const size_t idx2 = (num2+1) * (i+1);
     for (size_t j=0; j<num2; ++j) {
       // make the first of 2 tris
-      idx[3*icnt]   = idx1 + j + 0;
-      idx[3*icnt+1] = idx2 + j + 0;
-      idx[3*icnt+2] = idx2 + j + 1;
+      idx[Dimensions*icnt]   = idx1 + j + 0;
+      idx[Dimensions*icnt+1] = idx2 + j + 0;
+      idx[Dimensions*icnt+2] = idx2 + j + 1;
       icnt++;
       // do the other triangle
-      idx[3*icnt]   = idx1 + j + 0;
-      idx[3*icnt+1] = idx2 + j + 1;
-      idx[3*icnt+2] = idx1 + j + 1;
+      idx[Dimensions*icnt]   = idx1 + j + 0;
+      idx[Dimensions*icnt+1] = idx2 + j + 1;
+      idx[Dimensions*icnt+2] = idx1 + j + 1;
       icnt++;
     }
   }
 
   // all triangles share the same boundary condition velocity (in global coords)
   for (size_t i=0; i<num_panels; ++i) {
-    val[3*i+0] = m_bcx;
-    val[3*i+1] = m_bcy;
-    val[3*i+2] = m_bcz;
+    val[Dimensions*i+0] = m_bcx;
+    val[Dimensions*i+1] = m_bcy;
+    val[Dimensions*i+2] = m_bcz;
   }
 
   return ElementPacket<float>({x, idx, val, val.size()/Dimensions, 2});
