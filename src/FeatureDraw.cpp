@@ -13,7 +13,15 @@
 #include <vector>
 #include <cassert>
 
+const std::string vert_shader_source =
+#include "shaders/elempack.vert"
+;
+const std::string frag_shader_source =
+#include "shaders/elempack.frag"
+;
+
 // Control storage and drawing of features before Simulation takes over
+
 
 // empty out element packet
 void FeatureDraw::clear_elements() {
@@ -110,10 +118,10 @@ void FeatureDraw::initGL(std::vector<float>& _projmat,
 
   // Load and create the line-drawing shader program
   //m_gl->spo[0] = create_draw_surface_line_prog();
-  m_gl->spo[0] = create_draw_surface_tri_prog();
+  m_gl->spo[0] = create_vertfrag_prog(vert_shader_source, frag_shader_source);
 
   // Now do the two arrays
-  prepare_opengl_buffer(m_gl->spo[0], 0, "pos", 2);
+  prepare_opengl_buffer(m_gl->spo[0], 0, "pos", 3);
   prepare_opengl_buffer(m_gl->spo[0], 1, "str", 1);
 
   // Get the location of the attributes that enters in the vertex shader
@@ -225,7 +233,7 @@ void FeatureDraw::drawGL(std::vector<float>& _projmat,
     glUniform1i(m_gl->use_def_attribute, (const GLint)_oneColor);
 
     // the one draw call here
-    glDrawElements(GL_LINES, m_gl->num_uploaded, get_gl_type<Int>, 0);
+    glDrawElements(GL_TRIANGLES, m_gl->num_uploaded, get_gl_type<Int>, 0);
 
     // return state
     glEnable(GL_DEPTH_TEST);
