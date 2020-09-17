@@ -6,13 +6,14 @@ CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
 PROJECT( Omega3D )
 
 # User-serviceable variables here
-SET (CMAKE_CONFIGURATION_TYPES "Debug" "Release" "RelWithDebInfo")
+SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo")
 IF (NOT CMAKE_BUILD_TYPE)
   SET (CMAKE_BUILD_TYPE "Release")
 ENDIF ()
-SET (CMAKE_BUILD_TYPE "Release" CACHE STRING "Select which configuration to build" )
+SET (CMAKE_BUILD_TYPE "Release" CACHE STRING "Select which configuration to build")
 SET (BUILD_GUI TRUE CACHE BOOL "Build the GUI version")
 SET (BUILD_BATCH TRUE CACHE BOOL "Build the batch (no GUI) version")
+SET (CMAKE_INSTALL_PREFIX CACHE PATH "Installation location for binaries, sample inputs, and licenses")
 SET (USE_OMP FALSE CACHE BOOL "Use OpenMP multithreading")
 SET (USE_VC FALSE CACHE BOOL "Use Vc for vector arithmetic")
 SET (USE_OGL_COMPUTE FALSE CACHE BOOL "Use OpenGL compute shaders")
@@ -261,4 +262,5 @@ IF( BUILD_BATCH )
 ENDIF()
 
 INSTALL( DIRECTORY 3Dexamples/ DESTINATION 3Dexamples )
-#INSTALL( FILES LICENSE DESTINATION LICENSE )
+INSTALL( FILES LICENSE DESTINATION LICENSE )
+
