@@ -142,6 +142,7 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
       bp->set_name(bf->to_short_string());
       sim.add_body(bp);
     }
+    bf->generate_draw_geom();
     bfs.emplace_back(std::move(bf));
     bf = nullptr;
     created = true;
@@ -693,4 +694,5 @@ bool ExteriorFromFile::draw_info_gui(const std::string action) {
 #endif
 
 void ExteriorFromFile::generate_draw_geom() {
+  m_draw = init_elements(1);
 }
