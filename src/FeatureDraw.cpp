@@ -39,7 +39,7 @@ void FeatureDraw::add_elements(const ElementPacket<float> _in, const bool _enabl
   //std::cout << "  FeatureDraw appending " << (_in.x.size()/2) << " nodes and " << (_in.idx.size()/2) << " elements" << std::endl;
 
   // remember the number of points in the position array before appending
-  const Int np_old = m_geom.x.size() / 2;
+  const Int np_old = m_geom.x.size()/Dimensions;
   m_geom.x.insert(std::end(m_geom.x), std::begin(_in.x), std::end(_in.x));
 
   // append indices now

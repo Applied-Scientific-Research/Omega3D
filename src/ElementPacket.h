@@ -89,6 +89,12 @@ public:
     nelem = val.size();
   }
 
+  void print() {
+    for(int i=0; i<x.size()/Dimensions; i++) {
+      std::cout << "x: " << x[Dimensions*i] << " " << x[Dimensions*i+1] << " " << x[Dimensions*i+2] << std::endl;
+    }
+  }
+
   std::vector<S> x;
   std::vector<Int> idx;
   std::vector<S> val;

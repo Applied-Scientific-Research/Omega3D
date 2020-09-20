@@ -105,7 +105,6 @@ public:
   nlohmann::json to_json() const override;
   void create() override { }
   ElementPacket<float> init_elements(const float) const override;
-  ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string) override;
 #endif
@@ -115,7 +114,6 @@ protected:
   float m_sx;
   float m_sy;
   float m_sz;
-  ElementPacket<float> m_draw;
 };
 
 

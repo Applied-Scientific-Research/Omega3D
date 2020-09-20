@@ -87,6 +87,7 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
   static char strry[512] = "0.0*t";
   static char strrz[512] = "0.0*t";
   int changed = BoundaryFeature::obj_movement_gui(mitem, strx, stry, strz, strrx, strry, strrz);
+  
   static std::shared_ptr<Body> bp = nullptr; 
   if (changed) {
     switch(mitem) {
@@ -107,14 +108,13 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
         bp->set_rot(0, std::string(strrx));
         bp->set_rot(1, std::string(strry));
         bp->set_rot(2, std::string(strrz));
-        bp->set_name("sphere");
-        sim.add_body(bp);
         break;
     }
   }
 
   // define geometry second
   static int item = 0;
+  static int oldItem = -1;
   const int numItems = 3;
   const char* items[] = { "sphere", "rectangle", "from file" };
   ImGui::Spacing();
@@ -124,34 +124,40 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
   // show different inputs based on what is selected
   bool created = false;
   static std::unique_ptr<BoundaryFeature> bf = nullptr;
-  switch(item) {
-    case 0: {
-      // Need to create the object first
-      bf = std::make_unique<Ovoid>(bp);
-    } break;
-    case 1: {
-      bf = std::make_unique<SolidRect>(bp);
-    } break;
-    case 2: {
-      bf = std::make_unique<ExteriorFromFile>(bp);
-    } break;
-  }
+  if (oldItem != item) {
+    switch(item) {
+      case 0: {
+        // Need to create the object first
+        bf = std::make_unique<Ovoid>(bp);
+      } break;
+      case 1: {
+        bf = std::make_unique<SolidRect>(bp);
+      } break;
+      case 2: {
+        bf = std::make_unique<ExteriorFromFile>(bp);
+      } break;
+    }
+    oldItem = item;
+  } 
 
   if (bf->draw_info_gui("Add")) {
+    if (!bp) { abort(); }
     if (mitem == 2) {
       bp->set_name(bf->to_short_string());
       sim.add_body(bp);
     }
+    bf->set_body(bp);
     bf->generate_draw_geom();
     bfs.emplace_back(std::move(bf));
     bf = nullptr;
+    oldItem = -1;
     created = true;
-    ImGui::CloseCurrentPopup();
   }
 
   ImGui::SameLine();
   if (ImGui::Button("Cancel", ImVec2(120,0))) {
     ImGui::CloseCurrentPopup();
+    oldItem = -1;
     created = false;
   }
 
@@ -164,8 +170,6 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
 //
 ElementPacket<float>
 Ovoid::init_elements(const float _ips) const {
-
-  if (not this->is_enabled()) return ElementPacket<float>();
 
   // first, make an icosahedron
   std::vector<float>   x = ico0;
@@ -216,7 +220,7 @@ Ovoid::init_elements(const float _ips) const {
   epack.val.resize(Dimensions*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
   epack.nelem = epack.val.size()/Dimensions;
-
+  epack.print();
   return epack;
 }
 
@@ -270,15 +274,13 @@ Ovoid::to_json() const {
 }
 
 void Ovoid::generate_draw_geom() {
-  m_draw = init_elements(1);
+  m_draw = init_elements(0.125);
 }
 
 #ifdef USE_IMGUI
 bool Ovoid::draw_info_gui(const std::string action) {
-  //static bool external_flow = true;
-  static float xc[3] = {m_x, m_y, m_z};
-  //static float rotdeg = 0.0f;
-  static float scale = m_sx;
+  float xc[3] = {m_x, m_y, m_z};
+  float scale = m_sx;
   std::string buttonText = action+" spherical body";
   bool added = false;
 
