@@ -29,6 +29,7 @@ void FeatureDraw::clear_elements() {
   m_geom.idx.clear();
   m_geom.val.clear();
   m_idx.clear();
+  m_vals_changed = true;
 }
 
 float enable(float a) { return a*4; }
@@ -209,6 +210,7 @@ void FeatureDraw::drawGL(std::vector<float>& _projmat,
 
   if (/*(m_gl->num_uploaded != (GLsizei)m_geom.idx.size()) ||*/ m_vals_changed) {
     updateGL();
+    m_vals_changed = false;
   }
 
   // draw if there are any elems to draw
