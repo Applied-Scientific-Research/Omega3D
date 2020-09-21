@@ -104,11 +104,16 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
 
   const float vsx = (*_size);
   const float vsy = (*_size) * (float)display_h / (float)display_w;
+  const float nearclip = -50.0;
+  const float farclip = 50.0;
+  const float opm33 = -2.0 / (farclip-nearclip);
+  const float opm34 = -(farclip+nearclip) / (farclip-nearclip);
+
   _projmat =
     { 1.0f/vsx, 0.0f,     0.0f, 0.0f,
       0.0f,     1.0f/vsy, 0.0f, 0.0f,
-      0.0f,     0.0f,    -1.0f, 0.0f,
-     -_cx/vsx, -_cy/vsy,  0.0f, 1.0f };
+      0.0f,     0.0f,    opm33, 0.0f,
+     -_cx/vsx, -_cy/vsy, opm34, 1.0f };
 
   // save window size for next call
   last_w = display_w;
