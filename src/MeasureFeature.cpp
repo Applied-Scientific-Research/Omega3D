@@ -373,7 +373,7 @@ MeasurementLine::init_elements(float _ips) const {
     x.emplace_back((1.0-frac)*m_z + frac*m_zf);
   }
 
-  ElementPacket<float> packet({x, idx, vals, (size_t)(3*ilen), (uint8_t)0});
+  ElementPacket<float> packet({x, idx, vals, (size_t)(Dimensions*ilen), (uint8_t)0});
   if (packet.verify(packet.x.size(), Dimensions)) {
     return packet;
   } else {
@@ -413,7 +413,7 @@ MeasurementLine::to_string() const {
   } else {
     ss << "stationary";
   }
-  ss << " line from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << m_zf << " with dx " << m_dx;
+  ss << " line from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << " " << m_zf << " with dx " << m_dx;
   return ss.str();
 }
 
@@ -493,19 +493,19 @@ Grid2dPoints::init_elements(float _ips) const {
 
   // calculate length of two axes
   const float dist_s = std::sqrt( std::pow(m_xs, 2) + std::pow(m_ys, 2) + std::pow(m_zs, 2));
-  const float dist_t = std::sqrt( std::pow(m_xf, 2) + std::pow(m_yf, 2) + std::pow(m_zf, 2));
+  const float dist_f = std::sqrt( std::pow(m_xf, 2) + std::pow(m_yf, 2) + std::pow(m_zf, 2));
 
   // loop over integer indices
   for (float sp=0.5*m_ds/dist_s; sp<1.0+0.01*m_ds/dist_s; sp+=m_ds/dist_s) {
-    for (float tp=0.5*m_df/dist_t; tp<1.0+0.01*m_df/dist_t; tp+=m_df/dist_t) {
+    for (float fp=0.5*m_df/dist_f; fp<1.0+0.01*m_df/dist_f; fp+=m_df/dist_f) {
       // create a field point here
-      x.emplace_back(m_x + m_xs*sp + m_xf*tp);
-      x.emplace_back(m_y + m_ys*sp + m_yf*tp);
-      x.emplace_back(m_z + m_zs*sp + m_zf*tp);
+      x.emplace_back(m_x + m_xs*sp + m_xf*fp);
+      x.emplace_back(m_y + m_ys*sp + m_yf*fp);
+      x.emplace_back(m_z + m_zs*sp + m_zf*fp);
     }
   }
 
-  ElementPacket<float> packet({x, idx, vals, (size_t)(x.size()/2), (uint8_t)0});
+  ElementPacket<float> packet({x, idx, vals, (size_t)(x.size()/Dimensions), (uint8_t)0});
   if (packet.verify(packet.x.size(), Dimensions)) {
     return packet;
   } else {
@@ -568,11 +568,26 @@ Grid2dPoints::to_json() const {
 }
 
 void Grid2dPoints::generate_draw_geom() {
-  const float xc = (m_x+m_xf)/2.0;
-  const float yc = (m_y+m_yf)/2.0;
-  const float zc = (m_z+m_zf)/2.0;
-  std::unique_ptr<SolidRect> tmp = std::make_unique<SolidRect>(nullptr, true, xc, yc, zc,
-                                                               m_xf-m_x, m_yf-m_y, m_zf-m_z);          
+  const float normS = std::sqrt( std::pow(m_xs, 2) + std::pow(m_ys, 2) + std::pow(m_zs, 2));
+  const float normF = std::sqrt( std::pow(m_xf, 2) + std::pow(m_yf, 2) + std::pow(m_zf, 2));
+  const float sp = 1.0+0.01*m_ds/normS;
+  const float tp = 1.0+0.01*m_df/normF;
+  const float p0[3] = { m_x, m_y, m_z };
+  const float p1[3] = { m_x+(m_xs*0.5*m_ds/normS)+(m_xf),
+                        m_y+(m_ys*0.5*m_ds/normS)+(m_yf),
+                        m_z+(m_zs*0.5*m_ds/normS)+(m_zf) };
+  const float p2[3] = { m_x+(m_xf*0.5*m_df/normF)+(m_xs),
+                        m_y+(m_yf*0.5*m_df/normF)+(m_ys),
+                        m_z+(m_zf*0.5*m_df/normF)+(m_zs) };
+  const float p3[3] = { m_x+(m_xs)+(m_xf),
+                        m_y+(m_ys)+(m_yf),
+                        m_z+(m_zs)+(m_zf) };
+
+  std::unique_ptr<BoundaryQuad> tmp = std::make_unique<BoundaryQuad>(nullptr, p0[0], p0[1], p0[2],
+                                                                              p2[0], p2[1], p2[2], 
+                                                                              p3[0], p3[1], p3[2], 
+                                                                              p1[0], p1[1], p1[2],
+                                                                              0.0, 0.0, 0.0);
   m_draw = tmp->init_elements(1.0);
   std::cout << tmp->to_string() << std::endl;
 }
