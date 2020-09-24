@@ -184,7 +184,7 @@ SinglePoint::to_json() const {
 }
 
 void SinglePoint::generate_draw_geom() {
-  const float diam = 0.02;
+  const float diam = 0.005;
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
   m_draw = tmp->init_elements(diam/25.0);
 }
@@ -192,7 +192,7 @@ void SinglePoint::generate_draw_geom() {
 #ifdef USE_IMGUI
 bool SinglePoint::draw_info_gui(const std::string action, const float &tracerScale,
                                 const float ips) {
-  static float xc[3] = {m_x, m_y, m_z};
+  float xc[3] = {m_x, m_y, m_z};
   const std::string buttonText = action+" single point";
   bool add = false;
 
@@ -318,8 +318,8 @@ MeasurementBlob::to_json() const {
 }
 
 void MeasurementBlob::generate_draw_geom() {
-  //std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2.0, m_rad*2.0, m_rad*2.0);
-  //m_draw = tmp->init_elements(m_rad/12.5);
+  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2.0, m_rad*2.0, m_rad*2.0);
+  m_draw = tmp->init_elements(m_rad/12.5);
 }
 
 #ifdef USE_IMGUI
@@ -413,7 +413,7 @@ MeasurementLine::to_string() const {
   } else {
     ss << "stationary";
   }
-  ss << " line from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << " with dx " << m_dx;
+  ss << " line from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << m_zf << " with dx " << m_dx;
   return ss.str();
 }
 
@@ -447,15 +447,18 @@ MeasurementLine::to_json() const {
 }
 
 void MeasurementLine::generate_draw_geom() {
-  //std::unique_ptr<BoundarySegment> tmp = std::make_unique<BoundarySegment>(nullptr, true, m_x, m_y, m_z
-    //                                                                       m_xf, m_yf, m_zf, 0.0, 0.0);
-  //m_draw = tmp->init_elements(1.0);
+  const float minS = 0.01;
+  std::unique_ptr<SolidRect> tmp = std::make_unique<SolidRect>(nullptr, true, m_x, m_y, m_z,
+                                                               std::max(minS, m_xf-m_x), std::max(minS, m_yf-m_y),
+                                                               std::max(minS, m_zf-m_z));
+  m_draw = tmp->init_elements(1.0);
+  std::cout << tmp->to_string() << std::endl;
 }
 
 #ifdef USE_IMGUI
 bool MeasurementLine::draw_info_gui(const std::string action, const float &tracerScale, float ips) {
-  static float xc[3] = {m_x, m_y, m_z};
-  static float xf[3] = {m_xf, m_yf, m_zf};
+  float xc[3] = {m_x, m_y, m_z};
+  float xf[3] = {m_xf, m_yf, m_zf};
   const std::string buttonText = action+" line of measurement points";
   bool add = false;
   
@@ -565,20 +568,21 @@ Grid2dPoints::to_json() const {
 }
 
 void Grid2dPoints::generate_draw_geom() {
-  const float xc = (m_x+m_xf)/2;
-  const float yc = (m_y+m_yf)/2;
-  const float zc = (m_z+m_zf)/2;
-  std::unique_ptr<SolidRect> tmp = std::make_unique<SolidRect>(nullptr, true, xc, yc,
-                                                               m_xf-m_x, m_yf-m_y, 0.0);          
-  m_draw = tmp->init_elements(m_xf-m_x);
+  const float xc = (m_x+m_xf)/2.0;
+  const float yc = (m_y+m_yf)/2.0;
+  const float zc = (m_z+m_zf)/2.0;
+  std::unique_ptr<SolidRect> tmp = std::make_unique<SolidRect>(nullptr, true, xc, yc, zc,
+                                                               m_xf-m_x, m_yf-m_y, m_zf-m_z);          
+  m_draw = tmp->init_elements(1.0);
+  std::cout << tmp->to_string() << std::endl;
 }
 
 #ifdef USE_IMGUI
 bool Grid2dPoints::draw_info_gui(const std::string action, const float &tracer_scale, const float ips) {
-  static float xc[3] = {m_x, m_y, m_z};
-  static float xs[3] = {m_xs, m_ys, m_zs};
-  static float xf[3] = {m_xf, m_yf, m_zf};
-  static float dx[2] = {m_ds, m_df};
+  float xc[3] = {m_x, m_y, m_z};
+  float xs[3] = {m_xs, m_ys, m_zs};
+  float xf[3] = {m_xf, m_yf, m_zf};
+  float dx[2] = {m_ds, m_df};
   const std::string buttonText = action+" 2D grid of measurement points";
   bool add = false;
   
