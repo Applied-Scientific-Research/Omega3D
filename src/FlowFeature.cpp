@@ -342,8 +342,8 @@ BlockOfRandom::init_elements(float _ips) const {
   std::vector<float> x;
   std::vector<Int> idx;
   std::vector<float> vals;
-  x.resize(3*m_num);
-  vals.resize(4*m_num);
+  x.resize(Dimensions*m_num);
+  idx.resize(4*m_num);
 
   // initialize the particles' locations and strengths, leave radius zero for now
   for (size_t i=0; i<(size_t)m_num; ++i) {
@@ -624,7 +624,7 @@ void SingularRing::generate_draw_geom() {
   // We are going to drag the circle around in a circle to make the torus
   const float m_minrad = 0.1;
   std::vector<float> x;
-  std::vector<float> idx;
+  std::vector<Int> idx;
   for (int i=0; i<ts; i++) {
     const float alpha = i/(2*M_PI);
     for (int j=0; j<cs; j++) {
@@ -635,8 +635,39 @@ void SingularRing::generate_draw_geom() {
     }
   }
 
-  // We make triangles by using two consecutive points on the
-  // unit circle, and then the point in front of it on the next circle.
+  // Create triangles from points
+  for (int i=0; i<ts; i++) {
+    const Int ir1 = cs*i;
+    const Int ir2 = cs*(i+1);
+    for (int j=0; j<cs-1; j++) {
+      // set 1
+      idx.emplace_back(ir1+j);
+      idx.emplace_back(ir2+j);
+      idx.emplace_back(ir1+j+1);
+      // set 2
+      idx.emplace_back(ir2+j);
+      idx.emplace_back(ir2+j+1);
+      idx.emplace_back(ir1+j+1);
+    }
+    // set 1
+    idx.emplace_back(ir1+cs-1);
+    idx.emplace_back(ir2+cs-1);
+    idx.emplace_back(ir2);
+    // set 2
+    idx.emplace_back(ir2-1);
+    idx.emplace_back(ir2);
+    idx.emplace_back(ir1);
+  }
+  const int numPoints = cs*ts;
+  for (int i=idx.size()-cs; i<idx.size(); i++) {
+    idx[i] = idx[i]%numPoints;
+  }
+
+  std::vector<float> val;
+  val.resize(idx.size());
+  std::fill(val.begin(), val.end(), 1.0);
+  ElementPacket epack {x, idx, val, val.size()/Dimensions, 2};
+  m_draw = epack;
 }
 
 #ifdef USE_IMGUI
