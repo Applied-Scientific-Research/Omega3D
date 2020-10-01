@@ -342,6 +342,8 @@ BlockOfRandom::init_elements(float _ips) const {
   std::vector<float> x;
   std::vector<Int> idx;
   std::vector<float> vals;
+  x.resize(3*m_num);
+  vals.resize(4*m_num);
 
   // initialize the particles' locations and strengths, leave radius zero for now
   for (size_t i=0; i<(size_t)m_num; ++i) {
@@ -359,7 +361,7 @@ BlockOfRandom::init_elements(float _ips) const {
     vals[idx+1] = m_maxstr * zmean_dist(gen) / (float)m_num;
     vals[idx+2] = m_maxstr * zmean_dist(gen) / (float)m_num;
     // radius will get set later
-    vals[idx+4] = 0.0f;
+    vals[idx+3] = 0.0f;
   }
 
   ElementPacket<float> packet({x, idx, vals, x.size()/3, 0});
