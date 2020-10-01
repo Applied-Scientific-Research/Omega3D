@@ -176,7 +176,7 @@ int main(int argc, char const *argv[]) {
   bool show_json_input_window = false;
   bool show_file_output_window = false;
   //static bool show_origin = true;
-  static bool is_viscous = false;
+  static bool is_viscous = sim.get_diffuse();
 
   // colors and projection matrix for the render view
   RenderParams rparams;

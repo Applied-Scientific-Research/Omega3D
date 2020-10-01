@@ -38,7 +38,7 @@ public:
     : vrm(),
       h_nu(0.1),
       core_func(gaussian),
-      is_inviscid(false),
+      is_inviscid(true),
       adaptive_radii(false),
       nom_sep_scaled(std::sqrt(8.0)),
       particle_overlap(1.5),
@@ -375,9 +375,13 @@ void Diffusion<S,A,I>::from_json(const nlohmann::json j) {
 
   if (j.find("viscous") != j.end()) {
     std::string viscous = j["viscous"];
-    if (viscous == "vrm") { set_diffuse(true); }
-    else { set_diffuse(false); }
-    std::cout << "  setting is_viscous= " << get_diffuse() << std::endl;
+    if (viscous == "vrm") {
+      set_diffuse(true);
+    } else {
+      set_diffuse(false);
+    }
+  } else {
+    set_diffuse(false);
   }
 
   // regardless, load VRM settings as they were
