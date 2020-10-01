@@ -220,7 +220,6 @@ Ovoid::init_elements(const float _ips) const {
   epack.val.resize(Dimensions*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
   epack.nelem = epack.val.size()/Dimensions;
-  epack.print();
   return epack;
 }
 

@@ -91,7 +91,7 @@ public:
 
   void print() {
     for(int i=0; i<x.size()/Dimensions; i++) {
-      std::cout << "x: " << x[Dimensions*i] << " " << x[Dimensions*i+1] << " " << x[Dimensions*i+2] << std::endl;
+      std::cout << "idx: " << idx[i] << " x: " << x[Dimensions*i] << " " << x[Dimensions*i+1] << " " << x[Dimensions*i+2] << std::endl;
     }
   }
 

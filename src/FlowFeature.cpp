@@ -74,6 +74,7 @@ bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &f
         ff = std::make_unique<ThickRing>();
       } break;
     }
+    oldItem = item;
   }
 
   bool created = false;
@@ -291,10 +292,12 @@ VortexBlob::to_json() const {
 }
 
 void VortexBlob::generate_draw_geom() {
-  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2,
-                                                             m_rad*2, m_rad*2);
-  m_draw = tmp->init_elements(m_rad/12.5);
-  //std::fill(m_draw.val.begin(), m_draw.val.end(), m_str);
+  // Based on irad in init_elems
+  const float rad = 1+2*m_rad+m_softness;
+  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z,
+                                                       2*rad, 2*rad, 2*rad);
+  m_draw = tmp->init_elements(0.125);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), m_sz);
 }
 
 #ifdef USE_IMGUI
@@ -608,15 +611,37 @@ SingularRing::to_json() const {
   return j;
 }
 
+//void create
 void SingularRing::generate_draw_geom() {
-// Hard
+  // For sake of visualization, imagine the torus sitting on your table
+  // like a doughnut
+  // Number of steps around the torus
+  const int ts = 6;
+  // Number of steps around the circle perpendicular to the table
+  const int cs = 6;
+  // We are going to drag the circle around in a circle to make the torus
+  const float m_minrad = 0.1;
+  std::vector<float> x;
+  std::vector<float> idx;
+  for (int i=0; i<ts; i++) {
+    const float alpha = i/(2*M_PI);
+    for (int j=0; j<cs; j++) {
+      const float beta = j/(2*M_PI);
+      x.emplace_back((m_majrad+m_minrad*std::cos(beta))*std::cos(alpha));
+      x.emplace_back((m_majrad+m_minrad*std::cos(beta))*std::sin(alpha));
+      x.emplace_back(m_minrad*sin(beta));
+    }
+  }
+
+  // We make triangles by using two consecutive points on the
+  // unit circle, and then the point in front of it on the next circle.
 }
 
 #ifdef USE_IMGUI
 bool SingularRing::draw_info_gui(const std::string _action, const float _ips) {
-  static float xc[3] = {m_x, m_y, m_z};
-  static float vstr[3] = {m_nx, m_ny, m_nz};
-  static float guess_n = 1 + (2.0f * 3.1416f * m_majrad / _ips);
+  float xc[3] = {m_x, m_y, m_z};
+  float vstr[3] = {m_nx, m_ny, m_nz};
+  float guess_n = 1 + (2.0f * 3.1416f * m_majrad / _ips);
   std::string buttonText = _action+" singular ring";
   bool add = false;
 
@@ -775,20 +800,17 @@ void ThickRing::generate_draw_geom() {
 
 #ifdef USE_IMGUI
 bool ThickRing::draw_info_gui(const std::string action, const float ips) {
-  static float xc[3] = {m_x, m_y, m_z};
-  static float vstr[3] = {m_nx, m_ny, m_nz};
-  static float circ = m_circ;
-  static float rad = m_majrad;
-  static float minrad = m_minrad;
-  static float guess_n = (1 + (2.0f * 3.1416f * rad / ips) * std::pow(minrad/ips, 2));
+  float xc[3] = {m_x, m_y, m_z};
+  float vstr[3] = {m_nx, m_ny, m_nz};
+  float guess_n = (1 + (2.0f * 3.1416f * m_majrad / ips) * std::pow(m_minrad/ips, 2));
   std::string buttonText = action+" thick vortex ring";
   bool add = false;
 
   ImGui::InputFloat3("center", xc);
   ImGui::InputFloat3("direction", vstr);
-  ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
-  ImGui::SliderFloat("radius", &rad, 3.0f*ips, 10.0f, "%.3f");
-  ImGui::SliderFloat("thickness", &minrad, ips, 10.0f*ips, "%.4f");
+  ImGui::SliderFloat("circulation", &m_circ, 0.001f, 10.0f, "%.4f");
+  ImGui::SliderFloat("radius", &m_majrad, 3.0f*ips, 10.0f, "%.3f");
+  ImGui::SliderFloat("thickness", &m_minrad, ips, 10.0f*ips, "%.4f");
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add about %f particles", guess_n);
   ImGui::Spacing();
