@@ -176,7 +176,7 @@ int main(int argc, char const *argv[]) {
   bool show_json_input_window = false;
   bool show_file_output_window = false;
   //static bool show_origin = true;
-  static bool is_viscous = false;
+  static bool is_viscous = sim.get_diffuse();
 
   // colors and projection matrix for the render view
   RenderParams rparams;
@@ -279,7 +279,7 @@ int main(int argc, char const *argv[]) {
       // split on which to write
       if (save_all_vtus) {
         // default is to save all collections to vtu files
-      vtk_out_files = sim.write_vtk();
+        vtk_out_files = sim.write_vtk();
         // and don't do this next time
         save_all_vtus = false;
 
@@ -687,7 +687,7 @@ int main(int argc, char const *argv[]) {
         // add an "edit" button after the checkbox (so it's not easy to accidentally hit remove)
         ImGui::SameLine();
         ImGui::PushID(++buttonIDs);
-        if (ImGui::SmallButton("edit")) { 
+        if (ImGui::SmallButton("edit")) {
           tmpff = std::unique_ptr<FlowFeature>(ffeatures[i]->copy());
           edit_item_index = i;
         }
@@ -728,7 +728,7 @@ int main(int argc, char const *argv[]) {
             edit_item_index = -1;
             tmpff = nullptr;
             ImGui::CloseCurrentPopup();
-      }
+          }
         ImGui::EndPopup();
         }
       }
@@ -760,7 +760,7 @@ int main(int argc, char const *argv[]) {
       
         ImGui::SameLine(); 
         ImGui::PushID(++buttonIDs); 
-        if (ImGui::SmallButton("edit")) { 
+        if (ImGui::SmallButton("edit")) {
           tmpbf = std::unique_ptr<BoundaryFeature>(bfeatures[i]->copy());
           edit_item_index = i;
         }
@@ -866,7 +866,7 @@ int main(int argc, char const *argv[]) {
             mfeatures[edit_item_index].reset();
             mfeatures[edit_item_index] = std::move(tmpmf);
             redrawM = true;
-              fin = true;
+            fin = true;
           }
           ImGui::SameLine();
           if (ImGui::Button("Cancel", ImVec2(120,0))) { fin = true; }
@@ -913,7 +913,7 @@ int main(int argc, char const *argv[]) {
       ImGui::Text("Save simulation setup:");
       ImGui::SameLine();
       if (ImGui::Button("to JSON", ImVec2(10+4*fontSize,0))) show_file_output_window = true;
-      
+
       // save current data
       ImGui::Separator();
       ImGui::Spacing();
@@ -923,7 +923,7 @@ int main(int argc, char const *argv[]) {
       if (ImGui::Button("All to VTU", ImVec2(10+7*fontSize,0))) {
         save_all_vtus = true;
         export_vtk_this_frame = true;
-        }
+      }
       ImGui::SameLine();
       if (ImGui::Button("Screenshot to PNG", ImVec2(10+10*fontSize,0))) write_png_immediately = true;
 

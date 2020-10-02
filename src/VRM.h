@@ -673,7 +673,7 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
     b(32) = fourth_moment / 3.0;
   }
   
-  if (VERBOSE) {
+  if (VERBOSE and false) {
     std::cout << "  Here is the matrix A^T:\n" << A.transpose() << std::endl;
     std::cout << "  Here is the right hand side b:\n\t" << b.transpose() << std::endl;
     std::cout << "  Here is the solution vector:\n\t" << fractions.transpose() << std::endl;
