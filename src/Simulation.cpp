@@ -1121,8 +1121,21 @@ void Simulation::file_elements(std::vector<Collection>& _collvec,
     // make a new collection according to element dimension
     if (_elems.ndim == 0) {
       _collvec.push_back(Points<float>(_elems, _et, _mt, _bptr, get_vdelta()));
+#ifdef USE_OGL_COMPUTE
+      { // tell the new collection where the compute shader vao is
+        Points<float>& pts = std::get<Points<float>>(_collvec.back());
+        pts.set_opengl_compute_state(cgl);
+      }
+#endif
     } else if (_elems.ndim == 2) {
       _collvec.push_back(Surfaces<float>(_elems, _et, _mt, _bptr));
+#ifdef USE_OGL_COMPUTE
+      // tell it where the compute shader vao is
+      {
+        Surfaces<float>& surf = std::get<Surfaces<float>>(_collvec.back());
+        surf.set_opengl_compute_state(cgl);
+      }
+#endif
     }
 
   } else {
