@@ -570,8 +570,6 @@ Grid2dPoints::to_json() const {
 void Grid2dPoints::generate_draw_geom() {
   const float normS = std::sqrt( std::pow(m_xs, 2) + std::pow(m_ys, 2) + std::pow(m_zs, 2));
   const float normF = std::sqrt( std::pow(m_xf, 2) + std::pow(m_yf, 2) + std::pow(m_zf, 2));
-  const float sp = 1.0+0.01*m_ds/normS;
-  const float tp = 1.0+0.01*m_df/normF;
   const float p0[3] = { m_x, m_y, m_z };
   const float p1[3] = { m_x+(m_xs*0.5*m_ds/normS)+(m_xf),
                         m_y+(m_ys*0.5*m_ds/normS)+(m_yf),

@@ -618,24 +618,55 @@ void SingularRing::generate_draw_geom() {
   // For sake of visualization, imagine the torus sitting on your table
   // like a doughnut
   // Number of steps around the torus
-  const int ts = 6;
+  const int ts = 12;
   // Number of steps around the circle perpendicular to the table
-  const int cs = 6;
-  // We are going to drag the circle around in a circle to make the torus
-  const float m_minrad = 0.1;
-  std::vector<float> x;
+  const int cs = 12;
+  const float m_minrad = 0.01;
+  /*std::vector<float> x;
   std::vector<Int> idx;
   for (int i=0; i<ts; i++) {
-    const float alpha = i/(2*M_PI);
+    const float alpha = (2*M_PI)*i/ts;
     for (int j=0; j<cs; j++) {
-      const float beta = j/(2*M_PI);
+      const float beta = (2*M_PI)*j/cs;
       x.emplace_back((m_majrad+m_minrad*std::cos(beta))*std::cos(alpha));
       x.emplace_back((m_majrad+m_minrad*std::cos(beta))*std::sin(alpha));
       x.emplace_back(m_minrad*sin(beta));
     }
+  }*/
+  // We first make a circle we will then drag in a circular motion to create the torus
+  std::vector<float> circle;
+  for (int i=0; i<cs; i++) {
+    const float alpha = 2*M_PI*i/cs;
+    circle.emplace_back(m_minrad*std::sin(alpha));
+    circle.emplace_back(m_minrad*std::cos(alpha));
   }
+  // generate a set of orthogonal basis vectors for the given normal
+  std::array<float,3> norm = {m_nx, m_ny, m_nz};
+  normalizeVec(norm);
+  std::array<float,3> b1, b2;
+  branchlessONB<float>(norm, b1, b2);
+  
+  std::vector<float> x;
+  // loop over integer indices
+  for (int i=0; i<ts; ++i) {
+    const float theta = 2.0 * M_PI * (float)i / (float)ts;
+    const float st = std::sin(theta);
+    const float ct = std::cos(theta);
 
+    for (int j=0; j<cs; ++j) {
+      // helper indices for the disk particles
+      const size_t ix = 3*j;
+      const size_t iy = 3*j+1;
+
+      // create a particle here
+      x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
+      x.emplace_back(m_y + (m_majrad + circle[ix]) * (b1[1]*ct + b2[1]*st) + circle[iy]*norm[1]);
+      x.emplace_back(m_z + (m_majrad + circle[ix]) * (b1[2]*ct + b2[2]*st) + circle[iy]*norm[2]);
+    }
+  }
+      
   // Create triangles from points
+  std::vector<Int> idx;
   for (int i=0; i<ts; i++) {
     const Int ir1 = cs*i;
     const Int ir2 = cs*(i+1);
@@ -659,7 +690,7 @@ void SingularRing::generate_draw_geom() {
     idx.emplace_back(ir1);
   }
   const int numPoints = cs*ts;
-  for (int i=idx.size()-cs; i<idx.size(); i++) {
+  for (size_t i=idx.size()-cs; i<idx.size(); i++) {
     idx[i] = idx[i]%numPoints;
   }
 

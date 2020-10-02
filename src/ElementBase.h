@@ -130,7 +130,7 @@ public:
       assert(_in.val.size() >= nnew && "Input ElementPacket does not have enough values in val");
       const size_t nper = _in.val.size() / nnew;
       // must dereference s to get the actual vector
-      for (int j = 0; j < numStrenPerNode; j++) {
+      for (size_t j = 0; j < numStrenPerNode; j++) {
         (*s)[j].resize(n+nnew);
         for (size_t i=0; i<nnew; ++i) {
           (*s)[j][n+i] = _in.val[nper*i+j];
