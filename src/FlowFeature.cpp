@@ -655,8 +655,8 @@ void SingularRing::generate_draw_geom() {
 
     for (int j=0; j<cs; ++j) {
       // helper indices for the disk particles
-      const size_t ix = 3*j;
-      const size_t iy = 3*j+1;
+      const size_t ix = 2*j;
+      const size_t iy = 2*j+1;
 
       // create a particle here
       x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
