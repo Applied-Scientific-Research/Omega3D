@@ -422,7 +422,14 @@ BlockOfRandom::to_json() const {
 void BlockOfRandom::generate_draw_geom() {
   std::unique_ptr<SolidRect> tmp = std::make_unique<SolidRect>(nullptr, true, m_x, m_y, m_z, m_xsize, m_ysize, m_zsize);
   m_draw = tmp->init_elements(1);
-  std::fill(m_draw.val.begin(), m_draw.val.end(), m_maxstr);
+  
+  static std::random_device rd;  //Will be used to obtain a seed for the random number engine
+  static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+  static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
+  static std::uniform_real_distribution<> zo_dist(0.0, 1.0);
+  for (size_t i = 0; i < m_draw.val.size(); i++) {
+    m_draw.val[i] = m_maxstr*zmean_dist(gen)/m_num;
+  }
 }
 
 #ifdef USE_IMGUI
@@ -512,7 +519,11 @@ void ParticleEmitter::generate_draw_geom() {
   const float diam = 0.01;
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_sx, m_sy, m_sz);
   m_draw = tmp->init_elements(diam/25.0);
-  //std::fill(m_draw.val.begin(), m_draw.val.end(), m_str);
+  for (size_t i = 0; i<m_draw.val.size()/Dimensions; i++) {
+    m_draw.val[i] = m_sx;
+    m_draw.val[i+1] = m_sy;
+    m_draw.val[i+2] = m_sz;
+  }
 }
 
 #ifdef USE_IMGUI
@@ -618,9 +629,9 @@ void SingularRing::generate_draw_geom() {
   // For sake of visualization, imagine the torus sitting on your table
   // like a doughnut
   // Number of steps around the torus
-  const int ts = 12;
+  const int ts = 6;
   // Number of steps around the circle perpendicular to the table
-  const int cs = 12;
+  const int cs = 6;
   const float m_minrad = 0.01;
   /*std::vector<float> x;
   std::vector<Int> idx;
@@ -670,7 +681,7 @@ void SingularRing::generate_draw_geom() {
   for (int i=0; i<ts; i++) {
     const Int ir1 = cs*i;
     const Int ir2 = cs*(i+1);
-    for (int j=0; j<cs-1; j++) {
+    for (int j=0; j<cs; j++) {
       // set 1
       idx.emplace_back(ir1+j);
       idx.emplace_back(ir2+j);
@@ -699,6 +710,7 @@ void SingularRing::generate_draw_geom() {
   std::fill(val.begin(), val.end(), 1.0);
   ElementPacket epack {x, idx, val, val.size()/Dimensions, 2};
   m_draw = epack;
+  m_draw.print();
 }
 
 #ifdef USE_IMGUI
