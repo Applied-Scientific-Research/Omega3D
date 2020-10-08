@@ -861,7 +861,76 @@ ThickRing::to_json() const {
 }
 
 void ThickRing::generate_draw_geom() {
+  // For sake of visualization, imagine the torus sitting on your table like a doughnut
 
+  // Number of steps around the torus
+  const int ts = 37;
+  // Number of steps around the circle perpendicular to the table
+  const int cs = std::max(15, (int)std::floor(230*m_minrad));
+
+  // We first make a circle we will then drag in a circular motion to create the torus
+  std::vector<float> circle;
+  for (int i=0; i<cs; i++) {
+    const float alpha = 2.0*M_PI*i/(float)cs;
+    circle.emplace_back(m_minrad*std::sin(alpha));
+    circle.emplace_back(m_minrad*std::cos(alpha));
+  }
+
+  // generate a set of orthogonal basis vectors for the given normal
+  std::array<float,3> norm = {m_nx, m_ny, m_nz};
+  normalizeVec(norm);
+  std::array<float,3> b1, b2;
+  branchlessONB<float>(norm, b1, b2);
+  
+  std::vector<float> x;
+  // loop over integer indices
+  for (int i=0; i<ts; ++i) {
+    const float theta = 2.0 * M_PI * (float)i / (float)ts;
+    const float st = std::sin(theta);
+    const float ct = std::cos(theta);
+
+    for (int j=0; j<cs; ++j) {
+      // helper indices for the disk particles
+      const size_t ix = 2*j;
+      const size_t iy = 2*j+1;
+
+      // create a particle here
+      x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
+      x.emplace_back(m_y + (m_majrad + circle[ix]) * (b1[1]*ct + b2[1]*st) + circle[iy]*norm[1]);
+      x.emplace_back(m_z + (m_majrad + circle[ix]) * (b1[2]*ct + b2[2]*st) + circle[iy]*norm[2]);
+    }
+  }
+      
+  // Create triangles from points
+  std::vector<Int> idx;
+  for (int i=0; i<ts; i++) {
+    const Int ir1 = cs*i;
+    const Int ir2 = (i==ts-1 ? 0 : cs*(i+1));
+    for (int j=0; j<cs-1; j++) {
+      // set 1
+      idx.emplace_back(ir1+j);
+      idx.emplace_back(ir2+j);
+      idx.emplace_back(ir1+j+1);
+      // set 2
+      idx.emplace_back(ir2+j);
+      idx.emplace_back(ir2+j+1);
+      idx.emplace_back(ir1+j+1);
+    }
+    // set 1
+    idx.emplace_back(ir1+cs-1);
+    idx.emplace_back(ir2+cs-1);
+    idx.emplace_back(ir1);
+    // set 2
+    idx.emplace_back(ir2+cs-1);
+    idx.emplace_back(ir2);
+    idx.emplace_back(ir1);
+  }
+
+  std::vector<float> val;
+  val.resize(idx.size());
+  std::fill(val.begin(), val.end(), 1.0);
+  ElementPacket epack {x, idx, val, val.size()/Dimensions, 2};
+  m_draw = epack;
 }
 
 #ifdef USE_IMGUI
