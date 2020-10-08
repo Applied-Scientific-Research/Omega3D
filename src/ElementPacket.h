@@ -83,16 +83,17 @@ public:
     x.insert(x.end(), packet.x.begin(), packet.x.end());
     // Add the last current vertex number to the new set of indices
     std::transform(packet.idx.begin(), packet.idx.end(), packet.idx.begin(),
-                   std::bind(std::plus<Int>(), std::placeholders::_1, nelem));
+                   std::bind(std::plus<Int>(), std::placeholders::_1, idx.back()));
     idx.insert(idx.end(), packet.idx.begin(), packet.idx.end());
     val.insert(val.end(), packet.val.begin(), packet.val.end());
     nelem = val.size();
   }
 
   void print() {
-    for(int i=0; i<x.size()/Dimensions; i++) {
+    for(size_t i=0; i<x.size()/Dimensions; i++) {
       std::cout << "idx: " << idx[i] << " x: " << x[Dimensions*i] << " " << x[Dimensions*i+1] << " " << x[Dimensions*i+2] << std::endl;
     }
+     std::cout << std::endl;
   }
 
   std::vector<S> x;
