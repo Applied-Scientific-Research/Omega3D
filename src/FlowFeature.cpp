@@ -615,31 +615,22 @@ SingularRing::to_json() const {
 
 //void create
 void SingularRing::generate_draw_geom() {
-  // For sake of visualization, imagine the torus sitting on your table
-  // like a doughnut
+  // For sake of visualization, imagine the torus sitting on your table like a doughnut
+
   // Number of steps around the torus
-  const int ts = 12;
+  const int ts = 37;
   // Number of steps around the circle perpendicular to the table
-  const int cs = 12;
-  const float m_minrad = 0.01;
-  /*std::vector<float> x;
-  std::vector<Int> idx;
-  for (int i=0; i<ts; i++) {
-    const float alpha = (2*M_PI)*i/ts;
-    for (int j=0; j<cs; j++) {
-      const float beta = (2*M_PI)*j/cs;
-      x.emplace_back((m_majrad+m_minrad*std::cos(beta))*std::cos(alpha));
-      x.emplace_back((m_majrad+m_minrad*std::cos(beta))*std::sin(alpha));
-      x.emplace_back(m_minrad*sin(beta));
-    }
-  }*/
+  const int cs = 7;
+  const float m_minrad = m_majrad * 0.02;
+
   // We first make a circle we will then drag in a circular motion to create the torus
   std::vector<float> circle;
   for (int i=0; i<cs; i++) {
-    const float alpha = 2*M_PI*i/cs;
+    const float alpha = 2.0*M_PI*i/(float)cs;
     circle.emplace_back(m_minrad*std::sin(alpha));
     circle.emplace_back(m_minrad*std::cos(alpha));
   }
+
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
   normalizeVec(norm);
@@ -669,7 +660,7 @@ void SingularRing::generate_draw_geom() {
   std::vector<Int> idx;
   for (int i=0; i<ts; i++) {
     const Int ir1 = cs*i;
-    const Int ir2 = cs*(i+1);
+    const Int ir2 = (i==ts-1 ? 0 : cs*(i+1));
     for (int j=0; j<cs-1; j++) {
       // set 1
       idx.emplace_back(ir1+j);
@@ -683,15 +674,11 @@ void SingularRing::generate_draw_geom() {
     // set 1
     idx.emplace_back(ir1+cs-1);
     idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir2);
+    idx.emplace_back(ir1);
     // set 2
-    idx.emplace_back(ir2-1);
+    idx.emplace_back(ir2+cs-1);
     idx.emplace_back(ir2);
     idx.emplace_back(ir1);
-  }
-  const int numPoints = cs*ts;
-  for (size_t i=idx.size()-cs; i<idx.size(); i++) {
-    idx[i] = idx[i]%numPoints;
   }
 
   std::vector<float> val;
