@@ -3,6 +3,7 @@
  *
  * (c)2017-20 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
 #include "BoundaryFeature.h"
@@ -343,7 +344,7 @@ BlockOfRandom::init_elements(float _ips) const {
   std::vector<Int> idx;
   std::vector<float> vals;
   x.resize(Dimensions*m_num);
-  idx.resize(4*m_num);
+  vals.resize(4*m_num);
 
   // initialize the particles' locations and strengths, leave radius zero for now
   for (size_t i=0; i<(size_t)m_num; ++i) {
@@ -420,15 +421,17 @@ BlockOfRandom::to_json() const {
 }
 
 void BlockOfRandom::generate_draw_geom() {
-  std::unique_ptr<SolidRect> tmp = std::make_unique<SolidRect>(nullptr, true, m_x, m_y, m_z, m_xsize, m_ysize, m_zsize);
-  m_draw = tmp->init_elements(1);
+  SolidRect tmp = SolidRect(nullptr, true,
+                            m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize,
+                            m_xsize, m_ysize, m_zsize);
+  // generate draw geometry, OK to use more than 12 triangles
+  m_draw = tmp.init_elements(0.05*(m_xsize+m_ysize+m_zsize));
   
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
-  static std::uniform_real_distribution<> zo_dist(0.0, 1.0);
   for (size_t i = 0; i < m_draw.val.size(); i++) {
-    m_draw.val[i] = m_maxstr*zmean_dist(gen)/m_num;
+    m_draw.val[i] = m_maxstr*zmean_dist(gen);
   }
 }
 
