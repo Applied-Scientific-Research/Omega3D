@@ -21,6 +21,6 @@ void main() {
   //base_color = base_color*(1-use_back) + back_color*use_back;
 
   // pass 1 vert as a single primitive and set texture coords - see other shaders
-  gl_Position = Projection * vec4(pos.x, pos.y, pos.z, 1.f);
+  gl_Position = Projection * vec4(pos, 1.f);
 }
 )"
