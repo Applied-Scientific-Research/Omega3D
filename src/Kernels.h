@@ -961,27 +961,7 @@ static inline void kernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
   }
 }
 
-// helper functions: sqrt and dist
-
-#ifdef USE_VC
-template <class S>
-static inline S my_sqrt(const S _in) {
-  return Vc::sqrt(_in);
-}
-template <>
-inline float my_sqrt(const float _in) {
-  return std::sqrt(_in);
-}
-template <>
-inline double my_sqrt(const double _in) {
-  return std::sqrt(_in);
-}
-#else
-template <class S>
-static inline S my_sqrt(const S _in) {
-  return std::sqrt(_in);
-}
-#endif
+// helper functions: dist (others in CoreFunc.h)
 
 template <class S>
 static inline S my_dist(const S dx, const S dy, const S dz) {

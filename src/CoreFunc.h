@@ -2,7 +2,7 @@
  * CoreFunc.h - Non-class core function inlines for influence calculations
  *
  * (c)2020 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ *         Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -19,11 +19,31 @@
 
 //#define USE_RM_KERNEL
 //#define USE_EXPONENTIAL_KERNEL
-//#define USE_WL_KERNEL
-#define USE_V2_KERNEL
+#define USE_WL_KERNEL
+//#define USE_V2_KERNEL	// grads are bad!
 //#define USE_V3_KERNEL	// not programmed
 
-// helper functions: recip, oor1p5
+// helper functions: sqrt, recip, oor1p5
+#ifdef USE_VC
+template <class S>
+static inline S my_sqrt(const S _in) {
+  return Vc::sqrt(_in);
+}
+template <>
+inline float my_sqrt(const float _in) {
+  return std::sqrt(_in);
+}
+template <>
+inline double my_sqrt(const double _in) {
+  return std::sqrt(_in);
+}
+#else
+template <class S>
+static inline S my_sqrt(const S _in) {
+  return std::sqrt(_in);
+}
+#endif
+
 #ifdef USE_VC
 template <class S>
 static inline S my_recip(const S _in) {
@@ -154,70 +174,121 @@ template <class S> inline size_t flops_tp_grads () { return 7; }
 
 
 #ifdef USE_EXPONENTIAL_KERNEL
+// a helper conditional
+#ifdef USE_VC
+template <class S>
+static inline S exp_cond (const S ood3, const S corefac, const S reld3) {
+  S returnval = ood3;
+  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
+  returnval(reld3 < S(0.001)) = corefac;
+  return returnval;
+}
+template <>
+inline float exp_cond (const float ood3, const float corefac, const float reld3) {
+  if (reld3 > 16.0f) {
+    return ood3;
+  } else if (reld3 < 0.001f) {
+    return corefac;
+  } else {
+    return ood3 * (1.0f - std::exp(-reld3));
+  }
+}
+template <>
+inline double exp_cond (const double ood3, const double corefac, const double reld3) {
+  if (reld3 > 16.0) {
+    return ood3;
+  } else if (reld3 < 0.001) {
+    return corefac;
+  } else {
+    return ood3 * (1.0 - std::exp(-reld3));
+  }
+}
+#else
+template <class S>
+static inline S exp_cond (const S ood3, const S corefac, const S reld3) {
+  if (reld3 > 16.0f) {
+    return ood3;
+    // 1 flop (comparison)
+  } else if (reld3 < 0.001f) {
+    return corefac;
+    // 2 flops
+  } else {
+    return ood3 * (1.0f - std::exp(-reld3));
+    // 3 flops
+  }
+}
+#endif
+// and another one for bbb
+#ifdef USE_VC
+template <class S>
+static inline S exp_bbb (const S r3, const S corefac, const S reld3, const S dist, const S distsq) {
+  S mybbb;
+  mybbb(reld3 > S(16.0)) = S(-3.0) * r3 / distsq;
+  const S expreld3 = Vc::exp(-reld3);
+  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - r3) / distsq;
+  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * r3 * r3;
+  return mybbb;
+}
+template <>
+inline float exp_bbb (const float r3, const float corefac, const float reld3, const float dist, const float distsq) {
+  if (reld3 > 16.0f) {
+    return -3.0f * r3 / distsq;
+  } else if (reld3 < 0.001f) {
+    return -1.5f * dist * r3 * r3;
+  } else {
+    const float expreld3 = std::exp(-reld3);
+    return 3.0f * (corefac*expreld3 - r3) / distsq;
+  }
+}
+template <>
+inline double exp_bbb (const double r3, const double corefac, const double reld3, const double dist, const double distsq) {
+  if (reld3 > 16.0) {
+    return -3.0 * r3 / distsq;
+  } else if (reld3 < 0.001) {
+    return -1.5 * dist * r3 * r3;
+  } else {
+    const double expreld3 = std::exp(-reld3);
+    return 3.0 * (corefac*expreld3 - r3) / distsq;
+  }
+}
+#else
+template <class S>
+static inline S exp_bbb (const S r3, const S corefac, const S reld3, const S dist, const S distsq) {
+  if (reld3 > 16.0f) {
+    return -3.0f * r3 / distsq;
+    // this is 2 flops and is most likely
+  } else if (reld3 < 0.001f) {
+    return -1.5f * dist * r3 * r3;
+    // this is 3 flops
+  } else {
+    const S expreld3 = std::exp(-reld3);
+    return 3.0f * (corefac*expreld3 - r3) / distsq;
+    // this is 5 flops
+  }
+}
+#endif
 //
 // exponential core - velocity only
 //
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S ood3 = Vc::reciprocal(distsq * dist);
-  const S corefac = Vc::reciprocal(sr*sr*sr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S ood3 = S(1.0) / (distsq * dist);
-  const S corefac = S(1.0) / std::pow(sr,3);
-#endif
+  const S dist = my_sqrt(distsq);
+  const S ood3 = my_recip(distsq*dist);
+  const S corefac = my_recip(sr*sr*sr);
   const S reld3 = corefac / ood3;
   // 7 flops to here
-#ifdef USE_VC
-  S returnval = ood3;
-  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
-  returnval(reld3 < S(0.001)) = corefac;
-  //std::cout << std::endl << dist << std::endl << reld3 << std::endl << returnval << std::endl;
-  return returnval;
-#else
-  if (reld3 > S(16.0)) {
-    return ood3;
-    // 1 flop (comparison)
-  } else if (reld3 < S(0.001)) {
-    return corefac;
-    // 2 flops
-  } else {
-    return ood3 * (S(1.0) - std::exp(-reld3));
-    // 3 flops
-  }
-#endif
+  return exp_cond(ood3, corefac, reld3);
 }
 template <class S> inline size_t flops_tp_nograds () { return 9; }
 
 // non-singular targets
 template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S ood3 = Vc::reciprocal(distsq * dist);
-  const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S ood3 = S(1.0) / (distsq * dist);
-  const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
-#endif
+  const S dist = my_sqrt(distsq);
+  const S ood3 = my_recip(distsq*dist);
+  const S corefac = my_recip(sr*sr*sr + tr*tr*tr);
   const S reld3 = corefac / ood3;
-#ifdef USE_VC
-  S returnval = ood3;
-  returnval(reld3 < S(16.0)) = ood3 * (S(1.0) - Vc::exp(-reld3));
-  returnval(reld3 < S(0.001)) = corefac;
-  return returnval;
-#else
-  if (reld3 > S(16.0)) {
-    return ood3;
-  } else if (reld3 < S(0.001)) {
-    return corefac;
-  } else {
-    return ood3 * (S(1.0) - std::exp(-reld3));
-  }
-#endif
+  return exp_cond(ood3, corefac, reld3);
 }
 template <class S> inline size_t flops_tv_nograds () { return 12; }
 
@@ -227,43 +298,14 @@ template <class S> inline size_t flops_tv_nograds () { return 12; }
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S corefac = Vc::reciprocal(sr*sr*sr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S corefac = S(1.0) / std::pow(sr,3);
-#endif
+  const S dist = my_sqrt(distsq);
+  const S corefac = my_recip(sr*sr*sr);
   const S d3 = distsq * dist;
   const S reld3 = d3 * corefac;
   // 6 flops to here
-#ifdef USE_VC
-  S myr3, mybbb;
-  myr3(reld3 > S(16.0)) = Vc::reciprocal(d3);
-  mybbb(reld3 > S(16.0)) = S(-3.0) / (d3 * distsq);
-  const S expreld3 = Vc::exp(-reld3);
-  myr3(reld3 < S(16.0)) = (S(1.0) - expreld3) / d3;
-  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - myr3) / distsq;
-  myr3(reld3 < S(0.001)) = corefac;
-  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * corefac * corefac;
-  *r3 = myr3;
-  *bbb = mybbb;
-#else
-  if (reld3 > S(16.0)) {
-    *r3 = S(1.0) / d3;
-    *bbb = S(-3.0) / (d3 * distsq);
-    // this is 4 flops and is most likely
-  } else if (reld3 < S(0.001)) {
-    *r3 = corefac;
-    *bbb = S(-1.5) * dist * corefac * corefac;
-    // this is 5 flops
-  } else {
-    const S expreld3 = std::exp(-reld3);
-    *r3 = (S(1.0) - expreld3) / d3;
-    *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
-    // this is 9 flops
-  }
-#endif
+  const S ood3 = my_recip(d3);
+  *r3 = exp_cond(ood3, corefac, reld3);
+  *bbb = exp_bbb(*r3, corefac, reld3, dist, distsq);
 }
 template <class S> inline size_t flops_tp_grads () { return 11; }
 
@@ -271,43 +313,14 @@ template <class S> inline size_t flops_tp_grads () { return 11; }
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
-#ifdef USE_VC
-  const S dist = Vc::sqrt(distsq);
-  const S corefac = Vc::reciprocal(sr*sr*sr + tr*tr*tr);
-#else
-  const S dist = std::sqrt(distsq);
-  const S corefac = S(1.0) / (std::pow(sr,3) + std::pow(tr,3));
-#endif
+  const S dist = my_sqrt(distsq);
+  const S corefac = my_recip(sr*sr*sr + tr*tr*tr);
   const S d3 = distsq * dist;
   const S reld3 = d3 * corefac;
   // 9 flops to here
-#ifdef USE_VC
-  S myr3, mybbb;
-  myr3(reld3 > S(16.0)) = Vc::reciprocal(d3);
-  mybbb(reld3 > S(16.0)) = S(-3.0) / (d3 * distsq);
-  const S expreld3 = Vc::exp(-reld3);
-  myr3(reld3 < S(16.0)) = (S(1.0) - expreld3) / d3;
-  mybbb(reld3 < S(16.0)) = S(3.0) * (corefac*expreld3 - myr3) / distsq;
-  myr3(reld3 < S(0.001)) = corefac;
-  mybbb(reld3 < S(0.001)) = S(-1.5) * dist * corefac * corefac;
-  *r3 = myr3;
-  *bbb = mybbb;
-#else
-  if (reld3 > S(16.0)) {
-    *r3 = S(1.0) / d3;
-    *bbb = S(-3.0) / (d3 * distsq);
-    // this is 4 flops and is most likely
-  } else if (reld3 < S(0.001)) {
-    *r3 = corefac;
-    *bbb = S(-1.5) * dist * corefac * corefac;
-    // this is 5 flops
-  } else {
-    const S expreld3 = std::exp(-reld3);
-    *r3 = (S(1.0) - expreld3) / d3;
-    *bbb = S(3.0) * (corefac*expreld3 - *r3) / distsq;
-    // this is 9 flops
-  }
-#endif
+  const S ood3 = my_recip(d3);
+  *r3 = exp_cond(ood3, corefac, reld3);
+  *bbb = exp_bbb(*r3, corefac, reld3, dist, distsq);
 }
 template <class S> inline size_t flops_tv_grads () { return 14; }
 #endif
@@ -333,6 +346,9 @@ static inline S core_func (const S distsq, const S sr) {
 }
 template <class S> inline size_t flops_tp_nograds () { return 8; }
 
+//
+// Winckelmans–Leonard - with gradients
+//
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -380,7 +396,9 @@ static inline S core_func (const S distsq, const S sr) {
 }
 template <class S> inline size_t flops_tp_nograds () { return 8; }
 
-// core functions - Vatistas n=2 with gradients
+//
+// Vatistas n=2 - with gradients
+//
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
