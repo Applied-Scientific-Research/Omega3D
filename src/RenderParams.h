@@ -1,8 +1,8 @@
 /*
  * RenderParams.h - Structure to contain rendering/drawing parameters
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2019-20 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -32,11 +32,15 @@ public:
   int width = 1280;
   int height = 720;
 
-  // world space
+  // view position
   float vcx = -0.5f;
   float vcy = 0.0f;
   float vcz = 0.0f;
   float vsize = 2.0f;
+
+  // view rotation (radians)
+  float rx = 0.0f;
+  float ry = 0.0f;
 
   // colors
   float pos_circ_color[4] = {239./255.,  54./255.,  54./255., 1.0};

@@ -32,11 +32,12 @@ void mouse_callback(GLFWwindow* _thiswin,
                     ImGuiIO& io,
                     float*   _cx,
                     float*   _cy,
+                    float*   _rx,
+                    float*   _ry,
                     float*   _size) {
 
   // first, use left-click and drag to move the data
   static bool lbutton_down = false;
-
   if (io.MouseClicked[0]) lbutton_down = true;
   if (io.MouseReleased[0]) lbutton_down = false;
 
@@ -55,9 +56,20 @@ void mouse_callback(GLFWwindow* _thiswin,
     (*_cy) += 2.0f * (*_size) * (float)io.MouseDelta.y / io.DisplaySize.x;
   }
 
+  // right button down rotates
+  static bool rbutton_down = false;
+  if (io.MouseClicked[1]) rbutton_down = true;
+  if (io.MouseReleased[1]) rbutton_down = false;
+  if (rbutton_down) {
+    // this works on a Retina display:
+    (*_rx) += 3.0f * (float)io.MouseDelta.x / io.DisplaySize.x;
+    (*_ry) += 3.0f * (float)io.MouseDelta.y / io.DisplaySize.x;
+  }
+
+
   // then, use scroll wheel to zoom!
   //std::cout << "free mouse wheel " << io.MouseWheel << std::endl;
-  if (io.MouseWheel != 0) {
+  if (io.MouseWheel != 0 and false) {
     // do your drag here
     //int display_w, display_h;
     //glfwGetFramebufferSize(_thiswin, &display_w, &display_h);
@@ -125,6 +137,8 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
 //
 void compute_modelview_mat(const float         _cx,
                            const float         _cy,
+                           const float         _rx,
+                           const float         _ry,
                            std::vector<float>& _mvmat) {
 
   // make an affine transformation
@@ -134,9 +148,10 @@ void compute_modelview_mat(const float         _cx,
   trans.translate(Eigen::Vector3f(-_cx, -_cy, -3.0f));
 
   // auto-rotate around the origin
-  static float theta = 0.0;
-  trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
-  theta += 0.01f;
+  //static float theta = 0.0;
+  //trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
+  //theta += 0.01f;
+  trans.rotate(Eigen::AngleAxisf(_rx, Eigen::Vector3f::UnitY()));
 
   // and write it into the matrix
   Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_mvmat.data());

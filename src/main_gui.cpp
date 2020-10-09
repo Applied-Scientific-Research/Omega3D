@@ -170,7 +170,7 @@ int main(int argc, char const *argv[]) {
 
   // colors and projection matrix for the render view
   RenderParams rparams;
-  const bool is_ortho = true;
+  const bool is_ortho = false;
   std::vector<float> gl_projection;
   gl_projection.resize(16);
   std::vector<float> gl_mview;
@@ -178,7 +178,7 @@ int main(int argc, char const *argv[]) {
   float field_of_view = 35.0;
   if (is_ortho) compute_ortho_proj_mat(window, rparams.vsize, gl_projection);
   else compute_persp_proj_mat(window, field_of_view, gl_projection);
-  compute_modelview_mat(rparams.vcx, rparams.vcy, gl_mview);
+  compute_modelview_mat(rparams.vcx, rparams.vcy, rparams.rx, rparams.ry, gl_mview);
 
   // adjust some UI settings
   ImGuiStyle& style = ImGui::GetStyle();
@@ -337,7 +337,7 @@ int main(int argc, char const *argv[]) {
 
     // check mouse for drag and rescaling!
     if (not io.WantCaptureMouse) {
-      mouse_callback(window, io, &rparams.vcx, &rparams.vcy, &rparams.vsize);
+      mouse_callback(window, io, &rparams.vcx, &rparams.vcy, &rparams.rx, &rparams.ry, &rparams.vsize);
     }
 
     // check for keypresses to toggle state
@@ -950,7 +950,7 @@ int main(int argc, char const *argv[]) {
     // draw the simulation: panels and particles
     if (is_ortho) compute_ortho_proj_mat(window, rparams.vsize, gl_projection);
     else compute_persp_proj_mat(window, field_of_view, gl_projection);
-    compute_modelview_mat(rparams.vcx, rparams.vcy, gl_mview);
+    compute_modelview_mat(rparams.vcx, rparams.vcy, rparams.rx, rparams.ry, gl_mview);
     sim.drawGL(gl_mview, gl_projection, rparams);
 
     // if simulation has not been initted, draw the features instead!
