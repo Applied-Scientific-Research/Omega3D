@@ -38,6 +38,7 @@ public:
     spo.resize(_nspo);
 
     cstate.store(no_compute);
+    num_uploaded = 0;
   }
 
   // must specifically destroy buffers
@@ -79,8 +80,9 @@ public:
   GLint projmat_attribute, projmat_attribute_bl, projmat_attribute_pt;
   GLint mvmat_attribute_bl, mvmat_attribute_pt;
   GLint quad_attribute_bl, quad_attribute_pt;
-  GLint def_color_attribute, pos_color_attribute, neg_color_attribute, str_scale_attribute, unif_rad_attribute;
-  GLint rad_scale_attribute;
+  GLint def_color_attribute, pos_color_attribute, neg_color_attribute; //, back_color_attribute; 
+  GLint str_scale_attribute, unif_rad_attribute, rad_scale_attribute;
+  GLint use_def_attribute; //, use_back_attribute;
 
   // compute attributes
   GLint source_offset_attr, source_count_attr, target_offset_attr, target_count_attr;

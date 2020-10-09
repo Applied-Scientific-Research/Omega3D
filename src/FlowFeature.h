@@ -1,14 +1,16 @@
 /*
  * FlowFeature.h - GUI-side descriptions of flow features
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
 #pragma once
 
+#include "Body.h"
 #include "Feature.h"
-
+#include "ElementPacket.h"
 #include "json/json.hpp"
 
 #include <iostream>
@@ -22,21 +24,29 @@ public:
   explicit
   FlowFeature(float _x,
               float _y,
-              float _z)
+              float _z,
+              std::shared_ptr<Body> _bp)
     : Feature(true),
       m_x(_x),
       m_y(_y),
-      m_z(_z)
+      m_z(_z),
+      m_bp(_bp)
     {}
+  virtual ~FlowFeature() {}
+  virtual FlowFeature* copy() const = 0;
+
+  std::shared_ptr<Body> get_body() { return m_bp; }
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
   virtual void from_json(const nlohmann::json) = 0;
   virtual nlohmann::json to_json() const = 0;
-  virtual std::vector<float> init_particles(float) const = 0;
-  virtual std::vector<float> step_particles(float) const = 0;
+  virtual ElementPacket<float> init_elements(float) const = 0;
+  virtual ElementPacket<float> step_elements(float) const = 0;
+  virtual void generate_draw_geom() = 0;
+  virtual ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
-  static void draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
+  static bool draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
   virtual bool draw_info_gui(const std::string, const float) = 0;
 #endif
   // emit particles as vector of float4
@@ -45,6 +55,8 @@ protected:
   float m_x;
   float m_y;
   float m_z;
+  ElementPacket<float> m_draw;
+  std::shared_ptr<Body> m_bp;
 };
 
 std::ostream& operator<<(std::ostream& os, FlowFeature const& ff);
@@ -65,21 +77,24 @@ public:
                  float _z = 0.0,
                  float _sx = 0.0,
                  float _sy = 0.0,
-                 float _sz = 1.0)
-    : FlowFeature(_x, _y, _z),
+                 float _sz = 1.0,
+                 std::shared_ptr<Body> _bp = nullptr)
+    : FlowFeature(_x, _y, _z, _bp),
       m_sx(_sx),
       m_sy(_sy),
       m_sz(_sz)
     {}
+  SingleParticle* copy() const override 
+                  { return new SingleParticle(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
+  void generate_draw_geom() override;
 #ifdef USE_IMGUI
-  // This currently does nothing and returns false
   bool draw_info_gui(const std::string, const float) override;
 #endif
 
@@ -100,18 +115,22 @@ public:
              float _sy = 0.0,
              float _sz = 1.0,
              float _rad = 0.1,
-             float _soft = 0.1)
-    : SingleParticle(_x, _y, _z, _sx, _sy, _sz),
+             float _soft = 0.1,
+             std::shared_ptr<Body> _bp = nullptr)
+    : SingleParticle(_x, _y, _z, _sx, _sy, _sz, _bp),
       m_rad(_rad),
       m_softness(_soft)
     {}
+  VortexBlob* copy() const override 
+              { return new VortexBlob(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
   void from_json(nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
+  void generate_draw_geom() override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string, const float) override;
 #endif
@@ -134,21 +153,25 @@ public:
                 float _ysize = 1.0,
                 float _zsize = 1.0,
                 float _maxstr = 0.01,
-                int   _num = 100)
-    : FlowFeature(_x, _y, _z),
+                int   _num = 100,
+                std::shared_ptr<Body> _bp = nullptr)
+    : FlowFeature(_x, _y, _z, _bp),
       m_xsize(_xsize),
       m_ysize(_ysize),
       m_zsize(_zsize),
       m_maxstr(_maxstr),
       m_num(_num)
     {}
+  BlockOfRandom* copy() const override 
+                 { return new BlockOfRandom(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
+  void generate_draw_geom() override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string, const float) override;
 #endif
@@ -172,18 +195,21 @@ public:
                   float _z = 0.0,
                   float _sx = 0.0,
                   float _sy = 0.0,
-                  float _sz = 0.01)
-    : SingleParticle(_x, _y, _z, _sx, _sy, _sz)
+                  float _sz = 0.01,
+                  std::shared_ptr<Body> _bp = nullptr)
+    : SingleParticle(_x, _y, _z, _sx, _sy, _sz, _bp)
     {}
+  ParticleEmitter* copy() const override 
+                   { return new ParticleEmitter(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
+  void generate_draw_geom() override;
 #ifdef USE_IMGUI
-  // This currently does nothing and returns false
   bool draw_info_gui(const std::string, const float) override;
 #endif
 
@@ -203,21 +229,25 @@ public:
                float _ny = 0.0,
                float _nz = 0.0,
                float _majrad = 0.5,
-               float _circ = 1.0)
-    : FlowFeature(_x, _y, _z),
+               float _circ = 1.0,
+               std::shared_ptr<Body> _bp = nullptr)
+    : FlowFeature(_x, _y, _z, _bp),
       m_nx(_nx),
       m_ny(_ny),
       m_nz(_nz),
       m_majrad(_majrad),
       m_circ(_circ)
     {}
+  SingularRing* copy() const override 
+                { return new SingularRing(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
+  void generate_draw_geom() override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string, const float) override;
 #endif
@@ -244,17 +274,21 @@ public:
             float _nz = 0.0,
             float _majrad = 0.5,
             float _minrad = 0.05,
-            float _circ = 1.0)
+            float _circ = 1.0,
+            std::shared_ptr<Body> _bp = nullptr)
     : SingularRing(_x, _y, _z, _nx, _ny, _nz, _majrad, _circ),
       m_minrad(_minrad)
     {}
+  ThickRing* copy() const override 
+             { return new ThickRing(*this); }
 
   void debug(std::ostream& os) const override;
   std::string to_string() const override;
   void from_json(const nlohmann::json) override;
   nlohmann::json to_json() const override;
-  std::vector<float> init_particles(float) const override;
-  std::vector<float> step_particles(float) const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
+  void generate_draw_geom() override;
 #ifdef USE_IMGUI
   bool draw_info_gui(const std::string, const float) override;
 #endif
@@ -273,4 +307,3 @@ protected:
 // Parser for converting json object to new feature
 //
 void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>&, const nlohmann::json);
-

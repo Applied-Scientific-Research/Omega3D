@@ -11,6 +11,7 @@
 #include "Omega3D.h"
 #include "Body.h"
 #include "GlComputeState.h"
+#include "ElementPacket.h"
 
 #include <Eigen/Geometry>
 
@@ -60,7 +61,8 @@ public:
     //*s = _in;
   }
 
-  void add_new(std::vector<float>& _in) {
+  // child class calls here to add nodes and other properties
+  void add_new(const std::vector<float>& _in) {
 
     // check inputs
     if (_in.size() == 0) return;
@@ -81,7 +83,7 @@ public:
     // strength
     if (s and nper==7) {
       // must dereference s to get the actual vector
-      for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t d=0; d<numStrenPerNode; ++d) {
         (*s)[d].resize(n+nnew);
         for (size_t i=0; i<nnew; ++i) {
           (*s)[d][n+i] = _in[7*i+d+3];
@@ -103,6 +105,49 @@ public:
     n += nnew;
   }
 
+  // child class calls here to add nodes and other properties
+  void add_new(const ElementPacket<float>& _in) {
+
+    // check inputs
+    if (_in.x.size() == 0 or _in.nelem == 0) return;
+    assert(_in.x.size() % Dimensions == 0 && "Input ElementPacket does not have correct number of node coords");
+
+    // new number of nodes (not elements)
+    const size_t nnew = _in.x.size()/Dimensions;
+
+    // add node coordinates
+    for (size_t d=0; d<Dimensions; ++d) {
+      // extend with more space for new values
+      x[d].resize(n+nnew);
+      // copy new values to end of vector
+      for (size_t i=0; i<nnew; ++i) {
+        x[d][n+i] = _in.x[Dimensions*i+d];
+      }
+    }
+
+    // strength - ASSUMPTION: the strength is the first of each val entry
+    if (s) {
+      assert(_in.val.size() >= nnew && "Input ElementPacket does not have enough values in val");
+      const size_t nper = _in.val.size() / nnew;
+      // must dereference s to get the actual vector
+      for (size_t j = 0; j < numStrenPerNode; j++) {
+        (*s)[j].resize(n+nnew);
+        for (size_t i=0; i<nnew; ++i) {
+          (*s)[j][n+i] = _in.val[nper*i+j];
+        }
+      }
+    }
+
+    // extend the other vectors as well
+    for (size_t d=0; d<Dimensions; ++d) {
+      u[d].resize(n+nnew);
+    }
+
+    // finally, update n
+    n += nnew;
+  }
+
+
   // up-size all arrays to the new size, filling with sane values
   // this only happens right after diffusion
   void resize(const size_t _nnew) {
@@ -121,7 +166,7 @@ public:
 
     // strength
     if (s) {
-      for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t d=0; d<numStrenPerNode; ++d) {
         const size_t thisn = (*s)[d].size();
         (*s)[d].resize(_nnew);
         for (size_t i=thisn; i<_nnew; ++i) {
@@ -160,7 +205,7 @@ public:
 
   void zero_strengths() {
     if (s) {
-      for (size_t d=0; d<Dimensions; ++d) {
+      for (size_t d=0; d<numStrenPerNode; ++d) {
         std::fill((*s)[d].begin(), (*s)[d].end(), 0.0);
       }
     }
@@ -264,7 +309,7 @@ public:
       // this is the c++17 way
       //return std::reduce(std::execution::par, s->begin(), s->end());
       // this is the c++11 way
-      for (size_t d=0; d<3; ++d) {
+      for (size_t d=0; d<numStrenPerNode; ++d) {
         circ[d] = std::accumulate((*s)[d].begin(), (*s)[d].end(), 0.0);
       }
     }
@@ -340,7 +385,7 @@ protected:
 
   // state vector
   std::array<Vector<S>,Dimensions> x;                   // position of nodes
-  std::optional<std::array<Vector<S>,Dimensions>> s;    // strength at nodes
+  std::optional<std::array<Vector<S>,numStrenPerNode>> s;    // strength at nodes
 
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity at nodes

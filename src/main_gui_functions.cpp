@@ -28,7 +28,7 @@ static void error_callback(int error, const char* description) {
 // ImGuiIO data structure for information on the mouse state
 // There are no OpenGL calls here
 //
-void mouse_callback(GLFWwindow* _thiswin,
+void mouse_callback(GLFWwindow* /*_thiswin*/,
                     ImGuiIO& io,
                     float*   _cx,
                     float*   _cy,
@@ -116,16 +116,17 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
   }
 
   // near and far clipping planes (positive distance)
-  const float near = 0.1;
-  const float far = 10.0;
+  const float near = -50.0;
+  const float far = 50.0;
 
   const float vsx = _size;
   const float vsy = _size * (float)display_h / (float)display_w;
+  const float fac = 1.0f / (near-far);
   _projmat =
-    { 1.0f/vsx, 0.0f,     0.0f,                  0.0f,
-      0.0f,     1.0f/vsy, 0.0f,                  0.0f,
-      0.0f,     0.0f,     2.0f/(near-far),       0.0f,
-      0.0f,     0.0f,     (far+near)/(near-far), 1.0f };
+    { 1.0f/vsx, 0.0f,     0.0f,           0.0f,
+      0.0f,     1.0f/vsy, 0.0f,           0.0f,
+      0.0f,     0.0f,     2.0f*fac,       0.0f,
+      0.0f,     0.0f,     (far+near)*fac, 1.0f };
 
   // save window size for next call
   last_w = display_w;
@@ -250,32 +251,10 @@ void resize_to_resolution(GLFWwindow* window, const int new_w, const int new_h) 
 void LoadJsonSims(std::vector<nlohmann::json> &sims, std::vector<std::string> &descriptions, const std::string dirPath) {
   std::list<std::string> fileNames = MiniPath::listFiles(dirPath, "*.json");
   std::string sysDelim = MiniPath::getSystemDelim();
-  std::cout << "Reading in" << std::endl;
+  std::cout << "Reading in from " << dirPath << std::endl;
   for(const std::string& s : fileNames) {
     sims.push_back(read_json(dirPath+sysDelim+s));
     descriptions.push_back(sims.back()["description"]);
-  }
-}
-
-void obj_movement_gui(int &mitem, char* strx, char* stry, char* strrad) {
-  // fixed to ground      - this geometry is fixed (attached to inertial)
-  // attached to previous - this geometry is attached to the previous geometry
-  // according to formula - this geometry is attached to a new moving body
-  const char* mitems[] = { "fixed to ground", "attached to previous", "according to formula" };
-  //const char* mitems[] = { "fixed", "attached to previous", "according to formula", "dynamic" };
-  ImGui::Combo("movement", &mitem, mitems, 3);
-
-  // show different inputs based on what is selected
-  if (mitem == 2) {
-    ImGui::InputText("x position", strx, 512);
-    ImGui::SameLine();
-    ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
-    ImGui::InputText("y position", stry, 512);
-    ImGui::SameLine();
-    ShowHelpMarker("Use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
-    ImGui::InputText("angular position", strrad, 512);
-    ImGui::SameLine();
-    ShowHelpMarker("In radians, use C-style expressions, t is time\n+ - / * % ^ ( ) pi e\nabs, sin, cos, tan, exp, log, log10, sqrt, floor, pow");
   }
 }
 
@@ -346,5 +325,4 @@ bool draw_welcome_window(const float displayW, const float displayH) {
   }
   return show;
 }
-
 #endif
