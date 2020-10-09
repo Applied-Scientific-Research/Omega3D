@@ -84,8 +84,6 @@ void mouse_callback(GLFWwindow* _thiswin,
 // Also changes overall pixels-to-length scale
 //
 void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
-                            const float         _cx,
-                            const float         _cy,
                             float&              _size,
                             std::vector<float>& _projmat) {
 
@@ -105,14 +103,17 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
     }
   }
 
+  // near and far clipping planes (positive distance)
+  const float near = 0.1;
+  const float far = 10.0;
+
   const float vsx = _size;
   const float vsy = _size * (float)display_h / (float)display_w;
   _projmat =
-    { 1.0f/vsx, 0.0f,     0.0f, 0.0f,
-      0.0f,     1.0f/vsy, 0.0f, 0.0f,
-      0.0f,     0.0f,    -1.0f, 0.0f,
-     -_cx/vsx, -_cy/vsy,  0.0f, 1.0f };
-  // translation is on the bottom row
+    { 1.0f/vsx, 0.0f,     0.0f,                  0.0f,
+      0.0f,     1.0f/vsy, 0.0f,                  0.0f,
+      0.0f,     0.0f,     2.0f/(near-far),       0.0f,
+      0.0f,     0.0f,     (far+near)/(near-far), 1.0f };
 
   // save window size for next call
   last_w = display_w;
@@ -128,7 +129,11 @@ void compute_modelview_mat(const float         _cx,
 
   // make an affine transformation
   Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Transform<float,3,Eigen::Affine>::Identity());
-  trans.translate(Eigen::Vector3f(0.0f, 0.0f, -3.0f));
+
+  // back the camera up so we can see the simulation
+  trans.translate(Eigen::Vector3f(-_cx, -_cy, -3.0f));
+
+  // auto-rotate around the origin
   static float theta = 0.0;
   trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
   theta += 0.01f;

@@ -170,13 +170,14 @@ int main(int argc, char const *argv[]) {
 
   // colors and projection matrix for the render view
   RenderParams rparams;
+  const bool is_ortho = true;
   std::vector<float> gl_projection;
   gl_projection.resize(16);
   std::vector<float> gl_mview;
   gl_mview.resize(16);
-  //compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, rparams.vsize, gl_projection);
   float field_of_view = 35.0;
-  compute_persp_proj_mat(window, field_of_view, gl_projection);
+  if (is_ortho) compute_ortho_proj_mat(window, rparams.vsize, gl_projection);
+  else compute_persp_proj_mat(window, field_of_view, gl_projection);
   compute_modelview_mat(rparams.vcx, rparams.vcy, gl_mview);
 
   // adjust some UI settings
@@ -947,8 +948,8 @@ int main(int argc, char const *argv[]) {
 #endif
 
     // draw the simulation: panels and particles
-    //compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, rparams.vsize, gl_projection);
-    compute_persp_proj_mat(window, field_of_view, gl_projection);
+    if (is_ortho) compute_ortho_proj_mat(window, rparams.vsize, gl_projection);
+    else compute_persp_proj_mat(window, field_of_view, gl_projection);
     compute_modelview_mat(rparams.vcx, rparams.vcy, gl_mview);
     sim.drawGL(gl_mview, gl_projection, rparams);
 
