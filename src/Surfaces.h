@@ -1,8 +1,8 @@
 /*
  * Surfaces.h - Specialized class for trimesh surfaces in 3D
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2019-20 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -1202,7 +1202,7 @@ public:
       //if (this->E == inert) {
       //} else { // this->E is active or reactive
 
-      // draw as triangles
+      // draw using the triangle program
       glUseProgram(mgl->spo[0]);
 
       // multiply the two matrices to get the MVP matrix
