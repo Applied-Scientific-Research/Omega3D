@@ -1097,9 +1097,9 @@ int main(int argc, char const *argv[]) {
 
       // and draw
       //std::cout << "Main_Gui pre-sim draw call" << std::endl;
-      bdraw.drawGL(gl_projection, rparams, true);
-      fdraw.drawGL(gl_projection, rparams, false);
-      mdraw.drawGL(gl_projection, rparams, true);
+      bdraw.drawGL(gl_mview, gl_projection, rparams, true);
+      fdraw.drawGL(gl_mview, gl_projection, rparams, false);
+      mdraw.drawGL(gl_mview, gl_projection, rparams, true);
     }
 
     // here is where we write the buffer to a file

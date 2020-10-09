@@ -27,7 +27,7 @@ public:
   //void reset_enabled(const size_t, const bool);
 
   void updateGL();
-  void drawGL(std::vector<float>&, RenderParams&, bool);
+  void drawGL(std::vector<float>&, std::vector<float>&, RenderParams&, bool);
 
 private:
   //
