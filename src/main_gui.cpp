@@ -178,17 +178,16 @@ int main(int argc, char const *argv[]) {
   //static bool show_origin = true;
   static bool is_viscous = sim.get_diffuse();
 
-  // colors and projection matrix for the render view
+  // colors, modelview, and projection matrix for the render view
   RenderParams rparams;
   const bool is_ortho = false;
   std::vector<float> gl_projection;
   gl_projection.resize(16);
   std::vector<float> gl_mview;
   gl_mview.resize(16);
-  float field_of_view = 35.0;
   if (is_ortho) compute_ortho_proj_mat(window, rparams.vsize, gl_projection);
-  else compute_persp_proj_mat(window, field_of_view, gl_projection);
-  compute_modelview_mat(rparams.vcx, rparams.vcy, rparams.rx, rparams.ry, gl_mview);
+  else compute_persp_proj_mat(window, rparams.vfov, gl_projection);
+  compute_modelview_mat(rparams.vcx, rparams.vcy, rparams.vcz, rparams.rx, rparams.ry, gl_mview);
 
   // adjust some UI settings
   ImGuiStyle& style = ImGui::GetStyle();
@@ -385,7 +384,7 @@ int main(int argc, char const *argv[]) {
 
     // check mouse for drag and rescaling!
     if (not io.WantCaptureMouse) {
-      mouse_callback(window, io, &rparams.vcx, &rparams.vcy, &rparams.rx, &rparams.ry, &rparams.vsize);
+      mouse_callback(window, io, &rparams.vcx, &rparams.vcy, &rparams.vcz, &rparams.rx, &rparams.ry, &rparams.vsize);
     }
 
     // check for keypresses to toggle state
@@ -1081,8 +1080,8 @@ int main(int argc, char const *argv[]) {
 
     // draw the simulation: panels and particles
     if (is_ortho) compute_ortho_proj_mat(window, rparams.vsize, gl_projection);
-    else compute_persp_proj_mat(window, field_of_view, gl_projection);
-    compute_modelview_mat(rparams.vcx, rparams.vcy, rparams.rx, rparams.ry, gl_mview);
+    else compute_persp_proj_mat(window, rparams.vfov, gl_projection);
+    compute_modelview_mat(rparams.vcx, rparams.vcy, rparams.vcz, rparams.rx, rparams.ry, gl_mview);
     sim.drawGL(gl_mview, gl_projection, rparams);
 
     // if simulation has not been initted, draw the features instead!

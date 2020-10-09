@@ -32,6 +32,7 @@ void mouse_callback(GLFWwindow* /*_thiswin*/,
                     ImGuiIO& io,
                     float*   _cx,
                     float*   _cy,
+                    float*   _cz,
                     float*   _rx,
                     float*   _ry,
                     float*   _size) {
@@ -64,7 +65,6 @@ void mouse_callback(GLFWwindow* /*_thiswin*/,
     (*_cy) += 2.0f * (*_size) * (float)io.MouseDelta.y / io.DisplaySize.x;
   }
 
-
   // then, use scroll wheel to zoom!
   //std::cout << "free mouse wheel " << io.MouseWheel << std::endl;
   if (io.MouseWheel != 0 and false) {
@@ -86,6 +86,42 @@ void mouse_callback(GLFWwindow* /*_thiswin*/,
     (*_cx) += 2.0f * ((float)io.MousePos.x / io.DisplaySize.x - 0.5f) * (oldsize - (*_size));
     (*_cy) += 2.0f * (0.5f - (float)io.MousePos.y / io.DisplaySize.y) * (oldsize - (*_size)) * ar;
   }
+
+  // mouse wheel dollies
+  if (io.MouseWheel != 0) {
+    //(*_cz) *= std::pow(1.05f, io.MouseWheel);
+    (*_cz) += 0.1f * io.MouseWheel;
+  }
+}
+
+//
+// Generate and overwrite the modelview matrix (model space to world space to eye space)
+//
+void compute_modelview_mat(const float         _cx,
+                           const float         _cy,
+                           const float         _cz,
+                           const float         _rx,
+                           const float         _ry,
+                           std::vector<float>& _mvmat) {
+
+  // make an affine transformation
+  Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Transform<float,3,Eigen::Affine>::Identity());
+
+  // back the camera up so we can see the simulation
+  trans.translate(Eigen::Vector3f(-_cx, -_cy, _cz));
+
+  // auto-rotate around the origin
+  //static float theta = 0.0;
+  //trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
+  //theta += 0.01f;
+  trans.rotate(Eigen::AngleAxisf(_rx, Eigen::Vector3f::UnitY()));
+  trans.rotate(Eigen::AngleAxisf(_ry, Eigen::Vector3f::UnitX()));
+
+  // or arcball rotate
+
+  // and write it into the matrix
+  Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_mvmat.data());
+  pmat = trans.matrix();
 }
 
 //
@@ -129,33 +165,6 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
   // save window size for next call
   last_w = display_w;
   last_h = display_h;
-}
-
-//
-// Generate and overwrite the modelview matrix (model space to world space to eye space)
-//
-void compute_modelview_mat(const float         _cx,
-                           const float         _cy,
-                           const float         _rx,
-                           const float         _ry,
-                           std::vector<float>& _mvmat) {
-
-  // make an affine transformation
-  Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Transform<float,3,Eigen::Affine>::Identity());
-
-  // back the camera up so we can see the simulation
-  trans.translate(Eigen::Vector3f(-_cx, -_cy, -3.0f));
-
-  // auto-rotate around the origin
-  //static float theta = 0.0;
-  //trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
-  //theta += 0.01f;
-  trans.rotate(Eigen::AngleAxisf(_rx, Eigen::Vector3f::UnitY()));
-  trans.rotate(Eigen::AngleAxisf(_ry, Eigen::Vector3f::UnitX()));
-
-  // and write it into the matrix
-  Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_mvmat.data());
-  pmat = trans.matrix();
 }
 
 //
@@ -267,10 +276,12 @@ void draw_render_gui(RenderParams &rp) {
   ImGui::SliderFloat("particle scale", &(rp.vorton_scale), 0.01f, 2.0f, "%.2f", 2.0f);
 
   if (ImGui::Button("Recenter")) {
-    // put everything back to cente
-    rp.vcx = -0.5f;
+    // put everything back to center
+    rp.vcx = 0.0f;
     rp.vcy = 0.0f;
+    rp.vcz = -3.0f;
     rp.vsize = 2.0f;
+    rp.vfov = 35.0f;
   }
   // add button to recenter on all vorticity?
 }

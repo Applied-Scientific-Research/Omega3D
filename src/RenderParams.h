@@ -33,10 +33,11 @@ public:
   int height = 720;
 
   // view position
-  float vcx = -0.5f;
-  float vcy = 0.0f;
-  float vcz = 0.0f;
+  float vcx = 0.0f;	// "truck"
+  float vcy = 0.0f;	// "pedestal"
+  float vcz = -3.0f;	// "dolly"
   float vsize = 2.0f;
+  float vfov = 35.0f;
 
   // view rotation (radians)
   float rx = 0.0f;
