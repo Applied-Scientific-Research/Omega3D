@@ -152,6 +152,7 @@ void compute_modelview_mat(const float         _cx,
   //trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
   //theta += 0.01f;
   trans.rotate(Eigen::AngleAxisf(_rx, Eigen::Vector3f::UnitY()));
+  trans.rotate(Eigen::AngleAxisf(_ry, Eigen::Vector3f::UnitX()));
 
   // and write it into the matrix
   Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_mvmat.data());
