@@ -171,9 +171,13 @@ int main(int argc, char const *argv[]) {
   // colors and projection matrix for the render view
   RenderParams rparams;
   std::vector<float> gl_projection;
+  gl_projection.resize(16);
+  std::vector<float> gl_mview;
+  gl_mview.resize(16);
   //compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, rparams.vsize, gl_projection);
   float field_of_view = 35.0;
-  compute_persp_proj_mat(window, rparams.vcx, rparams.vcy, field_of_view, gl_projection);
+  compute_persp_proj_mat(window, field_of_view, gl_projection);
+  compute_modelview_mat(rparams.vcx, rparams.vcy, gl_mview);
 
   // adjust some UI settings
   ImGuiStyle& style = ImGui::GetStyle();
@@ -944,11 +948,12 @@ int main(int argc, char const *argv[]) {
 
     // draw the simulation: panels and particles
     //compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, rparams.vsize, gl_projection);
-    compute_persp_proj_mat(window, rparams.vcx, rparams.vcy, field_of_view, gl_projection);
-    sim.drawGL(gl_projection, rparams);
+    compute_persp_proj_mat(window, field_of_view, gl_projection);
+    compute_modelview_mat(rparams.vcx, rparams.vcy, gl_mview);
+    sim.drawGL(gl_mview, gl_projection, rparams);
 
     // if simulation has not been initted, draw the features instead!
-    //for (auto const& bf : bfeatures) { bf.drawGL(gl_projection, rparams); }
+    //for (auto const& bf : bfeatures) { bf.drawGL(gl_mview, gl_projection, rparams); }
 
     // here is where we write the buffer to a file
     if ((is_ready and record_all_frames and sim_is_running) or draw_this_frame) {

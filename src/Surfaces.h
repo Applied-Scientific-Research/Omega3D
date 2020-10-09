@@ -1141,7 +1141,8 @@ public:
   }
 
   // OpenGL3 stuff to draw triangles, called once per frame
-  void drawGL(std::vector<float>& _projmat,
+  void drawGL(std::vector<float>& _modelviewmat,
+              std::vector<float>& _projmat,
               RenderParams&       _rparams,
               const float         _vdelta) {
 

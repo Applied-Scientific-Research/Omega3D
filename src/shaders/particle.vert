@@ -1,6 +1,7 @@
 R"(
 #version 150
 
+uniform mat4 ModelView;
 uniform mat4 Projection;
 uniform vec4 pos_color;
 uniform vec4 neg_color;
@@ -40,6 +41,10 @@ void main() {
 
   // make 4 verts as a single primitive and set texture coords - see other shaders
   float rscale = 2.5f * r * rad_scale;
-  gl_Position = Projection * vec4(px + rscale*quad_attr.x, py + rscale*quad_attr.y, posz, 1.f);
+  //gl_Position = Projection * vec4(px + rscale*quad_attr.x, py + rscale*quad_attr.y, posz, 1.f);
+
+  // do it again, but align the quads to face the camera
+  vec4 vpos = vec4(px, py, posz, 1.f);
+  gl_Position = Projection * vec4((ModelView*vpos).xyz + rscale*quad_attr.xyz, 1.f);
 }
 )"

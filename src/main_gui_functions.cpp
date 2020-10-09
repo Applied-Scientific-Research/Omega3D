@@ -120,13 +120,30 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
 }
 
 //
+// Generate and overwrite the modelview matrix (model space to world space to eye space)
+//
+void compute_modelview_mat(const float         _cx,
+                           const float         _cy,
+                           std::vector<float>& _mvmat) {
+
+  // make an affine transformation
+  Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Transform<float,3,Eigen::Affine>::Identity());
+  trans.translate(Eigen::Vector3f(0.0f, 0.0f, -3.0f));
+  static float theta = 0.0;
+  trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
+  theta += 0.01f;
+
+  // and write it into the matrix
+  Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_mvmat.data());
+  pmat = trans.matrix();
+}
+
+//
 // Helper routine to determine perspective projection matrix
 // given coords at screen center and a measure of size
 // Also changes overall pixels-to-length scale
 //
 void compute_persp_proj_mat(GLFWwindow*         _thiswin,
-                            const float         _cx,
-                            const float         _cy,
                             float&              _fov,
                             std::vector<float>& _projmat) {
 
@@ -138,11 +155,13 @@ void compute_persp_proj_mat(GLFWwindow*         _thiswin,
   const float thisfov = std::min(std::max(_fov,10.f),160.f);
   _fov = thisfov;
 
+  // near and far clipping planes (positive distance)
+  const float near = 0.1;
+  const float far = 10.0;
+
   // off-axis projection
   if (false) {
     // compute precursors
-    const float near = 0.1;
-    const float far = 10.0;
     const float viewscale = std::tan(thisfov * 0.5 * M_PI / 180.0) * near;
     const float right = viewscale * (float)display_w / (float)display_h;
     const float left = -right;
@@ -157,8 +176,6 @@ void compute_persp_proj_mat(GLFWwindow*         _thiswin,
 
   } else {
     // this is the same, but for on-axis only
-    const float near = 0.1;
-    const float far = 10.0;
     const float viewscale = std::tan(thisfov * 0.5 * M_PI / 180.0);
     const float right = viewscale * (float)display_w / (float)display_h;
     const float top = viewscale;
@@ -170,20 +187,17 @@ void compute_persp_proj_mat(GLFWwindow*         _thiswin,
   }
 
   // alternatively
-  Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_projmat.data());
+  //Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_projmat.data());
 
   // translate it to position
-  //Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Translation3f(0.0f, 0.0f, -1.5f));
-  Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Transform<float,3,Eigen::Affine>::Identity());
-  static float theta = 0.0;
-  //trans.rotate(Eigen::AngleAxisf(0.0f, Eigen::Vector3f::UnitX()));
-  trans.translate(Eigen::Vector3f(0.0f, 0.0f, -2.0f));
-  trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
-  theta += 0.01f;
+  //Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Transform<float,3,Eigen::Affine>::Identity());
+  //static float theta = 0.0;
+  //trans.translate(Eigen::Vector3f(0.0f, 0.0f, -2.0f));
+  //trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
+  //theta += 0.01f;
 
   // apply it to the matrix
-  pmat *= trans.matrix();
-
+  //pmat *= trans.matrix();
 }
 
 //

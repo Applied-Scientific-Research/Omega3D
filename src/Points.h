@@ -491,7 +491,8 @@ public:
   }
 
   // this gets done once - load the shaders, set up the vao
-  void initGL(std::vector<float>& _projmat,
+  void initGL(std::vector<float>& _modelviewmat,
+              std::vector<float>& _projmat,
               float*              _poscolor,
               float*              _negcolor,
               float*              _defcolor) {
@@ -522,9 +523,11 @@ public:
       // and for the compute shaders!
 
       // Get the location of the attributes that enters in the vertex shader
+      mgl->mvmat_attribute_pt = glGetUniformLocation(mgl->spo[0], "ModelView");
       mgl->projmat_attribute_pt = glGetUniformLocation(mgl->spo[0], "Projection");
 
       // upload the projection matrix
+      glUniformMatrix4fv(mgl->mvmat_attribute_pt, 1, GL_FALSE, _modelviewmat.data());
       glUniformMatrix4fv(mgl->projmat_attribute_pt, 1, GL_FALSE, _projmat.data());
 
       // locate where the colors and color scales go
@@ -543,13 +546,13 @@ public:
       glBindFragDataLocation(mgl->spo[0], 0, "frag_color");
 
       // Initialize the quad attributes
-      std::vector<float> quadverts = {-1,-1, 1,-1, 1,1, -1,1};
+      std::vector<float> quadverts = {-1,-1,0, 1,-1,0, 1,1,0, -1,1,0};
       glGenBuffers(1, &(mgl->qvbo));
       glBindBuffer(GL_ARRAY_BUFFER, mgl->qvbo);
       glBufferData(GL_ARRAY_BUFFER, quadverts.size()*sizeof(float), quadverts.data(), GL_STATIC_DRAW);
 
       mgl->quad_attribute_pt = glGetAttribLocation(mgl->spo[0], "quad_attr");
-      glVertexAttribPointer(mgl->quad_attribute_pt, 2, GL_FLOAT, GL_FALSE, 0, 0);
+      glVertexAttribPointer(mgl->quad_attribute_pt, 3, GL_FLOAT, GL_FALSE, 0, 0);
       glEnableVertexAttribArray(mgl->quad_attribute_pt);
 
     } else { // this->E is active or reactive
@@ -578,9 +581,11 @@ public:
       // and for the compute shaders!
 
       // Get the location of the attributes that enters in the vertex shader
+      mgl->mvmat_attribute_bl = glGetUniformLocation(mgl->spo[1], "ModelView");
       mgl->projmat_attribute_bl = glGetUniformLocation(mgl->spo[1], "Projection");
 
       // upload the projection matrix
+      glUniformMatrix4fv(mgl->mvmat_attribute_bl, 1, GL_FALSE, _modelviewmat.data());
       glUniformMatrix4fv(mgl->projmat_attribute_bl, 1, GL_FALSE, _projmat.data());
 
       // locate where the colors and color scales go
@@ -659,7 +664,8 @@ public:
   }
 
   // OpenGL3 stuff to display points, called once per frame
-  void drawGL(std::vector<float>& _projmat,
+  void drawGL(std::vector<float>& _modelviewmat,
+              std::vector<float>& _projmat,
               RenderParams&       _rparams,
               const float         _vdelta) {
 
@@ -667,9 +673,10 @@ public:
 
     // has this been init'd yet?
     if (not mgl) {
-      initGL(_projmat, _rparams.pos_circ_color,
-                       _rparams.neg_circ_color,
-                       _rparams.default_color);
+      initGL(_modelviewmat, _projmat,
+             _rparams.pos_circ_color,
+             _rparams.neg_circ_color,
+             _rparams.default_color);
       updateGL();
     }
 
@@ -690,6 +697,7 @@ public:
         glEnableVertexAttribArray(mgl->quad_attribute_pt);
 
         // upload the current uniforms
+        glUniformMatrix4fv(mgl->mvmat_attribute_pt, 1, GL_FALSE, _modelviewmat.data());
         glUniformMatrix4fv(mgl->projmat_attribute_pt, 1, GL_FALSE, _projmat.data());
         glUniform4fv(mgl->def_color_attribute, 1, (const GLfloat *)_rparams.default_color);
         glUniform1f (mgl->unif_rad_attribute, (const GLfloat)(1.0f*_rparams.tracer_size));
@@ -705,6 +713,7 @@ public:
         glEnableVertexAttribArray(mgl->quad_attribute_bl);
 
         // upload the current projection matrix
+        glUniformMatrix4fv(mgl->mvmat_attribute_bl, 1, GL_FALSE, _modelviewmat.data());
         glUniformMatrix4fv(mgl->projmat_attribute_bl, 1, GL_FALSE, _projmat.data());
 
         // upload the current color values

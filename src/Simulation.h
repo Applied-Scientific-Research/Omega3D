@@ -139,7 +139,7 @@ public:
 #ifdef USE_GL
   // graphics pass-through call
   void updateGL();
-  void drawGL(std::vector<float>&, RenderParams&);
+  void drawGL(std::vector<float>&, std::vector<float>&, RenderParams&);
 #endif
 
 #ifdef USE_OGL_COMPUTE
