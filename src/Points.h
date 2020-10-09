@@ -187,6 +187,17 @@ public:
     for (size_t d=0; d<Dimensions; ++d) {
       this->u[d].resize(this->n);
     }
+
+    // optional velgrads here
+    if (_e != inert or _m != lagrangian) {
+      // i.e. all active particles get grads, as do all fixed field points
+      //      but lagrangian field points do not
+      std::array<Vector<S>,Dimensions*Dimensions> new_ug;
+      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+        new_ug[d].resize(this->n);
+      }
+      ug = std::move(new_ug);
+    }
   }
 
   const Vector<S>& get_elong() const { return elong; }
@@ -392,9 +403,11 @@ public:
         wdu[2] = this_s[0]*this_ug[2] + this_s[1]*this_ug[5] + this_s[2]*this_ug[8];
 
         // update elongation
-        const S circmag = std::sqrt(this_s[0]*this_s[0] + this_s[1]*this_s[1] + this_s[2]*this_s[2]);
-        const S elongfactor = (S)_dt * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmag;
-        elong[i] *= 1.0 + elongfactor;
+        const S circmagsqrd = this_s[0]*this_s[0] + this_s[1]*this_s[1] + this_s[2]*this_s[2];
+        if (circmagsqrd > 0.0) {
+          const S elongfactor = (S)_dt * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmagsqrd;
+          elong[i] *= 1.0 + elongfactor;
+        }
 
         // add Cottet SFS into stretch term (after elongation)
 
@@ -410,12 +423,15 @@ public:
         if (VERBOSE) {
         //if (i == 0) {
         //if (i < 10) {
+        //if (i%100 == 0) {
           std::cout << "  x " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i];// << std::endl;
           std::cout << "  v " << this->u[0][i] << " " << this->u[1][i] << " " << this->u[2][i];// << std::endl;
           std::cout << "  ug " << this_ug[0] << " " << this_ug[1] << " " << this_ug[2];// << std::endl;
-          //std::cout << "  wdu " << wdu[0] << " " << wdu[1] << " " << wdu[2];// << std::endl;
+          std::cout << "  " << this_ug[3] << " " << this_ug[4] << " " << this_ug[5];// << std::endl;
+          std::cout << "  " << this_ug[6] << " " << this_ug[7] << " " << this_ug[8];// << std::endl;
+          std::cout << "  wdu " << wdu[0] << " " << wdu[1] << " " << wdu[2];// << std::endl;
           std::cout << "  s " << (*this->s)[0][i] << " " << (*this->s)[1][i] << " " << (*this->s)[2][i];// << std::endl;
-          //std::cout << "  elong " << elong[i];
+          std::cout << "  elong " << elong[i];
           std::cout << std::endl;
         }
       }
@@ -503,6 +519,7 @@ public:
         if (VERBOSE) {
         //if (i == 0) {
         //if (i == this->n - 1) {
+        //if (i%100 == 0) {
           //std::array<S,3> thisx = {this->x[0][i], this->x[1][i], this->x[2][i]};
           //std::cout << "  p " << i << " at rad " << length(thisx) << " has circmag " << std::sqrt(thisstr) << " and new elong " << elong[i] << std::endl;
           std::cout << "x " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i];// << std::endl;

@@ -700,7 +700,7 @@ void SingularRing::generate_draw_geom() {
   std::fill(val.begin(), val.end(), 1.0);
   ElementPacket epack {x, idx, val, val.size()/Dimensions, 2};
   m_draw = epack;
-  m_draw.print();
+  if (VERBOSE) m_draw.print();
 }
 
 #ifdef USE_IMGUI
