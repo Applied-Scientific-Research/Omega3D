@@ -36,15 +36,23 @@ void mouse_callback(GLFWwindow* /*_thiswin*/,
                     float*   _ry,
                     float*   _size) {
 
-  // first, use left-click and drag to move the data
+  // use left-click and drag to rotate
   static bool lbutton_down = false;
   if (io.MouseClicked[0]) lbutton_down = true;
   if (io.MouseReleased[0]) lbutton_down = false;
 
   if (lbutton_down) {
     //std::cout << "free mouse moved " << io.MouseDelta.x << " " << io.MouseDelta.y << std::endl;
-    // do your drag here
+    // this works on a Retina display:
+    (*_rx) += 3.0f * (float)io.MouseDelta.x / io.DisplaySize.x;
+    (*_ry) += 3.0f * (float)io.MouseDelta.y / io.DisplaySize.x;
+  }
 
+  // use left button drag to pan
+  static bool rbutton_down = false;
+  if (io.MouseClicked[1]) rbutton_down = true;
+  if (io.MouseReleased[1]) rbutton_down = false;
+  if (rbutton_down) {
     // this worked on Linux:
     //int display_w, display_h;
     //glfwGetFramebufferSize(_thiswin, &display_w, &display_h);
@@ -54,16 +62,6 @@ void mouse_callback(GLFWwindow* /*_thiswin*/,
     // this works on a Retina display:
     (*_cx) -= 2.0f * (*_size) * (float)io.MouseDelta.x / io.DisplaySize.x;
     (*_cy) += 2.0f * (*_size) * (float)io.MouseDelta.y / io.DisplaySize.x;
-  }
-
-  // right button down rotates
-  static bool rbutton_down = false;
-  if (io.MouseClicked[1]) rbutton_down = true;
-  if (io.MouseReleased[1]) rbutton_down = false;
-  if (rbutton_down) {
-    // this works on a Retina display:
-    (*_rx) += 3.0f * (float)io.MouseDelta.x / io.DisplaySize.x;
-    (*_ry) += 3.0f * (float)io.MouseDelta.y / io.DisplaySize.x;
   }
 
 
