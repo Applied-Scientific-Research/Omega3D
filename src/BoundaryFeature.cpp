@@ -87,6 +87,7 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
   static char strry[512] = "0.0*t";
   static char strrz[512] = "0.0*t";
   int changed = BoundaryFeature::obj_movement_gui(mitem, strx, stry, strz, strrx, strry, strrz);
+  
   static std::shared_ptr<Body> bp = nullptr; 
   if (changed) {
     switch(mitem) {
@@ -107,14 +108,13 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
         bp->set_rot(0, std::string(strrx));
         bp->set_rot(1, std::string(strry));
         bp->set_rot(2, std::string(strrz));
-        bp->set_name("sphere");
-        sim.add_body(bp);
         break;
     }
   }
 
   // define geometry second
   static int item = 0;
+  static int oldItem = -1;
   const int numItems = 3;
   const char* items[] = { "sphere", "rectangle", "from file" };
   ImGui::Spacing();
@@ -124,33 +124,40 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
   // show different inputs based on what is selected
   bool created = false;
   static std::unique_ptr<BoundaryFeature> bf = nullptr;
-  switch(item) {
-    case 0: {
-      // Need to create the object first
-      bf = std::make_unique<Ovoid>(bp);
-    } break;
-    case 1: {
-      bf = std::make_unique<SolidRect>(bp);
-    } break;
-    case 2: {
-      bf = std::make_unique<ExteriorFromFile>(bp);
-    } break;
-  }
+  if (oldItem != item) {
+    switch(item) {
+      case 0: {
+        // Need to create the object first
+        bf = std::make_unique<Ovoid>(bp);
+      } break;
+      case 1: {
+        bf = std::make_unique<SolidRect>(bp);
+      } break;
+      case 2: {
+        bf = std::make_unique<ExteriorFromFile>(bp);
+      } break;
+    }
+    oldItem = item;
+  } 
 
   if (bf->draw_info_gui("Add")) {
+    if (!bp) { abort(); }
     if (mitem == 2) {
       bp->set_name(bf->to_short_string());
       sim.add_body(bp);
     }
+    bf->set_body(bp);
+    bf->generate_draw_geom();
     bfs.emplace_back(std::move(bf));
     bf = nullptr;
+    oldItem = -1;
     created = true;
-    ImGui::CloseCurrentPopup();
   }
 
   ImGui::SameLine();
   if (ImGui::Button("Cancel", ImVec2(120,0))) {
     ImGui::CloseCurrentPopup();
+    oldItem = -1;
     created = false;
   }
 
@@ -164,13 +171,11 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
 ElementPacket<float>
 Ovoid::init_elements(const float _ips) const {
 
-  if (not this->is_enabled()) return ElementPacket<float>();
-
   // first, make an icosahedron
   std::vector<float>   x = ico0;
   std::vector<Int>   idx = ico0idx;
   std::vector<float> val;
-  ElementPacket<float> epack {x, idx, val};
+  ElementPacket<float> epack {x, idx, val, val.size()/Dimensions, 2};
 
   // estimate the triangle spacing for the scaled ovoid
   float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
@@ -184,14 +189,14 @@ Ovoid::init_elements(const float _ips) const {
     refine_geometry(epack);
 
     // re-sphericalize (r=0.5)
-    for (size_t i=0; i<epack.x.size()/3; ++i) {
-      const float rad = std::sqrt( std::pow(epack.x[3*i], 2) +
-                                   std::pow(epack.x[3*i+1], 2) +
-                                   std::pow(epack.x[3*i+2], 2));
+    for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
+      const float rad = std::sqrt( std::pow(epack.x[Dimensions*i], 2) +
+                                   std::pow(epack.x[Dimensions*i+1], 2) +
+                                   std::pow(epack.x[Dimensions*i+2], 2));
       const float scale = 0.5 / rad;
-      epack.x[3*i]   *= scale;
-      epack.x[3*i+1] *= scale;
-      epack.x[3*i+2] *= scale;
+      epack.x[Dimensions*i]   *= scale;
+      epack.x[Dimensions*i+1] *= scale;
+      epack.x[Dimensions*i+2] *= scale;
     }
 
     meansize *= 0.5;
@@ -199,22 +204,22 @@ Ovoid::init_elements(const float _ips) const {
   std::cout << " panels" << std::endl;
 
   // scale and translate here
-  for (size_t i=0; i<epack.x.size()/3; ++i) {
-    const float in_x = epack.x[3*i];
-    const float in_y = epack.x[3*i+1];
-    const float in_z = epack.x[3*i+2];
+  for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
+    const float in_x = epack.x[Dimensions*i];
+    const float in_y = epack.x[Dimensions*i+1];
+    const float in_z = epack.x[Dimensions*i+2];
 
     // first scale, then translate
-    epack.x[3*i]   = in_x * m_sx + m_x;
-    epack.x[3*i+1] = in_y * m_sy + m_y;
-    epack.x[3*i+2] = in_z * m_sz + m_z;
+    epack.x[Dimensions*i]   = in_x * m_sx + m_x;
+    epack.x[Dimensions*i+1] = in_y * m_sy + m_y;
+    epack.x[Dimensions*i+2] = in_z * m_sz + m_z;
   }
 
   // finally, assume standard behavior: reactive, zero-flow panels
-  const size_t nsurfs = epack.idx.size() / 3;
-  epack.val.resize(3*nsurfs);
+  const size_t nsurfs = epack.idx.size() / Dimensions;
+  epack.val.resize(Dimensions*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
-
+  epack.nelem = epack.val.size()/Dimensions;
   return epack;
 }
 
@@ -267,12 +272,14 @@ Ovoid::to_json() const {
   return mesh;
 }
 
+void Ovoid::generate_draw_geom() {
+  m_draw = init_elements(0.125);
+}
+
 #ifdef USE_IMGUI
 bool Ovoid::draw_info_gui(const std::string action) {
-  //static bool external_flow = true;
-  static float xc[3] = {m_x, m_y, m_z};
-  //static float rotdeg = 0.0f;
-  static float scale = m_sx;
+  float xc[3] = {m_x, m_y, m_z};
+  float scale = m_sx;
   std::string buttonText = action+" spherical body";
   bool added = false;
 
@@ -282,14 +289,11 @@ bool Ovoid::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid spherical body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_sx = m_sy = m_sz = scale;
-    added = true;
-  }
-
+  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = m_sy = m_sz = scale;
   return added;
 }
 #endif
@@ -300,13 +304,11 @@ bool Ovoid::draw_info_gui(const std::string action) {
 ElementPacket<float>
 SolidRect::init_elements(const float _ips) const {
 
-  if (not this->is_enabled()) return ElementPacket<float>();
-
   // first, make 12-triangle rectangle
   std::vector<float>   x = cube0;
   std::vector<Int>   idx = cube0idx;
   std::vector<float> val;
-  ElementPacket<float> epack {x, idx, val};
+  ElementPacket<float> epack {x, idx, val, val.size()/Dimensions, 2};
 
   // estimate the triangle spacing for the scaled rectangle
   float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
@@ -321,21 +323,22 @@ SolidRect::init_elements(const float _ips) const {
   std::cout << " panels" << std::endl;
 
   // scale and translate here
-  for (size_t i=0; i<epack.x.size()/3; ++i) {
-    const float in_x = epack.x[3*i];
-    const float in_y = epack.x[3*i+1];
-    const float in_z = epack.x[3*i+2];
+  for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
+    const float in_x = epack.x[Dimensions*i];
+    const float in_y = epack.x[Dimensions*i+1];
+    const float in_z = epack.x[Dimensions*i+2];
 
     // first scale, then translate
-    epack.x[3*i]   = in_x * m_sx + m_x;
-    epack.x[3*i+1] = in_y * m_sy + m_y;
-    epack.x[3*i+2] = in_z * m_sz + m_z;
+    epack.x[Dimensions*i]   = in_x * m_sx + m_x;
+    epack.x[Dimensions*i+1] = in_y * m_sy + m_y;
+    epack.x[Dimensions*i+2] = in_z * m_sz + m_z;
   }
 
   // finally, assume standard behavior: reactive, zero-flow panels
-  const size_t nsurfs = epack.idx.size() / 3;
-  epack.val.resize(3*nsurfs);
+  const size_t nsurfs = epack.idx.size() / Dimensions;
+  epack.val.resize(Dimensions*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
+  epack.nelem = epack.val.size()/Dimensions;
 
   return epack;
 }
@@ -406,26 +409,26 @@ bool SolidRect::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid rectangular body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_sx = xs[0];
-    m_sy = xs[1];
-    m_sz = xs[2];
-    added = true;
-  }
-
+  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = xs[0];
+  m_sy = xs[1];
+  m_sz = xs[2];
   return added;
 }
 #endif
+
+void SolidRect::generate_draw_geom() {
+  m_draw = init_elements(1);
+}
+
 //
 // Create a triangulated quad of a solid boundary
 //
 ElementPacket<float>
 BoundaryQuad::init_elements(const float _ips) const {
-
-  if (not this->is_enabled()) return ElementPacket<float>();
 
   // how many panels?
   const float side1 = 0.5 * (std::sqrt(std::pow(m_x1-m_x,2)  + std::pow(m_y1-m_y,2)  + std::pow(m_z1-m_z,2))
@@ -440,9 +443,9 @@ BoundaryQuad::init_elements(const float _ips) const {
   std::cout << "  " << to_string() << std::endl;
 
   // created once
-  std::vector<float>   x(3*(num1+1)*(num2+1));
-  std::vector<Int>   idx(num_panels*3);
-  std::vector<float> val(num_panels*3);
+  std::vector<float>   x(Dimensions*(num1+1)*(num2+1));
+  std::vector<Int>   idx(num_panels*Dimensions);
+  std::vector<float> val(num_panels*Dimensions);
 
   // when quad nodes appear in CCW order, the viewer is "outside" the object (inside the fluid)
   // so go CW around the body
@@ -468,26 +471,26 @@ BoundaryQuad::init_elements(const float _ips) const {
     const size_t idx2 = (num2+1) * (i+1);
     for (size_t j=0; j<num2; ++j) {
       // make the first of 2 tris
-      idx[3*icnt]   = idx1 + j + 0;
-      idx[3*icnt+1] = idx2 + j + 0;
-      idx[3*icnt+2] = idx2 + j + 1;
+      idx[Dimensions*icnt]   = idx1 + j + 0;
+      idx[Dimensions*icnt+1] = idx2 + j + 0;
+      idx[Dimensions*icnt+2] = idx2 + j + 1;
       icnt++;
       // do the other triangle
-      idx[3*icnt]   = idx1 + j + 0;
-      idx[3*icnt+1] = idx2 + j + 1;
-      idx[3*icnt+2] = idx1 + j + 1;
+      idx[Dimensions*icnt]   = idx1 + j + 0;
+      idx[Dimensions*icnt+1] = idx2 + j + 1;
+      idx[Dimensions*icnt+2] = idx1 + j + 1;
       icnt++;
     }
   }
 
   // all triangles share the same boundary condition velocity (in global coords)
   for (size_t i=0; i<num_panels; ++i) {
-    val[3*i+0] = m_bcx;
-    val[3*i+1] = m_bcy;
-    val[3*i+2] = m_bcz;
+    val[Dimensions*i+0] = m_bcx;
+    val[Dimensions*i+1] = m_bcy;
+    val[Dimensions*i+2] = m_bcz;
   }
 
-  return ElementPacket<float>({x, idx, val});
+  return ElementPacket<float>({x, idx, val, val.size()/Dimensions, 2});
 }
 
 void
@@ -498,7 +501,7 @@ BoundaryQuad::debug(std::ostream& os) const {
 std::string
 BoundaryQuad::to_string() const {
   std::stringstream ss;
-  ss << "quad at " << m_x << " " << m_y << " " << m_x;
+  ss << "quad at " << m_x << " " << m_y << " " << m_z;
   if (std::abs(m_bcx)+std::abs(m_bcy)+std::abs(m_bcz) > std::numeric_limits<float>::epsilon()) {
     ss << " with vel " << m_bcx << " " << m_bcy << " " << m_bcz;
   }
@@ -551,6 +554,10 @@ bool BoundaryQuad::draw_info_gui(const std::string action) {
   return false;
 }
 #endif
+
+void BoundaryQuad::generate_draw_geom() {
+  m_draw = init_elements(1);
+}
 
 //
 // Create a closed object from a geometry file (fluid is outside)
@@ -678,14 +685,15 @@ bool ExteriorFromFile::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_sx = m_sy = m_sz = scale;
-    added = true;
-  }
-
+  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = m_sy = m_sz = scale;
   return added;
 }
 #endif
+
+void ExteriorFromFile::generate_draw_geom() {
+  m_draw = init_elements(1);
+}

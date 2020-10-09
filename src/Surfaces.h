@@ -121,7 +121,7 @@ public:
       // value is a fixed strength for the panel
       assert(_val.size() == 3*nsurfs && "Value array is not an even multiple of panel count");
       // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths and source sheet str
-      for (size_t d=0; d<3; ++d) {
+      for (size_t d=0; d<Dimensions; ++d) {
         if (ps[d]) {
           ps[d]->resize(nsurfs);
           for (size_t i=0; i<nsurfs; ++i) {
@@ -156,7 +156,7 @@ public:
       bcs_to_bcs(0,nsurfs);
 
       // make space for the unknown sheet strengths
-      for (size_t d=0; d<3; ++d) {
+      for (size_t d=0; d<Dimensions; ++d) {
         if (ps[d]) {
           ps[d]->resize(nsurfs);
           std::fill(ps[d]->begin(), ps[d]->end(), 0.0);
@@ -181,7 +181,7 @@ public:
     }
 
     // debug print
-    if (false) {
+    if (VERBOSE) {
       std::cout << "Nodes" << std::endl;
       for (size_t i=0; i<nnodes; ++i) {
         std::cout << "  " << i << " " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i] << std::endl;
@@ -201,6 +201,14 @@ public:
       set_geom_center();
     }
   }
+
+  // delegating constructor
+  Surfaces(const ElementPacket<S>& _elems,
+           const elem_t _e,
+           const move_t _m,
+           std::shared_ptr<Body> _bp)
+    : Surfaces(_elems.x, _elems.idx, _elems.val, _e, _m, _bp)
+  { }
 
   size_t                         get_npanels()     const { return np; }
   const S                        get_vol()         const { return vol; }
@@ -470,7 +478,7 @@ public:
     }
 
     // debug print
-    if (false) {
+    if (VERBOSE) {
       std::cout << "Nodes" << std::endl;
       for (size_t i=0; i<nnold+nnodes; ++i) {
         std::cout << "  " << i << " " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i] << std::endl;
@@ -490,6 +498,23 @@ public:
       set_geom_center();
     }
   }
+
+  // append nodes and panels to this collection
+  void add_new(const ElementPacket<float>& _in) {
+
+    // ensure that this packet really is Surfaces
+    assert(_in.idx.size() != 0 && "Input ElementPacket is not Surfaces");
+    assert(_in.ndim == 2 && "Input ElementPacket is not Surfaces");
+
+    // and that it has the right number of values per particle
+    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with inert Surfaces has nonzero val array");
+    else assert(_in.val.size()/Dimensions == _in.nelem && "Input ElementPacket with Surfaces has bad val array size");
+
+    // must explicitly call the method in the base class first - this pulls out positions and strengths
+    //ElementBase<S>::add_new(_in);
+    (void) add_new(_in.x, _in.idx, _in.val);
+  }
+
 
   void add_body_motion(const S _factor, const double _time) {
     // no need to call base class now
@@ -663,9 +688,9 @@ public:
     double ysum = 0.0;
     double zsum = 0.0;
     for (size_t i=0; i<get_npanels(); i++) {
-      const size_t jp0 = idx[3*i];
-      const size_t jp1 = idx[3*i+1];
-      const size_t jp2 = idx[3*i+2];
+      const size_t jp0 = idx[Dimensions*i];
+      const size_t jp1 = idx[Dimensions*i+1];
+      const size_t jp2 = idx[Dimensions*i+2];
       // assume a triangle from 0,0 to two ends of each panel
       double thisvol = (*this->ux)[0][jp0] * (double)(*this->ux)[1][jp1] * (*this->ux)[2][jp2]
                      - (*this->ux)[0][jp0] * (double)(*this->ux)[1][jp2] * (*this->ux)[2][jp1]
@@ -675,7 +700,14 @@ public:
                      - (*this->ux)[0][jp2] * (double)(*this->ux)[1][jp1] * (*this->ux)[2][jp0];
       thisvol /= 6.0;
       // add this to the running sums
-      //std::cout << "    and area " << thisvol << " and center " << xc << " " << yc << std::endl;
+      if (VERBOSE) { std::cout << "    and area " << thisvol << std::endl;
+        std::cout << (*this->ux)[0][jp0] << " " << (double)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp2] << std::endl;
+        std::cout << (*this->ux)[0][jp0] << " " << (double)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp1] << std::endl;
+        std::cout << (*this->ux)[0][jp1] << " " << (double)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp2] << std::endl;
+        std::cout << (*this->ux)[0][jp1] << " " << (double)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp0] << std::endl;
+        std::cout << (*this->ux)[0][jp2] << " " << (double)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp1] << std::endl;
+        std::cout << (*this->ux)[0][jp2] << " " << (double)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp0] << std::endl;
+      }
       vsum += thisvol;
       xsum += 0.25 * thisvol * ((*this->ux)[0][jp0] + (*this->ux)[0][jp1] + (*this->ux)[0][jp2]);
       ysum += 0.25 * thisvol * ((*this->ux)[1][jp0] + (*this->ux)[1][jp1] + (*this->ux)[1][jp2]);

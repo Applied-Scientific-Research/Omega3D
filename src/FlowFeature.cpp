@@ -3,8 +3,10 @@
  *
  * (c)2017-20 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
+#include "BoundaryFeature.h"
 #include "FlowFeature.h"
 #include "MathHelper.h"
 #include "imgui/imgui.h"
@@ -50,36 +52,50 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 }
 
 #ifdef USE_IMGUI
-void FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
+bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
   static int item = 1;
+  static int oldItem = -1;
   const char* items[] = { "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
   ImGui::Combo("type", &item, items, 4);
 
   // show different inputs based on what is selected
   static std::unique_ptr<FlowFeature> ff = nullptr;
-  switch(item) {
-    case 0: {
-      ff = std::make_unique<VortexBlob>();
-    } break;
-    case 1: {
-      ff = std::make_unique<BlockOfRandom>();
-    } break;
-    case 2: {
-      ff = std::make_unique<SingularRing>();
-    } break;
-    case 3: {
-      ff = std::make_unique<ThickRing>();
-    } break;
+  if (oldItem != item) {
+    switch(item) {
+      case 0: {
+        ff = std::make_unique<VortexBlob>();
+      } break;
+      case 1: {
+        ff = std::make_unique<BlockOfRandom>();
+      } break;
+      case 2: {
+        ff = std::make_unique<SingularRing>();
+      } break;
+      case 3: {
+        ff = std::make_unique<ThickRing>();
+      } break;
+    }
+    oldItem = item;
   }
 
+  bool created = false;
   if (ff->draw_info_gui("Add", ips)) {
+    ff->generate_draw_geom();
     ffs.emplace_back(std::move(ff));
     ff = nullptr;
+    created = true;
+    oldItem = -1;
     ImGui::CloseCurrentPopup();
   }
 
   ImGui::SameLine();
-  if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+  if (ImGui::Button("Cancel", ImVec2(120,0))) {
+    oldItem = -1;
+    ImGui::CloseCurrentPopup();
+  }
+
+  ImGui::EndPopup();
+  return created;
 }
 #endif
 
@@ -92,15 +108,24 @@ void FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &f
 //
 // drop a single particle
 //
-std::vector<float>
-SingleParticle::init_particles(float _ips) const {
-  if (this->is_enabled()) return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
-  else return std::vector<float>();
+ElementPacket<float>
+SingleParticle::init_elements(float _ips) const {
+  //if (this->is_enabled()) return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
+  //else return std::vector<float>();
+  std::vector<float> x = {m_x, m_y, m_z};
+  std::vector<Int> idx = {};
+  std::vector<float> vals = {m_sx, m_sy, m_sz};
+  ElementPacket<float> packet({x, idx, vals, (size_t)1, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
+    return packet;
+  } else {
+    return ElementPacket<float>();
+  }
 }
 
-std::vector<float>
-SingleParticle::step_particles(float _ips) const {
-  return std::vector<float>();
+ElementPacket<float>
+SingleParticle::step_elements(float _ips) const {
+  return ElementPacket<float>();
 }
 
 void
@@ -139,7 +164,17 @@ SingleParticle::to_json() const {
   return j;
 }
 
+//Single Particles cant be made by user
+void SingleParticle::generate_draw_geom() {
+  //const float diam = 0.01;
+  //std::unique_ptr<Ovoid> tmp = std::make_unique<SolidCircle>(nullptr, true, m_x, m_y, m_z,
+  //                                                           diam, diam, diam);
+  //m_draw = tmp->init_elements(diam/25.0);
+  //std::fill(m_draw.val.begin(), m_draw.val.end(), m_str);
+}
+
 #ifdef USE_IMGUI
+// User can't actually create this
 bool SingleParticle::draw_info_gui(const std::string action, const float ips) {
   return false;
 }
@@ -148,12 +183,12 @@ bool SingleParticle::draw_info_gui(const std::string action, const float ips) {
 //
 // make a circular vortex blob with soft transition
 //
-std::vector<float>
-VortexBlob::init_particles(float _ips) const {
+ElementPacket<float>
+VortexBlob::init_elements(float _ips) const {
   // create a new vector to pass on
   std::vector<float> x;
-
-  if (not this->is_enabled()) return x;
+  std::vector<Int> idx;
+  std::vector<float> vals;
 
   // what size 2D integer array will we loop over
   int irad = 1 + (m_rad + 0.5*m_softness) / _ips;
@@ -182,13 +217,13 @@ VortexBlob::init_particles(float _ips) const {
         // create a weaker particle
         this_wgt = 0.5 - 0.5*std::sin(M_PI * (dr - m_rad) / m_softness);
       }
+      vals.emplace_back(m_sx * (float)this_wgt);
+      vals.emplace_back(m_sy * (float)this_wgt);
+      vals.emplace_back(m_sz * (float)this_wgt);
       tot_wgt += this_wgt;
-      x.emplace_back(m_sx * (float)this_wgt);
-      x.emplace_back(m_sy * (float)this_wgt);
-      x.emplace_back(m_sz * (float)this_wgt);
 
       // this is the radius - still zero for now
-      x.emplace_back(0.0f);
+      vals.emplace_back(0.0f);
     }
   }
   }
@@ -198,17 +233,22 @@ VortexBlob::init_particles(float _ips) const {
   //   has exactly the right strength
   std::cout << "blob had " << tot_wgt << " initial circulation" << std::endl;
   double str_scale = 1.0 / tot_wgt;
-  for (size_t i=3; i<x.size(); i+=7) {
-    x[i+0] = (float)((double)x[i+0] * str_scale);
-    x[i+1] = (float)((double)x[i+1] * str_scale);
-    x[i+2] = (float)((double)x[i+2] * str_scale);
+  for (size_t i=0; i<x.size(); i+=4) {
+    vals[i+0] = (float)((double)vals[i+0] * str_scale);
+    vals[i+1] = (float)((double)vals[i+1] * str_scale);
+    vals[i+2] = (float)((double)vals[i+2] * str_scale);
   }
 
-  return x;
+  ElementPacket<float> packet({x, idx, vals, x.size()/3, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+    return packet;
+  } else {
+    return ElementPacket<float>();
+  }
 }
 
-std::vector<float>
-VortexBlob::step_particles(float _ips) const {
+ElementPacket<float>
+VortexBlob::step_elements(float _ips) const {
   return std::vector<float>();
 }
 
@@ -252,35 +292,37 @@ VortexBlob::to_json() const {
   return j;
 }
 
+void VortexBlob::generate_draw_geom() {
+  // Based on irad in init_elems
+  const float rad = 1+2*m_rad+m_softness;
+  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z,
+                                                       2*rad, 2*rad, 2*rad);
+  m_draw = tmp->init_elements(0.125);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), m_sz);
+}
+
 #ifdef USE_IMGUI
-bool VortexBlob::draw_info_gui(const std::string action, const float ips) {
+bool VortexBlob::draw_info_gui(const std::string _action, const float _ips) {
   static float xc[3] = {m_x, m_y, m_z};
   static float vstr[3] = {m_sx, m_sy, m_sz};
-  static float rad = m_rad;
-  static float soft = m_softness;
-  static float guess_n = 4.1888f * std::pow((2.0f*rad+soft)/ips, 3);
-  std::string buttonText = action+" vortex blob";
+  static float guess_n = 4.1888f * std::pow((2.0f*m_rad+m_softness)/_ips, 3);
+  std::string buttonText = _action+" vortex blob";
   bool add = false;
 
   ImGui::InputFloat3("center", xc);
   ImGui::InputFloat3("strength", vstr);
-  ImGui::SliderFloat("radius", &rad, ips, 10.0f*ips, "%.4f");
-  ImGui::SliderFloat("softness", &soft, ips, rad, "%.4f");
+  ImGui::SliderFloat("radius", &m_rad, _ips, 10.0f*_ips, "%.4f");
+  ImGui::SliderFloat("softness", &m_softness, _ips, m_rad, "%.4f");
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add about %f particles", guess_n);
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_sx = vstr[0];
-    m_sy = vstr[1];
-    m_sz = vstr[2];
-    m_rad = rad;
-    m_softness = soft;
-    add = true;
-  }
-
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = vstr[0];
+  m_sy = vstr[1];
+  m_sz = vstr[2];
   return add;
 }
 #endif
@@ -288,10 +330,8 @@ bool VortexBlob::draw_info_gui(const std::string action, const float ips) {
 //
 // make the block of randomly-placed and random-strength particles
 //
-std::vector<float>
-BlockOfRandom::init_particles(float _ips) const {
-
-  if (not this->is_enabled()) return std::vector<float>();
+ElementPacket<float>
+BlockOfRandom::init_elements(float _ips) const {
 
   // set up the random number generator
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
@@ -299,27 +339,43 @@ BlockOfRandom::init_particles(float _ips) const {
   static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
   static std::uniform_real_distribution<> zo_dist(0.0, 1.0);
 
-  std::vector<float> x(7*m_num);
+  // create a new vector to pass on
+  std::vector<float> x;
+  std::vector<Int> idx;
+  std::vector<float> vals;
+  x.resize(Dimensions*m_num);
+  vals.resize(4*m_num);
+
   // initialize the particles' locations and strengths, leave radius zero for now
   for (size_t i=0; i<(size_t)m_num; ++i) {
-    size_t idx = 7*i;
+    size_t idx = 3*i;
     // positions
     x[idx+0] = m_x + m_xsize*zmean_dist(gen);
     x[idx+1] = m_y + m_ysize*zmean_dist(gen);
     x[idx+2] = m_z + m_zsize*zmean_dist(gen);
-    // strengths
-    x[idx+3] = m_maxstr * zmean_dist(gen) / (float)m_num;
-    x[idx+4] = m_maxstr * zmean_dist(gen) / (float)m_num;
-    x[idx+5] = m_maxstr * zmean_dist(gen) / (float)m_num;
-    // radius will get set later
-    x[idx+6] = 0.0f;
   }
-  return x;
+
+  for (size_t i=0; i<(size_t)m_num; ++i) {
+    size_t idx = 4*i;
+    // strengths
+    vals[idx+0] = m_maxstr * zmean_dist(gen) / (float)m_num;
+    vals[idx+1] = m_maxstr * zmean_dist(gen) / (float)m_num;
+    vals[idx+2] = m_maxstr * zmean_dist(gen) / (float)m_num;
+    // radius will get set later
+    vals[idx+3] = 0.0f;
+  }
+
+  ElementPacket<float> packet({x, idx, vals, x.size()/3, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 1)) {
+    return packet;
+  } else {
+    return ElementPacket<float>();
+  }
 }
 
-std::vector<float>
-BlockOfRandom::step_particles(float _ips) const {
-  return std::vector<float>();
+ElementPacket<float>
+BlockOfRandom::step_elements(float _ips) const {
+  return ElementPacket<float>();
 }
 
 void
@@ -364,34 +420,42 @@ BlockOfRandom::to_json() const {
   return j;
 }
 
+void BlockOfRandom::generate_draw_geom() {
+  SolidRect tmp = SolidRect(nullptr, true,
+                            m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize,
+                            m_xsize, m_ysize, m_zsize);
+  // generate draw geometry, OK to use more than 12 triangles
+  m_draw = tmp.init_elements(0.05*(m_xsize+m_ysize+m_zsize));
+  
+  static std::random_device rd;  //Will be used to obtain a seed for the random number engine
+  static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+  static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
+  for (size_t i = 0; i < m_draw.val.size(); i++) {
+    m_draw.val[i] = m_maxstr*zmean_dist(gen);
+  }
+}
+
 #ifdef USE_IMGUI
 bool BlockOfRandom::draw_info_gui(const std::string action, const float ips) {
-  static int npart = m_num;
   static float xs[3] = {m_xsize, m_ysize, m_zsize};
   static float xc[3] = {m_x, m_y, m_z};
-  static float strmag = m_maxstr;
   std::string buttonText = action+" random vorticies";
   bool add = false;
 
-  ImGui::SliderInt("number", &npart, 10, 100000);
+  ImGui::SliderInt("number", &m_num, 10, 100000);
   ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
   ImGui::InputFloat3("center", xc);
-  ImGui::SliderFloat("strength magnitude", &strmag, 0.01f, 10.0f, "%.3f", 2.0f);
+  ImGui::SliderFloat("strength magnitude", &m_maxstr, 0.01f, 10.0f, "%.3f", 2.0f);
   ImGui::Spacing();
-  ImGui::TextWrapped("This feature will add %d particles", npart);
+  ImGui::TextWrapped("This feature will add %d particles", m_num);
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) {
-    m_num = npart;
-    m_xsize = xs[0];
-    m_ysize = xs[1];
-    m_zsize = xs[2];
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_maxstr = strmag;
-    add = true;
-  }
-
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
+  m_xsize = xs[0];
+  m_ysize = xs[1];
+  m_zsize = xs[2];
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
   return add;
 }
 #endif
@@ -399,15 +463,23 @@ bool BlockOfRandom::draw_info_gui(const std::string action, const float ips) {
 //
 // drop a single particle from the emitter
 //
-std::vector<float>
-ParticleEmitter::init_particles(float _ips) const {
-  return std::vector<float>();
+ElementPacket<float>
+ParticleEmitter::init_elements(float _ips) const {
+  return ElementPacket<float>();
 }
 
-std::vector<float>
-ParticleEmitter::step_particles(float _ips) const {
-  if (this->is_enabled()) return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
-  else return std::vector<float>();
+ElementPacket<float>
+ParticleEmitter::step_elements(float _ips) const {
+  std::vector<float> x = {m_x, m_y, m_z};
+  std::vector<Int> idx;
+  std::vector<float> vals = {m_sx, m_sy, m_sz, 0.0};
+  ElementPacket<float> packet(x, idx, vals, x.size()/3, 0);
+
+  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+    return packet;
+  } else {
+    return ElementPacket<float>();
+  }
 }
 
 void
@@ -446,6 +518,17 @@ ParticleEmitter::to_json() const {
   return j;
 }
 
+void ParticleEmitter::generate_draw_geom() {
+  const float diam = 0.01;
+  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_sx, m_sy, m_sz);
+  m_draw = tmp->init_elements(diam/25.0);
+  for (size_t i = 0; i<m_draw.val.size()/Dimensions; i++) {
+    m_draw.val[i] = m_sx;
+    m_draw.val[i+1] = m_sy;
+    m_draw.val[i+2] = m_sz;
+  }
+}
+
 #ifdef USE_IMGUI
 bool ParticleEmitter::draw_info_gui(const std::string action, const float ips) {
   return false;
@@ -455,12 +538,13 @@ bool ParticleEmitter::draw_info_gui(const std::string action, const float ips) {
 //
 // make a singular (one row) vortex ring
 //
-std::vector<float>
-SingularRing::init_particles(float _ips) const {
-  // create a new vector to pass on
-  std::vector<float> x;
+ElementPacket<float>
+SingularRing::init_elements(float _ips) const {
 
-  if (not this->is_enabled()) return x;
+// create a new vector to pass on
+  std::vector<float> x;
+  std::vector<Int> idx;
+  std::vector<float> vals;
 
   // what size 2D integer array will we loop over
   const int ndiam = 1 + (2.0 * M_PI * m_majrad) / _ips;
@@ -483,20 +567,24 @@ SingularRing::init_particles(float _ips) const {
     x.emplace_back(m_z + m_majrad * (b1[2]*std::cos(theta) + b2[2]*std::sin(theta)));
 
     // set the strength
-    x.emplace_back(this_ips * m_circ * (b2[0]*std::cos(theta) - b1[0]*std::sin(theta)));
-    x.emplace_back(this_ips * m_circ * (b2[1]*std::cos(theta) - b1[1]*std::sin(theta)));
-    x.emplace_back(this_ips * m_circ * (b2[2]*std::cos(theta) - b1[2]*std::sin(theta)));
-
+    vals.emplace_back(this_ips * m_circ * (b2[0]*std::cos(theta) - b1[0]*std::sin(theta)));
+    vals.emplace_back(this_ips * m_circ * (b2[1]*std::cos(theta) - b1[1]*std::sin(theta)));
+    vals.emplace_back(this_ips * m_circ * (b2[2]*std::cos(theta) - b1[2]*std::sin(theta)));
     // this is the radius - still zero for now
-    x.emplace_back(0.0f);
+    vals.emplace_back(0.0f);
   }
 
-  return x;
+  ElementPacket<float> packet({x, idx, vals, (size_t)ndiam, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+    return packet;
+  } else {
+    return ElementPacket<float>();
+  }
 }
 
-std::vector<float>
-SingularRing::step_particles(float _ips) const {
-  return std::vector<float>();
+ElementPacket<float>
+SingularRing::step_elements(float _ips) const {
+  return ElementPacket<float>();
 }
 
 void
@@ -539,35 +627,104 @@ SingularRing::to_json() const {
   return j;
 }
 
+//void create
+void SingularRing::generate_draw_geom() {
+  // For sake of visualization, imagine the torus sitting on your table like a doughnut
+
+  // Number of steps around the torus
+  const int ts = 37;
+  // Number of steps around the circle perpendicular to the table
+  const int cs = 7;
+  const float m_minrad = m_majrad * 0.02;
+
+  // We first make a circle we will then drag in a circular motion to create the torus
+  std::vector<float> circle;
+  for (int i=0; i<cs; i++) {
+    const float alpha = 2.0*M_PI*i/(float)cs;
+    circle.emplace_back(m_minrad*std::sin(alpha));
+    circle.emplace_back(m_minrad*std::cos(alpha));
+  }
+
+  // generate a set of orthogonal basis vectors for the given normal
+  std::array<float,3> norm = {m_nx, m_ny, m_nz};
+  normalizeVec(norm);
+  std::array<float,3> b1, b2;
+  branchlessONB<float>(norm, b1, b2);
+  
+  std::vector<float> x;
+  // loop over integer indices
+  for (int i=0; i<ts; ++i) {
+    const float theta = 2.0 * M_PI * (float)i / (float)ts;
+    const float st = std::sin(theta);
+    const float ct = std::cos(theta);
+
+    for (int j=0; j<cs; ++j) {
+      // helper indices for the disk particles
+      const size_t ix = 2*j;
+      const size_t iy = 2*j+1;
+
+      // create a particle here
+      x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
+      x.emplace_back(m_y + (m_majrad + circle[ix]) * (b1[1]*ct + b2[1]*st) + circle[iy]*norm[1]);
+      x.emplace_back(m_z + (m_majrad + circle[ix]) * (b1[2]*ct + b2[2]*st) + circle[iy]*norm[2]);
+    }
+  }
+      
+  // Create triangles from points
+  std::vector<Int> idx;
+  for (int i=0; i<ts; i++) {
+    const Int ir1 = cs*i;
+    const Int ir2 = (i==ts-1 ? 0 : cs*(i+1));
+    for (int j=0; j<cs-1; j++) {
+      // set 1
+      idx.emplace_back(ir1+j);
+      idx.emplace_back(ir2+j);
+      idx.emplace_back(ir1+j+1);
+      // set 2
+      idx.emplace_back(ir2+j);
+      idx.emplace_back(ir2+j+1);
+      idx.emplace_back(ir1+j+1);
+    }
+    // set 1
+    idx.emplace_back(ir1+cs-1);
+    idx.emplace_back(ir2+cs-1);
+    idx.emplace_back(ir1);
+    // set 2
+    idx.emplace_back(ir2+cs-1);
+    idx.emplace_back(ir2);
+    idx.emplace_back(ir1);
+  }
+
+  std::vector<float> val;
+  val.resize(idx.size());
+  std::fill(val.begin(), val.end(), 1.0);
+  ElementPacket epack {x, idx, val, val.size()/Dimensions, 2};
+  m_draw = epack;
+  m_draw.print();
+}
+
 #ifdef USE_IMGUI
-bool SingularRing::draw_info_gui(const std::string action, const float ips) {
-  static float xc[3] = {m_x, m_y, m_z};
-  static float vstr[3] = {m_nx, m_ny, m_nz};
-  static float circ = m_circ;
-  static float rad = m_majrad;
-  static float guess_n = 1 + (2.0f * 3.1416f * rad / ips);
-  std::string buttonText = action+" singular ring";
+bool SingularRing::draw_info_gui(const std::string _action, const float _ips) {
+  float xc[3] = {m_x, m_y, m_z};
+  float vstr[3] = {m_nx, m_ny, m_nz};
+  float guess_n = 1 + (2.0f * 3.1416f * m_majrad / _ips);
+  std::string buttonText = _action+" singular ring";
   bool add = false;
 
   ImGui::InputFloat3("center", xc);
   ImGui::InputFloat3("direction", vstr);
-  ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.3f");
-  ImGui::SliderFloat("radius", &rad, 3.0f*ips, 10.0f, "%.3f");
+  ImGui::SliderFloat("circulation", &m_circ, 0.001f, 10.0f, "%.3f");
+  ImGui::SliderFloat("radius", &m_majrad, 3.0f*_ips, 10.0f, "%.3f");
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add about %f particles", guess_n);
   ImGui::Spacing();
-  if (ImGui::Button("Add singular vortex ring")) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_nx = vstr[0];
-    m_ny = vstr[1];
-    m_nz = vstr[2];
-    m_circ = circ;
-    m_majrad = rad;
-    add = true;
-  }
-
+  if (ImGui::Button("Add singular vortex ring")) { add = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_nx = vstr[0];
+  m_ny = vstr[1];
+  m_nz = vstr[2];
   return add;
 }
 #endif
@@ -575,8 +732,8 @@ bool SingularRing::draw_info_gui(const std::string action, const float ips) {
 //
 // make a thick-cored vortex ring
 //
-std::vector<float>
-ThickRing::init_particles(float _ips) const {
+ElementPacket<float>
+ThickRing::init_elements(float _ips) const {
 
   if (not this->is_enabled()) return std::vector<float>();
 
@@ -616,8 +773,9 @@ ThickRing::init_particles(float _ips) const {
   std::array<float,3> b1, b2;
   branchlessONB<float>(norm, b1, b2);
 
-  // create a new vector with the particle values
   std::vector<float> x;
+  std::vector<Int> idx;
+  std::vector<float> vals;
 
   // loop over integer indices
   for (int i=0; i<ndiam; ++i) {
@@ -638,20 +796,25 @@ ThickRing::init_particles(float _ips) const {
 
       // set the strength
       const float sscale = disk[il] * this_ips * m_circ / (float)nthisdisk;
-      x.emplace_back(sscale * (b2[0]*ct - b1[0]*st));
-      x.emplace_back(sscale * (b2[1]*ct - b1[1]*st));
-      x.emplace_back(sscale * (b2[2]*ct - b1[2]*st));
+      vals.emplace_back(sscale * (b2[0]*ct - b1[0]*st));
+      vals.emplace_back(sscale * (b2[1]*ct - b1[1]*st));
+      vals.emplace_back(sscale * (b2[2]*ct - b1[2]*st));
 
       // this is the radius - still zero for now
-      x.emplace_back(0.0f);
+      vals.emplace_back(0.0f);
     }
   }
 
-  return x;
+  ElementPacket<float> packet({x, idx, vals, (size_t)x.size()/3, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 1)) {
+    return packet;
+  } else {
+    return ElementPacket<float>();
+  }
 }
 
-std::vector<float>
-ThickRing::step_particles(float _ips) const {
+ElementPacket<float>
+ThickRing::step_elements(float _ips) const {
   return std::vector<float>();
 }
 
@@ -697,38 +860,102 @@ ThickRing::to_json() const {
   return j;
 }
 
+void ThickRing::generate_draw_geom() {
+  // For sake of visualization, imagine the torus sitting on your table like a doughnut
+
+  // Number of steps around the torus
+  const int ts = 37;
+  // Number of steps around the circle perpendicular to the table
+  const int cs = std::max(15, (int)std::floor(230*m_minrad));
+
+  // We first make a circle we will then drag in a circular motion to create the torus
+  std::vector<float> circle;
+  for (int i=0; i<cs; i++) {
+    const float alpha = 2.0*M_PI*i/(float)cs;
+    circle.emplace_back(m_minrad*std::sin(alpha));
+    circle.emplace_back(m_minrad*std::cos(alpha));
+  }
+
+  // generate a set of orthogonal basis vectors for the given normal
+  std::array<float,3> norm = {m_nx, m_ny, m_nz};
+  normalizeVec(norm);
+  std::array<float,3> b1, b2;
+  branchlessONB<float>(norm, b1, b2);
+  
+  std::vector<float> x;
+  // loop over integer indices
+  for (int i=0; i<ts; ++i) {
+    const float theta = 2.0 * M_PI * (float)i / (float)ts;
+    const float st = std::sin(theta);
+    const float ct = std::cos(theta);
+
+    for (int j=0; j<cs; ++j) {
+      // helper indices for the disk particles
+      const size_t ix = 2*j;
+      const size_t iy = 2*j+1;
+
+      // create a particle here
+      x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
+      x.emplace_back(m_y + (m_majrad + circle[ix]) * (b1[1]*ct + b2[1]*st) + circle[iy]*norm[1]);
+      x.emplace_back(m_z + (m_majrad + circle[ix]) * (b1[2]*ct + b2[2]*st) + circle[iy]*norm[2]);
+    }
+  }
+      
+  // Create triangles from points
+  std::vector<Int> idx;
+  for (int i=0; i<ts; i++) {
+    const Int ir1 = cs*i;
+    const Int ir2 = (i==ts-1 ? 0 : cs*(i+1));
+    for (int j=0; j<cs-1; j++) {
+      // set 1
+      idx.emplace_back(ir1+j);
+      idx.emplace_back(ir2+j);
+      idx.emplace_back(ir1+j+1);
+      // set 2
+      idx.emplace_back(ir2+j);
+      idx.emplace_back(ir2+j+1);
+      idx.emplace_back(ir1+j+1);
+    }
+    // set 1
+    idx.emplace_back(ir1+cs-1);
+    idx.emplace_back(ir2+cs-1);
+    idx.emplace_back(ir1);
+    // set 2
+    idx.emplace_back(ir2+cs-1);
+    idx.emplace_back(ir2);
+    idx.emplace_back(ir1);
+  }
+
+  std::vector<float> val;
+  val.resize(idx.size());
+  std::fill(val.begin(), val.end(), 1.0);
+  ElementPacket epack {x, idx, val, val.size()/Dimensions, 2};
+  m_draw = epack;
+}
+
 #ifdef USE_IMGUI
 bool ThickRing::draw_info_gui(const std::string action, const float ips) {
-  static float xc[3] = {m_x, m_y, m_z};
-  static float vstr[3] = {m_nx, m_ny, m_nz};
-  static float circ = m_circ;
-  static float rad = m_majrad;
-  static float minrad = m_minrad;
-  static float guess_n = (1 + (2.0f * 3.1416f * rad / ips) * std::pow(minrad/ips, 2));
+  float xc[3] = {m_x, m_y, m_z};
+  float vstr[3] = {m_nx, m_ny, m_nz};
+  float guess_n = (1 + (2.0f * 3.1416f * m_majrad / ips) * std::pow(m_minrad/ips, 2));
   std::string buttonText = action+" thick vortex ring";
   bool add = false;
 
   ImGui::InputFloat3("center", xc);
   ImGui::InputFloat3("direction", vstr);
-  ImGui::SliderFloat("circulation", &circ, 0.001f, 10.0f, "%.4f");
-  ImGui::SliderFloat("radius", &rad, 3.0f*ips, 10.0f, "%.3f");
-  ImGui::SliderFloat("thickness", &minrad, ips, 10.0f*ips, "%.4f");
+  ImGui::SliderFloat("circulation", &m_circ, 0.001f, 10.0f, "%.4f");
+  ImGui::SliderFloat("radius", &m_majrad, 3.0f*ips, 10.0f, "%.3f");
+  ImGui::SliderFloat("thickness", &m_minrad, ips, 10.0f*ips, "%.4f");
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add about %f particles", guess_n);
   ImGui::Spacing();
-  if (ImGui::Button("Add thick vortex ring")) {
-    m_x = xc[0];
-    m_y = xc[1];
-    m_z = xc[2];
-    m_nx = vstr[0];
-    m_ny = vstr[1];
-    m_nz = vstr[2];
-    m_circ = circ;
-    m_majrad = rad;
-    m_minrad = minrad;
-    add = true;
-  }
-
+  if (ImGui::Button("Add thick vortex ring")) { add = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_nx = vstr[0];
+  m_ny = vstr[1];
+  m_nz = vstr[2];
   return add;
 }
 #endif

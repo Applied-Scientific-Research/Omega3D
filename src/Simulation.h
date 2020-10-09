@@ -91,10 +91,12 @@ public:
   // inviscid case needs this
   void set_re_for_ips(float);
 
-  // receive and add a set of particles
+  // receive and add a set of elements
   void add_particles(std::vector<float>);
   void add_fldpts(std::vector<float>, const bool);
   void add_boundary(std::shared_ptr<Body>, ElementPacket<float>);
+  void add_elements(const ElementPacket<float>, const elem_t, const move_t, std::shared_ptr<Body>);
+  void file_elements(std::vector<Collection>&, const ElementPacket<float>, const elem_t, const move_t, std::shared_ptr<Body>);
 
   // access body list
   void add_body(std::shared_ptr<Body>);
@@ -126,7 +128,10 @@ public:
   bool do_any_bodies_move();
   bool any_nonzero_bcs();
   bool test_for_new_results();
-  std::vector<std::string> write_vtk(const int _index = -1);
+  std::vector<std::string> write_vtk(const int _index = -1,
+                                     const bool _do_bdry = true,
+                                     const bool _do_flow = true,
+                                     const bool _do_measure = true);
   bool test_vs_stop();
   bool test_vs_stop_async();
 

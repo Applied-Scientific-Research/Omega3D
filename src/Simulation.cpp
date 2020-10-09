@@ -509,7 +509,10 @@ void Simulation::clear_bodies() {
 }
 
 // Write a set of vtu files for the particles and panels
-std::vector<std::string> Simulation::write_vtk(const int _index) {
+std::vector<std::string> Simulation::write_vtk(const int _index,
+                                               const bool _do_bdry,
+                                               const bool _do_flow,
+                                               const bool _do_measure) {
 
   // solve the BEM (before any VTK or status file output)
   //std::cout << "Updating element vels" << std::endl;
@@ -517,9 +520,10 @@ std::vector<std::string> Simulation::write_vtk(const int _index) {
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
   //clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
   solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
-  conv.find_vels(thisfs, vort, bdry, vort);
-  conv.find_vels(thisfs, vort, bdry, fldpt);
-  conv.find_vels(thisfs, vort, bdry, bdry);
+
+  if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort);
+  if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt);
+  if (_do_bdry)    conv.find_vels(thisfs, vort, bdry, bdry);
 #endif
 
   // may eventually want to avoid clobbering by maintaining an internal count of the
@@ -535,9 +539,9 @@ std::vector<std::string> Simulation::write_vtk(const int _index) {
   }
 
   // ask Vtk to write files for each collection
-  write_vtk_files<float>(vort, stepnum, time, files);
-  write_vtk_files<float>(fldpt, stepnum, time, files);
-  write_vtk_files<float>(bdry, stepnum, time, files);
+  if (_do_flow)    write_vtk_files<float>(vort, stepnum, time, files);
+  if (_do_measure) write_vtk_files<float>(fldpt, stepnum, time, files);
+  if (_do_bdry)    write_vtk_files<float>(bdry, stepnum, time, files);
 
   return files;
 }
@@ -742,16 +746,16 @@ void Simulation::step() {
       //std::cout << std::endl;
 
       // none of these are passed as const, because both may be extended with new particles
-      std::array<Vector<float>,Dimensions>& x = pts.get_pos();
-      Vector<float>&                        r = pts.get_rad();
-      Vector<float>&                    elong = pts.get_elong();
-      std::array<Vector<float>,Dimensions>& s = pts.get_str();
+      std::array<Vector<float>,Dimensions>&       x = pts.get_pos();
+      Vector<float>&                              r = pts.get_rad();
+      Vector<float>&                              elong = pts.get_elong();
+      std::array<Vector<float>, numStrenPerNode>& s = pts.get_str();
 
       // last two arguments are: relative distance, allow variable core radii
       (void)split_elongated<float>(x[0], x[1], x[2], r, elong, s[0], s[1], s[2],
-                               diff.get_core_func(),
-                               diff.get_particle_overlap(),
-                               1.2);
+                                   diff.get_core_func(),
+                                   diff.get_particle_overlap(),
+                                   1.2);
 
       // we probably have a different number of particles now, resize the u, ug, elong arrays
       pts.resize(r.size());
@@ -1050,6 +1054,101 @@ void Simulation::add_boundary(std::shared_ptr<Body> _bptr, ElementPacket<float> 
       surf.add_new(_geom.x,
                    _geom.idx,
                    _geom.val);
+    }
+  }
+}
+
+// add elements (general)
+void Simulation::add_elements(const ElementPacket<float> _elems,
+                              const elem_t _et, const move_t _mt,
+                              std::shared_ptr<Body> _bptr) {
+
+  // skip out early if nothing's here
+  if (_elems.nelem == 0) return;
+
+  // now split on which Collection will receive this
+  if (_et == active) {
+    // it's active vorticity, add to vort
+    file_elements(vort, _elems, active, _mt, _bptr);
+    // in that routine, we will look for a match for move type, body pointer, and points/surfs/vols
+  } else if (_et == reactive) {
+    file_elements(bdry, _elems, reactive, _mt, _bptr);
+  } else {
+    file_elements(fldpt, _elems, inert, _mt, _bptr);
+  }
+}
+
+// file the new elements into the correct collection
+void Simulation::file_elements(std::vector<Collection>& _collvec,
+                               const ElementPacket<float> _elems,
+                               const elem_t _et, const move_t _mt,
+                               std::shared_ptr<Body> _bptr) {
+
+  // search the collections list for a match (same movement type, Body, elem dims)
+  size_t imatch = 0;
+  bool no_match = true;
+  for (size_t i=0; i<_collvec.size(); ++i) {
+    // assume match
+    bool this_match = true;
+
+    // check movement type
+    const move_t tmt = std::visit([=](auto& elem) { return elem.get_movet(); }, _collvec[i]);
+    if (_mt != tmt) {
+      this_match = false;
+
+    } else if (tmt == bodybound) {
+      // check body pointer
+      std::shared_ptr<Body> tbp = std::visit([=](auto& elem) { return elem.get_body_ptr(); }, _collvec[i]);
+      if (_bptr != tbp) this_match = false;
+    }
+
+    // check Collections element dimension
+    auto& coll = _collvec[i];
+    if (std::holds_alternative<Points<float>>(coll) and _elems.ndim != 0) {
+      this_match = false;
+    } else if (std::holds_alternative<Surfaces<float>>(coll) and _elems.ndim != 2) {
+      this_match = false;
+    }
+
+    if (this_match) {
+      imatch = i;
+      no_match = false;
+    }
+  }
+
+  // if no match, or no collections exist
+  if (no_match) {
+    // make a new collection according to element dimension
+    if (_elems.ndim == 0) {
+      _collvec.push_back(Points<float>(_elems, _et, _mt, _bptr, get_vdelta()));
+#ifdef USE_OGL_COMPUTE
+      { // tell the new collection where the compute shader vao is
+        Points<float>& pts = std::get<Points<float>>(_collvec.back());
+        pts.set_opengl_compute_state(cgl);
+      }
+#endif
+    } else if (_elems.ndim == 2) {
+      _collvec.push_back(Surfaces<float>(_elems, _et, _mt, _bptr));
+#ifdef USE_OGL_COMPUTE
+      // tell it where the compute shader vao is
+      {
+        Surfaces<float>& surf = std::get<Surfaces<float>>(_collvec.back());
+        surf.set_opengl_compute_state(cgl);
+      }
+#endif
+    }
+
+  } else {
+    // found a match - get the Collection that matched
+    auto& coll = _collvec[imatch];
+
+    // proceed to add the correct object type
+    if (_elems.ndim == 0) {
+      Points<float>& pts = std::get<Points<float>>(coll);
+      pts.add_new(_elems, get_vdelta());
+    } else if (_elems.ndim == 2) {
+      Surfaces<float>& surf = std::get<Surfaces<float>>(coll);
+      surf.add_new(_elems);
     }
   }
 }
