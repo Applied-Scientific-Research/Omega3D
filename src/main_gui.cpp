@@ -171,7 +171,9 @@ int main(int argc, char const *argv[]) {
   // colors and projection matrix for the render view
   RenderParams rparams;
   std::vector<float> gl_projection;
-  compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
+  //compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, rparams.vsize, gl_projection);
+  float field_of_view = 35.0;
+  compute_persp_proj_mat(window, rparams.vcx, rparams.vcy, field_of_view, gl_projection);
 
   // adjust some UI settings
   ImGuiStyle& style = ImGui::GetStyle();
@@ -941,7 +943,8 @@ int main(int argc, char const *argv[]) {
 #endif
 
     // draw the simulation: panels and particles
-    compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, &rparams.vsize, gl_projection);
+    //compute_ortho_proj_mat(window, rparams.vcx, rparams.vcy, rparams.vsize, gl_projection);
+    compute_persp_proj_mat(window, rparams.vcx, rparams.vcy, field_of_view, gl_projection);
     sim.drawGL(gl_projection, rparams);
 
     // if simulation has not been initted, draw the features instead!

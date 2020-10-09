@@ -12,6 +12,8 @@
 #ifdef USE_IMGUI
 #include <GLFW/glfw3.h>
 #include "imgui/imgui.h"
+#include "algorithm"
+#include <Eigen/Geometry>
 
 static void error_callback(int error, const char* description) {
   fprintf(stderr, "Error %d: %s\n", error, description);
@@ -22,8 +24,9 @@ static void error_callback(int error, const char* description) {
 //}
 
 //
-// this is NOT a GLFW callback, but my own, and it needs the
+// This is NOT a GLFW callback, but my own, and it needs the
 // ImGuiIO data structure for information on the mouse state
+// There are no OpenGL calls here
 //
 void mouse_callback(GLFWwindow* _thiswin,
                     ImGuiIO& io,
@@ -83,7 +86,7 @@ void mouse_callback(GLFWwindow* _thiswin,
 void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
                             const float         _cx,
                             const float         _cy,
-                            float*              _size,
+                            float&              _size,
                             std::vector<float>& _projmat) {
 
   // track changes in window!
@@ -97,22 +100,90 @@ void compute_ortho_proj_mat(GLFWwindow*         _thiswin,
   if (last_h != -1) {
     if (last_h != display_h or last_w != display_w) {
       // window aspect ratio changed, adjust _size
-      (*_size) *= sqrt(  ((float)last_h   /(float)last_w   )
-                       / ((float)display_h/(float)display_w));
+      _size *= sqrt(  ((float)last_h   /(float)last_w   )
+                    / ((float)display_h/(float)display_w));
     }
   }
 
-  const float vsx = (*_size);
-  const float vsy = (*_size) * (float)display_h / (float)display_w;
+  const float vsx = _size;
+  const float vsy = _size * (float)display_h / (float)display_w;
   _projmat =
     { 1.0f/vsx, 0.0f,     0.0f, 0.0f,
       0.0f,     1.0f/vsy, 0.0f, 0.0f,
       0.0f,     0.0f,    -1.0f, 0.0f,
      -_cx/vsx, -_cy/vsy,  0.0f, 1.0f };
+  // translation is on the bottom row
 
   // save window size for next call
   last_w = display_w;
   last_h = display_h;
+}
+
+//
+// Helper routine to determine perspective projection matrix
+// given coords at screen center and a measure of size
+// Also changes overall pixels-to-length scale
+//
+void compute_persp_proj_mat(GLFWwindow*         _thiswin,
+                            const float         _cx,
+                            const float         _cy,
+                            float&              _fov,
+                            std::vector<float>& _projmat) {
+
+  // get current window size
+  int display_w, display_h;
+  glfwGetFramebufferSize(_thiswin, &display_w, &display_h);
+
+  // validate fov
+  const float thisfov = std::min(std::max(_fov,10.f),160.f);
+  _fov = thisfov;
+
+  // off-axis projection
+  if (false) {
+    // compute precursors
+    const float near = 0.1;
+    const float far = 10.0;
+    const float viewscale = std::tan(thisfov * 0.5 * M_PI / 180.0) * near;
+    const float right = viewscale * (float)display_w / (float)display_h;
+    const float left = -right;
+    const float top = viewscale;
+    const float bottom = -top;
+    // generate matrix
+    _projmat =
+      { 2.0f*near/(right-left),    0.0f,                      0.0f,                     0.0f,
+        0.0f,                      2.0f*near/(top-bottom),    0.0f,                     0.0f,
+        (right+left)/(right-left), (top+bottom)/(top-bottom), (near+far)/(near-far),    -1.0f,
+        0.0f,                      0.0f,                      2.0f*far*near/(near-far), 0.0f };
+
+  } else {
+    // this is the same, but for on-axis only
+    const float near = 0.1;
+    const float far = 10.0;
+    const float viewscale = std::tan(thisfov * 0.5 * M_PI / 180.0);
+    const float right = viewscale * (float)display_w / (float)display_h;
+    const float top = viewscale;
+    _projmat =
+      { 1.0f/right, 0.0f,     0.0f,                     0.0f,
+        0.0f,       1.0f/top, 0.0f,                     0.0f,
+        0.0f,       0.0f,     (near+far)/(near-far),    -1.0f,
+        0.0f,       0.0f,     2.0f*far*near/(near-far), 0.0f };
+  }
+
+  // alternatively
+  Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_projmat.data());
+
+  // translate it to position
+  //Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Translation3f(0.0f, 0.0f, -1.5f));
+  Eigen::Transform<float,3,Eigen::Affine> trans(Eigen::Transform<float,3,Eigen::Affine>::Identity());
+  static float theta = 0.0;
+  //trans.rotate(Eigen::AngleAxisf(0.0f, Eigen::Vector3f::UnitX()));
+  trans.translate(Eigen::Vector3f(0.0f, 0.0f, -2.0f));
+  trans.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
+  theta += 0.01f;
+
+  // apply it to the matrix
+  pmat *= trans.matrix();
+
 }
 
 //
