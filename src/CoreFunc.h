@@ -46,6 +46,26 @@ static inline S my_sqrt(const S _in) {
 
 #ifdef USE_VC
 template <class S>
+static inline S my_rsqrt(const S _in) {
+  return Vc::rsqrt(_in);
+}
+template <>
+inline float my_rsqrt(const float _in) {
+  return 1.0f / std::sqrt(_in);
+}
+template <>
+inline double my_rsqrt(const double _in) {
+  return 1.0 / std::sqrt(_in);
+}
+#else
+template <class S>
+static inline S my_rsqrt(const S _in) {
+  return (S)1.0 / std::sqrt(_in);
+}
+#endif
+
+#ifdef USE_VC
+template <class S>
 static inline S my_recip(const S _in) {
   return Vc::reciprocal(_in);
 }
@@ -406,15 +426,10 @@ static inline void core_func (const S distsq, const S sr, const S tr,
   const S t2 = tr*tr;
   const S denom = distsq*distsq + s2*s2 + t2*t2;
   *r3 = oor0p75<S>(denom);
-  // this does not seem right
+  // this did not find elong correctly
   //*bbb = S(-3.0) * distsq / denom;
-  // this matches the other kernels better
-  const S denomg = distsq*distsq*my_sqrt(distsq) + s2*s2 + t2*t2;
-  *bbb = S(-3.0) / denom;
-  // but still returns elongation half of what it should be
-  // gnuplot this:
-  // set logscale y
-  // plot [0:10][1e-5:1000] 3*(x*x+1)**-2.5, -2*(x*x+1)**-2.5+5*(x*x+2.5)*(x*x+1)**-3.5, 3*x**-5, 3/(1+x**5)
+  // this looks right
+  *bbb = S(-3.0) * (*r3) * my_rsqrt(denom);
 }
 template <class S> inline size_t flops_tv_grads () { return 13; }
 
@@ -424,10 +439,7 @@ static inline void core_func (const S distsq, const S sr,
   const S s2 = sr*sr;
   const S denom = distsq*distsq + s2*s2;
   *r3 = oor0p75<S>(denom);
-  // see above
-  //*bbb = S(-3.0) * distsq / denom;
-  const S denomg = distsq*distsq*my_sqrt(distsq) + s2*s2;
-  *bbb = S(-3.0) / denom;
+  *bbb = S(-3.0) * (*r3) * my_rsqrt(denom);
 }
 template <class S> inline size_t flops_tp_grads () { return 10; }
 #endif

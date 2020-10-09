@@ -40,7 +40,7 @@ void main() {
          float t2 = targpos.w*targpos.w;
          float r2 = 1.f / sqrt(d2*d2 + s2*s2 + t2*t2);
          float r3 = r2*sqrt(r2);
-         float bbb = -3.f * d2 * r2 * r2;
+         float bbb = -3.f * r3 * r2;
          // find the velocities (15 flops here)
          float dxxw = diff.z*str.y - diff.y*str.z;
          float dyxw = diff.x*str.z - diff.z*str.x;
