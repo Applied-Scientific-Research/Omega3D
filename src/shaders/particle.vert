@@ -40,6 +40,6 @@ void main() {
 
   // make 4 verts as a single primitive and set texture coords - see other shaders
   float rscale = 2.5f * r * rad_scale;
-  gl_Position = Projection * vec4(px + rscale*quad_attr.x, py + rscale*quad_attr.y, 0.f, 1.f);
+  gl_Position = Projection * vec4(px + rscale*quad_attr.x, py + rscale*quad_attr.y, posz, 1.f);
 }
 )"

@@ -19,6 +19,6 @@ void main() {
   txcoord = quad_attr.xy;
 
   // make 4 verts as a single primitive and set texture coords - see other shaders
-  gl_Position = Projection * vec4(px + rad*quad_attr.x, py + rad*quad_attr.y, 0.f, 1.f);
+  gl_Position = Projection * vec4(px + rad*quad_attr.x, py + rad*quad_attr.y, posz, 1.f);
 }
 )"
