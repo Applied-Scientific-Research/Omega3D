@@ -20,7 +20,7 @@
 //#define USE_RM_KERNEL
 //#define USE_EXPONENTIAL_KERNEL
 #define USE_WL_KERNEL
-//#define USE_V2_KERNEL	// grads are bad!
+//#define USE_V2_KERNEL
 //#define USE_V3_KERNEL	// not programmed
 
 // helper functions: sqrt, recip, oor1p5
@@ -406,7 +406,15 @@ static inline void core_func (const S distsq, const S sr, const S tr,
   const S t2 = tr*tr;
   const S denom = distsq*distsq + s2*s2 + t2*t2;
   *r3 = oor0p75<S>(denom);
-  *bbb = S(-3.0) * distsq / denom;
+  // this does not seem right
+  //*bbb = S(-3.0) * distsq / denom;
+  // this matches the other kernels better
+  const S denomg = distsq*distsq*my_sqrt(distsq) + s2*s2 + t2*t2;
+  *bbb = S(-3.0) / denom;
+  // but still returns elongation half of what it should be
+  // gnuplot this:
+  // set logscale y
+  // plot [0:10][1e-5:1000] 3*(x*x+1)**-2.5, -2*(x*x+1)**-2.5+5*(x*x+2.5)*(x*x+1)**-3.5, 3*x**-5, 3/(1+x**5)
 }
 template <class S> inline size_t flops_tv_grads () { return 13; }
 
@@ -416,7 +424,10 @@ static inline void core_func (const S distsq, const S sr,
   const S s2 = sr*sr;
   const S denom = distsq*distsq + s2*s2;
   *r3 = oor0p75<S>(denom);
-  *bbb = S(-3.0) * distsq / denom;
+  // see above
+  //*bbb = S(-3.0) * distsq / denom;
+  const S denomg = distsq*distsq*my_sqrt(distsq) + s2*s2;
+  *bbb = S(-3.0) / denom;
 }
 template <class S> inline size_t flops_tp_grads () { return 10; }
 #endif
