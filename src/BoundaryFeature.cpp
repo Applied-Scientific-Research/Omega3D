@@ -115,8 +115,8 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
   // define geometry second
   static int item = 0;
   static int oldItem = -1;
-  const int numItems = 3;
-  const char* items[] = { "sphere", "rectangle", "from file" };
+  const int numItems = 4;
+  const char* items[] = { "sphere", "rectangle", "Boundary Quad", "from file" };
   ImGui::Spacing();
   ImGui::Combo("geometry type", &item, items, numItems);
 
@@ -134,6 +134,9 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
         bf = std::make_unique<SolidRect>(bp);
       } break;
       case 2: {
+        bf = std::make_unique<BoundaryQuad>(bp);
+      } break;
+      case 3: {
         bf = std::make_unique<ExteriorFromFile>(bp);
       } break;
     }
@@ -551,7 +554,41 @@ BoundaryQuad::to_json() const {
 
 #ifdef USE_IMGUI
 bool BoundaryQuad::draw_info_gui(const std::string action) {
-  return false;
+  float xc[3] = {m_x, m_y, m_z};
+  float x1[3] = {m_x1, m_y1, m_z1};
+  float x2[3] = {m_x2, m_y2, m_z2};
+  float x3[3] = {m_x3, m_y3, m_z3};
+  float v[3] = {m_bcx, m_bcy, m_bcz};
+  std::string buttonText = action+" boundary quad";
+  bool add = false;
+  
+  // create a solid rectangle
+  ImGui::InputFloat3("Starting point", xc);
+  ImGui::InputFloat3("Point 1", x1);
+  ImGui::InputFloat3("Point 2", x2);
+  ImGui::InputFloat3("Point 3", x3);
+  ImGui::InputFloat3("Velocities", v);
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add a boundary quad");
+  ImGui::Spacing();
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_x1 = x1[0];
+  m_y1 = x1[1];
+  m_z1 = x1[2];
+  m_x2 = x2[0];
+  m_y2 = x2[1];
+  m_z2 = x2[2];
+  m_x3 = x3[0];
+  m_y3 = x3[1];
+  m_z3 = x3[2];
+  m_bcx = v[0];
+  m_bcy = v[1];
+  m_bcz = v[2];
+
+  return add;
 }
 #endif
 
