@@ -55,23 +55,27 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
   static int item = 1;
   static int oldItem = -1;
-  const char* items[] = { "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
-  ImGui::Combo("type", &item, items, 4);
+  const int numItems = 5;
+  const char* items[] = { "vortex particle", "vortex blob", "random particles", "singular vortex ring", "thick vortex ring" };
+  ImGui::Combo("type", &item, items, numItems);
 
   // show different inputs based on what is selected
   static std::unique_ptr<FlowFeature> ff = nullptr;
   if (oldItem != item) {
     switch(item) {
       case 0: {
-        ff = std::make_unique<VortexBlob>();
+        ff = std::make_unique<SingleParticle>();
       } break;
       case 1: {
-        ff = std::make_unique<BlockOfRandom>();
+        ff = std::make_unique<VortexBlob>();
       } break;
       case 2: {
-        ff = std::make_unique<SingularRing>();
+        ff = std::make_unique<BlockOfRandom>();
       } break;
       case 3: {
+        ff = std::make_unique<SingularRing>();
+      } break;
+      case 4: {
         ff = std::make_unique<ThickRing>();
       } break;
     }
@@ -114,9 +118,9 @@ SingleParticle::init_elements(float _ips) const {
   //else return std::vector<float>();
   std::vector<float> x = {m_x, m_y, m_z};
   std::vector<Int> idx = {};
-  std::vector<float> vals = {m_sx, m_sy, m_sz};
+  std::vector<float> vals = {m_sx, m_sy, m_sz, 0.0};
   ElementPacket<float> packet({x, idx, vals, (size_t)1, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
+  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -166,17 +170,39 @@ SingleParticle::to_json() const {
 
 //Single Particles cant be made by user
 void SingleParticle::generate_draw_geom() {
-  //const float diam = 0.01;
-  //std::unique_ptr<Ovoid> tmp = std::make_unique<SolidCircle>(nullptr, true, m_x, m_y, m_z,
-  //                                                           diam, diam, diam);
-  //m_draw = tmp->init_elements(diam/25.0);
-  //std::fill(m_draw.val.begin(), m_draw.val.end(), m_str);
+  const float diam = 0.01;
+  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z,
+                                                       diam, diam, diam);
+  m_draw = tmp->init_elements(diam/25.0);
+  for (size_t i=0; i<m_draw.val.size()/Dimensions; i++) {
+    m_draw.val[i] = m_sx;
+    m_draw.val[i+1] = m_sy;
+    m_draw.val[i+2] = m_sz;
+  }
 }
 
 #ifdef USE_IMGUI
 // User can't actually create this
-bool SingleParticle::draw_info_gui(const std::string action, const float ips) {
-  return false;
+bool SingleParticle::draw_info_gui(const std::string _action, const float ips) {
+  float xc[3] = {m_x, m_y, m_z};
+  float xs[3] = {m_sx, m_sy, m_sz};
+  std::string buttonText = _action+" single particle";
+  bool add = false;
+
+  ImGui::InputFloat3("center", xc);
+  ImGui::InputFloat3("strengths", xs);
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add a single particle");
+  ImGui::Spacing();
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = xs[0];
+  m_sy = xs[1];
+  m_sz = xs[2];
+  
+  return add;
 }
 #endif
 
