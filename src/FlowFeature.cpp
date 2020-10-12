@@ -52,7 +52,7 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 }
 
 #ifdef USE_IMGUI
-bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
+bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float _ips) {
   static int item = 1;
   static int oldItem = -1;
   const int numItems = 6;
@@ -87,7 +87,7 @@ bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &f
   }
 
   bool created = false;
-  if (ff->draw_info_gui("Add", ips)) {
+  if (ff->draw_info_gui("Add", _ips)) {
     ff->generate_draw_geom();
     ffs.emplace_back(std::move(ff));
     ff = nullptr;
@@ -187,7 +187,7 @@ void SingleParticle::generate_draw_geom() {
 
 #ifdef USE_IMGUI
 // User can't actually create this
-bool SingleParticle::draw_info_gui(const std::string _action, const float ips) {
+bool SingleParticle::draw_info_gui(const std::string _action, const float _ips) {
   float xc[3] = {m_x, m_y, m_z};
   float xs[3] = {m_sx, m_sy, m_sz};
   std::string buttonText = _action+" single particle";
@@ -470,7 +470,7 @@ void BlockOfRandom::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool BlockOfRandom::draw_info_gui(const std::string _action, const float ips) {
+bool BlockOfRandom::draw_info_gui(const std::string _action, const float _ips) {
   static float xs[3] = {m_xsize, m_ysize, m_zsize};
   static float xc[3] = {m_x, m_y, m_z};
   std::string buttonText = _action+" random vorticies";
@@ -564,7 +564,7 @@ void ParticleEmitter::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool ParticleEmitter::draw_info_gui(const std::string _action, const float ips) {
+bool ParticleEmitter::draw_info_gui(const std::string _action, const float _ips) {
   float xc[3] = {m_x, m_y, m_z};
   float xs[3] = {m_sx, m_sy, m_sz};
   std::string buttonText = _action+" particle emitter";
@@ -986,18 +986,18 @@ void ThickRing::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool ThickRing::draw_info_gui(const std::string _action, const float ips) {
+bool ThickRing::draw_info_gui(const std::string _action, const float _ips) {
   float xc[3] = {m_x, m_y, m_z};
   float vstr[3] = {m_nx, m_ny, m_nz};
-  float guess_n = (1 + (2.0f * 3.1416f * m_majrad / ips) * std::pow(m_minrad/ips, 2));
+  float guess_n = (1 + (2.0f * 3.1416f * m_majrad / _ips) * std::pow(m_minrad/_ips, 2));
   std::string buttonText = _action+" thick vortex ring";
   bool add = false;
 
   ImGui::InputFloat3("center", xc);
   ImGui::InputFloat3("direction", vstr);
   ImGui::SliderFloat("circulation", &m_circ, 0.001f, 10.0f, "%.4f");
-  ImGui::SliderFloat("radius", &m_majrad, 3.0f*ips, 10.0f, "%.3f");
-  ImGui::SliderFloat("thickness", &m_minrad, ips, 10.0f*ips, "%.4f");
+  ImGui::SliderFloat("radius", &m_majrad, 3.0f*_ips, 10.0f, "%.3f");
+  ImGui::SliderFloat("thickness", &m_minrad, _ips, 10.0f*_ips, "%.4f");
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add about %f particles", guess_n);
   ImGui::Spacing();
