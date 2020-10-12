@@ -263,7 +263,7 @@ VortexBlob::init_elements(float _ips) const {
   //   has exactly the right strength
   std::cout << "blob had " << tot_wgt << " initial circulation" << std::endl;
   double str_scale = 1.0 / tot_wgt;
-  for (size_t i=0; i<x.size(); i+=4) {
+  for (size_t i=0; i<vals.size(); i+=4) {
     vals[i+0] = (float)((double)vals[i+0] * str_scale);
     vals[i+1] = (float)((double)vals[i+1] * str_scale);
     vals[i+2] = (float)((double)vals[i+2] * str_scale);

@@ -126,7 +126,7 @@ public:
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
     // and that it has the right number of values per particle
-    std::cout << _in.val.size()/(numStrenPerNode+1) << " " << _in.nelem << std::endl;
+    //std::cout << _in.val.size()/(numStrenPerNode+1) << " " << _in.nelem << std::endl;
     if (_e == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
     else if (_e == reactive) assert(false && "Input ElementPacket with reactive points is unsupported");
     else assert(_in.val.size()/(numStrenPerNode+1) == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
