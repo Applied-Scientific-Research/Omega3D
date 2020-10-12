@@ -275,7 +275,7 @@ VortexBlob::from_json(const nlohmann::json j) {
   m_sx = s[0];
   m_sy = s[1];
   m_sz = s[2];
-  m_rad = j["rad"];
+  m_rad = j["radius"];
   m_softness = j["softness"];
   m_enabled = j.value("enabled", true);
 }
