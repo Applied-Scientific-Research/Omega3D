@@ -272,7 +272,7 @@ void draw_render_gui(RenderParams &rp) {
   ImGui::ColorEdit3("feature color",        rp.default_color);
   ImGui::ColorEdit3("background color",     rp.clear_color);
   //ImGui::Checkbox("show origin", &show_origin);
-  ImGui::SliderFloat("particle brightness", &(rp.circ_density), 0.01f, 10.0f, "%.2f", 2.0f);
+  ImGui::SliderFloat("particle brightness", &(rp.circ_density), 0.001f, 1.0f, "%.3f", 2.0f);
   ImGui::SliderFloat("particle scale", &(rp.vorton_scale), 0.01f, 2.0f, "%.2f", 2.0f);
 
   if (ImGui::Button("Recenter")) {
