@@ -571,12 +571,12 @@ void Grid2dPoints::generate_draw_geom() {
   const float normS = std::sqrt( std::pow(m_xs, 2) + std::pow(m_ys, 2) + std::pow(m_zs, 2));
   const float normF = std::sqrt( std::pow(m_xf, 2) + std::pow(m_yf, 2) + std::pow(m_zf, 2));
   const float p0[3] = { m_x, m_y, m_z };
-  const float p1[3] = { m_x+(m_xs*0.5*m_ds/normS)+(m_xf),
-                        m_y+(m_ys*0.5*m_ds/normS)+(m_yf),
-                        m_z+(m_zs*0.5*m_ds/normS)+(m_zf) };
-  const float p2[3] = { m_x+(m_xf*0.5*m_df/normF)+(m_xs),
-                        m_y+(m_yf*0.5*m_df/normF)+(m_ys),
-                        m_z+(m_zf*0.5*m_df/normF)+(m_zs) };
+  const float p1[3] = { m_x+(m_xs*0.5f*m_ds/normS)+(m_xf),
+                        m_y+(m_ys*0.5f*m_ds/normS)+(m_yf),
+                        m_z+(m_zs*0.5f*m_ds/normS)+(m_zf) };
+  const float p2[3] = { m_x+(m_xf*0.5f*m_df/normF)+(m_xs),
+                        m_y+(m_yf*0.5f*m_df/normF)+(m_ys),
+                        m_z+(m_zf*0.5f*m_df/normF)+(m_zs) };
   const float p3[3] = { m_x+(m_xs)+(m_xf),
                         m_y+(m_ys)+(m_yf),
                         m_z+(m_zs)+(m_zf) };

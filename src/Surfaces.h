@@ -1,8 +1,8 @@
 /*
  * Surfaces.h - Specialized class for trimesh surfaces in 3D
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2019-20 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -1173,7 +1173,8 @@ public:
   }
 
   // OpenGL3 stuff to draw triangles, called once per frame
-  void drawGL(std::vector<float>& _projmat,
+  void drawGL(std::vector<float>& _modelviewmat,
+              std::vector<float>& _projmat,
               RenderParams&       _rparams,
               const float         _vdelta) {
 
@@ -1201,11 +1202,17 @@ public:
       //if (this->E == inert) {
       //} else { // this->E is active or reactive
 
-      // draw as triangles
+      // draw using the triangle program
       glUseProgram(mgl->spo[0]);
 
+      // multiply the two matrices to get the MVP matrix
+      Eigen::Matrix<float,4,4> mvp;
+      Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_projmat.data());
+      Eigen::Map<Eigen::Matrix<float,4,4>> mvmat(_modelviewmat.data());
+      mvp = pmat * mvmat;
+
       // upload the current projection matrix
-      glUniformMatrix4fv(mgl->projmat_attribute, 1, GL_FALSE, _projmat.data());
+      glUniformMatrix4fv(mgl->projmat_attribute, 1, GL_FALSE, mvp.data());
 
       // upload the current color values
       glUniform4fv(mgl->pos_color_attribute, 1, (const GLfloat *)_rparams.pos_circ_color);

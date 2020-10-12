@@ -3,11 +3,14 @@
  *
  * (c)2020 Applied Scientific Research, Inc.
  *         Mark J Stock <markjstock@gmail.com>
+ *         Blake B Hillier <blakehillier@mac.com>
  */
 
 #include "FeatureDraw.h"
 #include "ShaderHelper.h"
 #include "OglHelper.h"
+
+#include <Eigen/Dense>
 
 #include <iostream>
 #include <vector>
@@ -193,7 +196,8 @@ void FeatureDraw::updateGL() {
   }*/
 }
 
-void FeatureDraw::drawGL(std::vector<float>& _projmat,
+void FeatureDraw::drawGL(std::vector<float>& _modelviewmat,
+                         std::vector<float>& _projmat,
                          RenderParams&       _rparams,
                          bool                _oneColor) {
 
@@ -222,11 +226,17 @@ void FeatureDraw::drawGL(std::vector<float>& _projmat,
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
 
-    // draw as lines
+    // enable the elempacket program
     glUseProgram(m_gl->spo[0]);
 
+    // multiply the two matrices to get the MVP matrix
+    Eigen::Matrix<float,4,4> mvp;
+    Eigen::Map<Eigen::Matrix<float,4,4>> pmat(_projmat.data());
+    Eigen::Map<Eigen::Matrix<float,4,4>> mvmat(_modelviewmat.data());
+    mvp = pmat * mvmat;
+
     // upload the current projection matrix
-    glUniformMatrix4fv(m_gl->projmat_attribute, 1, GL_FALSE, _projmat.data());
+    glUniformMatrix4fv(m_gl->projmat_attribute, 1, GL_FALSE, mvp.data());
 
     // upload the current color values
     glUniform4fv(m_gl->pos_color_attribute, 1, (const GLfloat *)_rparams.pos_circ_color);

@@ -3,6 +3,7 @@
  *
  * (c)2020 Applied Scientific Research, Inc.
  *         Mark J Stock <markjstock@gmail.com>
+ *         Blake B Hillier <blakehillier@mac.com>
  */
 
 #pragma once
@@ -27,7 +28,7 @@ public:
   //void reset_enabled(const size_t, const bool);
 
   void updateGL();
-  void drawGL(std::vector<float>&, RenderParams&, bool);
+  void drawGL(std::vector<float>&, std::vector<float>&, RenderParams&, bool);
 
 private:
   //
