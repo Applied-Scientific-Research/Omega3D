@@ -51,7 +51,7 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
 }
 
 #ifdef USE_IMGUI
-bool MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &mfs, const float ips, const float &tracerScale) {
+bool MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &mfs, const float _ips, const float &_tracerScale) {
   static int item = 0;
   static int oldItem = -1;
   const char* items[] = { "single point", "measurement circle", "measurement line", "2d grid" };
@@ -78,7 +78,7 @@ bool MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeatur
     }
 
   bool created = false;  
-  if (mf->draw_info_gui("Add", tracerScale, ips)) {
+  if (mf->draw_info_gui("Add", _tracerScale, _ips)) {
     mf->generate_draw_geom();
     mfs.emplace_back(std::move(mf));
     mf = nullptr;
@@ -190,10 +190,10 @@ void SinglePoint::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool SinglePoint::draw_info_gui(const std::string action, const float &tracerScale,
-                                const float ips) {
+bool SinglePoint::draw_info_gui(const std::string _action, const float &_tracerScale,
+                                const float _ips) {
   float xc[3] = {m_x, m_y, m_z};
-  const std::string buttonText = action+" single point";
+  const std::string buttonText = _action+" single point";
   bool add = false;
 
   ImGui::InputFloat3("position", xc);
@@ -456,16 +456,16 @@ void MeasurementLine::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool MeasurementLine::draw_info_gui(const std::string action, const float &tracerScale, float ips) {
+bool MeasurementLine::draw_info_gui(const std::string _action, const float &_tracerScale, float _ips) {
   float xc[3] = {m_x, m_y, m_z};
   float xf[3] = {m_xf, m_yf, m_zf};
-  const std::string buttonText = action+" line of measurement points";
+  const std::string buttonText = _action+" line of measurement points";
   bool add = false;
   
   ImGui::InputFloat3("start", xc);
   ImGui::InputFloat3("finish", xf);
   ImGui::TextWrapped("This feature will add about %d field points",
-                     1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(tracerScale*ips)));
+                     1+(int)(std::sqrt(std::pow(xf[0]-xc[0],2)+std::pow(xf[1]-xc[1],2)+std::pow(xf[2]-xc[2],2))/(_tracerScale*_ips)));
   if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
@@ -591,12 +591,12 @@ void Grid2dPoints::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool Grid2dPoints::draw_info_gui(const std::string action, const float &tracer_scale, const float ips) {
+bool Grid2dPoints::draw_info_gui(const std::string _action, const float &tracer_scale, const float _ips) {
   float xc[3] = {m_x, m_y, m_z};
   float xs[3] = {m_xs, m_ys, m_zs};
   float xf[3] = {m_xf, m_yf, m_zf};
   float dx[2] = {m_ds, m_df};
-  const std::string buttonText = action+" 2D grid of measurement points";
+  const std::string buttonText = _action+" 2D grid of measurement points";
   bool add = false;
   
   ImGui::InputFloat3("corner", xc);
