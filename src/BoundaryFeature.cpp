@@ -280,11 +280,11 @@ void Ovoid::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool Ovoid::draw_info_gui(const std::string action) {
+bool Ovoid::draw_info_gui(const std::string _action) {
   float xc[3] = {m_x, m_y, m_z};
   float scale = m_sx;
-  std::string buttonText = action+" spherical body";
-  bool added = false;
+  std::string buttonText = _action+" spherical body";
+  bool add = false;
 
   // create a solid sphere
   ImGui::InputFloat3("center", xc);
@@ -292,12 +292,12 @@ bool Ovoid::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid spherical body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
   m_z = xc[2];
   m_sx = m_sy = m_sz = scale;
-  return added;
+  return add;
 }
 #endif
 
@@ -396,13 +396,13 @@ SolidRect::to_json() const {
 }
 
 #ifdef USE_IMGUI
-bool SolidRect::draw_info_gui(const std::string action) {
+bool SolidRect::draw_info_gui(const std::string _action) {
   //static bool external_flow = true;
   static float xc[3] = {m_x, m_y, m_z};
   static float xs[3] = {m_sx, m_sy, m_sz};
   //static float rotdeg = 0.0f;
-  std::string buttonText = action+" rectangular body";
-  bool added = false;
+  std::string buttonText = _action+" rectangular body";
+  bool add = false;
   
   // create a solid rectangle
   ImGui::InputFloat3("center", xc);
@@ -412,14 +412,14 @@ bool SolidRect::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid rectangular body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
   m_z = xc[2];
   m_sx = xs[0];
   m_sy = xs[1];
   m_sz = xs[2];
-  return added;
+  return add;
 }
 #endif
 
@@ -553,13 +553,13 @@ BoundaryQuad::to_json() const {
 }
 
 #ifdef USE_IMGUI
-bool BoundaryQuad::draw_info_gui(const std::string action) {
+bool BoundaryQuad::draw_info_gui(const std::string _action) {
   float xc[3] = {m_x, m_y, m_z};
   float x1[3] = {m_x1, m_y1, m_z1};
   float x2[3] = {m_x2, m_y2, m_z2};
   float x3[3] = {m_x3, m_y3, m_z3};
   float v[3] = {m_bcx, m_bcy, m_bcz};
-  std::string buttonText = action+" boundary quad";
+  std::string buttonText = _action+" boundary quad";
   bool add = false;
   
   // create a solid rectangle
@@ -683,7 +683,7 @@ ExteriorFromFile::to_json() const {
 }
 
 #ifdef USE_IMGUI
-bool ExteriorFromFile::draw_info_gui(const std::string action) {
+bool ExteriorFromFile::draw_info_gui(const std::string _action) {
   // load a geometry file
   static std::string infile = m_infile;
   static std::string shortname = infile;
@@ -712,8 +712,8 @@ bool ExteriorFromFile::draw_info_gui(const std::string action) {
   static float xc[3] = {m_x, m_y, m_z};
   //static float rotdeg = 0.0f;
   static float scale = m_sx;
-  std::string buttonText = action+" geometry from file";
-  bool added = false;
+  std::string buttonText = _action+" geometry from file";
+  bool add = false;
   
   ImGui::SameLine();
   ImGui::Text(shortname.c_str());
@@ -722,12 +722,12 @@ bool ExteriorFromFile::draw_info_gui(const std::string action) {
   ImGui::Spacing();
   ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
   ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) { added = true; }
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
   m_z = xc[2];
   m_sx = m_sy = m_sz = scale;
-  return added;
+  return add;
 }
 #endif
 

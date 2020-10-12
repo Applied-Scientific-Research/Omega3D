@@ -190,10 +190,10 @@ void SinglePoint::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool SinglePoint::draw_info_gui(const std::string action, const float &tracerScale,
+bool SinglePoint::draw_info_gui(const std::string _action, const float &tracerScale,
                                 const float ips) {
   float xc[3] = {m_x, m_y, m_z};
-  const std::string buttonText = action+" single point";
+  const std::string buttonText = _action+" single point";
   bool add = false;
 
   ImGui::InputFloat3("position", xc);
@@ -456,10 +456,10 @@ void MeasurementLine::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool MeasurementLine::draw_info_gui(const std::string action, const float &tracerScale, float ips) {
+bool MeasurementLine::draw_info_gui(const std::string _action, const float &tracerScale, float ips) {
   float xc[3] = {m_x, m_y, m_z};
   float xf[3] = {m_xf, m_yf, m_zf};
-  const std::string buttonText = action+" line of measurement points";
+  const std::string buttonText = _action+" line of measurement points";
   bool add = false;
   
   ImGui::InputFloat3("start", xc);
@@ -591,12 +591,12 @@ void Grid2dPoints::generate_draw_geom() {
 }
 
 #ifdef USE_IMGUI
-bool Grid2dPoints::draw_info_gui(const std::string action, const float &tracer_scale, const float ips) {
+bool Grid2dPoints::draw_info_gui(const std::string _action, const float &tracer_scale, const float ips) {
   float xc[3] = {m_x, m_y, m_z};
   float xs[3] = {m_xs, m_ys, m_zs};
   float xf[3] = {m_xf, m_yf, m_zf};
   float dx[2] = {m_ds, m_df};
-  const std::string buttonText = action+" 2D grid of measurement points";
+  const std::string buttonText = _action+" 2D grid of measurement points";
   bool add = false;
   
   ImGui::InputFloat3("corner", xc);
