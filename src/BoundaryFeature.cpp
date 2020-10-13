@@ -278,7 +278,6 @@ Ovoid::to_json() const {
 void Ovoid::generate_draw_geom() {
   m_draw = init_elements(0.125);
   m_draw.val.resize(m_draw.val.size()/Dimensions);
-  m_draw.nelem = m_draw.val.size();
 }
 
 #ifdef USE_IMGUI
@@ -400,7 +399,6 @@ SolidRect::to_json() const {
 void SolidRect::generate_draw_geom() {
   m_draw = init_elements(1);
   m_draw.val.resize(m_draw.val.size()/Dimensions);
-  m_draw.nelem = m_draw.val.size();
 }
 
 #ifdef USE_IMGUI
@@ -559,7 +557,6 @@ BoundaryQuad::to_json() const {
 void BoundaryQuad::generate_draw_geom() {
   m_draw = init_elements(1);
   m_draw.val.resize(m_draw.val.size()/Dimensions);
-  m_draw.nelem = m_draw.val.size();
 }
 
 #ifdef USE_IMGUI
@@ -691,7 +688,6 @@ ExteriorFromFile::to_json() const {
 void ExteriorFromFile::generate_draw_geom() {
   m_draw = init_elements(1);
   m_draw.val.resize(m_draw.val.size()/Dimensions);
-  m_draw.nelem = m_draw.val.size();
 }
 
 #ifdef USE_IMGUI

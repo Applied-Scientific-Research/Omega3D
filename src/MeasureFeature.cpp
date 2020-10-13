@@ -188,7 +188,7 @@ void SinglePoint::generate_draw_geom() {
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
   m_draw = tmp->init_elements(diam/25.0);
 
-  const int numPts = m_draw.val.size()/Dimensions;
+  const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
 }
 
@@ -324,7 +324,7 @@ void MeasurementBlob::generate_draw_geom() {
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2.0, m_rad*2.0, m_rad*2.0);
   m_draw = tmp->init_elements(m_rad/12.5);
 
-  const int numPts = m_draw.val.size()/Dimensions;
+  const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
 }
 
@@ -459,7 +459,7 @@ void MeasurementLine::generate_draw_geom() {
                                                                std::max(minS, m_zf-m_z));
   m_draw = tmp->init_elements(1.0);
 
-  const int numPts = m_draw.val.size()/Dimensions;
+  const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
 }
 
@@ -596,7 +596,7 @@ void Grid2dPoints::generate_draw_geom() {
                                                                               0.0, 0.0, 0.0);
   m_draw = tmp->init_elements(1.0);
   
-  const int numPts = m_draw.val.size()/Dimensions;
+  const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
 }
 

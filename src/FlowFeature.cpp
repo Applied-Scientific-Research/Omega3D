@@ -179,10 +179,10 @@ void SingleParticle::generate_draw_geom() {
                                                        diam, diam, diam);
   m_draw = tmp->init_elements(diam/25.0);
 
-  const int numPts = m_draw.val.size()/Dimensions;
+  // OpenGL expects a val for every point (3x's)
+  const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
-  const float sign = std::copysign(1.0, m_sx+m_sy+m_sz);
-  std::fill(m_draw.val.begin(), m_draw.val.end(), sign*length(std::array<float,3>{m_sx, m_sy, m_sz}));
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_sx, m_sy, m_sz}));
 }
 
 #ifdef USE_IMGUI
@@ -201,8 +201,6 @@ bool SingleParticle::draw_info_gui(const std::string _action, const float _ips) 
   if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
-  m_z = xc[2];
-  m_sx = xs[0];
   m_sy = xs[1];
   m_sz = xs[2];
   
@@ -328,10 +326,10 @@ void VortexBlob::generate_draw_geom() {
                                                        2*m_rad, 2*m_rad, 2*m_rad);
   m_draw = tmp->init_elements(2*m_rad/25.0);
   
-  const int numPts = m_draw.val.size()/Dimensions;
+  // OpenGL expects a val for every point (3x's)
+  const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
-  const float sign = std::copysign(1.0, m_sx+m_sy+m_sz);
-  std::fill(m_draw.val.begin(), m_draw.val.end(), sign*length(std::array<float,3>{m_sx, m_sy, m_sz}));
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_sx, m_sy, m_sz}));
 }
 
 #ifdef USE_IMGUI
@@ -463,7 +461,8 @@ void BlockOfRandom::generate_draw_geom() {
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
-  const size_t numPts = m_draw.val.size()/Dimensions;
+  // OpenGL expects a val for every point (3x's)
+  const size_t numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
   for (size_t i = 0; i < numPts; i++) {
     m_draw.val[i] = m_maxstr*zmean_dist(gen);
@@ -747,13 +746,10 @@ void SingularRing::generate_draw_geom() {
     idx.emplace_back(ir1);
   }
 
-  const size_t numPts = idx.size()/Dimensions;
-  std::vector<float> val;
-  val.resize(numPts);
-  const float sign = std::copysign(1.0, m_nx+m_ny+m_nz);
-  std::fill(val.begin(), val.end(), sign*length(std::array<float,3>{m_nx, m_ny, m_nz}));
-  ElementPacket epack {x, idx, val, numPts, 2};
-  m_draw = epack;
+  // OpenGL expects a val for every point (3x's)
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
 }
 
 #ifdef USE_IMGUI
@@ -979,13 +975,10 @@ void ThickRing::generate_draw_geom() {
     idx.emplace_back(ir1);
   }
 
-  const size_t numPts = idx.size()/Dimensions;
-  std::vector<float> val;
-  val.resize(numPts);
-  const float sign = std::copysign(1.0, m_nx+m_ny+m_nz);
-  std::fill(val.begin(), val.end(), sign*length(std::array<float,3>{m_nx, m_ny, m_nz}));
-  ElementPacket epack {x, idx, val, numPts, 2};
-  m_draw = epack;
+  // OpenGL expects a val for every point (3x's)
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
 }
 
 #ifdef USE_IMGUI
