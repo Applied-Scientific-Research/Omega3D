@@ -15,11 +15,10 @@ void main() {
     base_color = def_color;
   } else {
   // flip between base colors based on magnitude of strength
-    base_color = abs(str)*(pos_color*step(0.0f, str) + neg_color*step(0.0f, -str));
+    //base_color = abs(str)*(pos_color*step(0.0f, str) + neg_color*step(0.0f, -str));
+    base_color = abs(str)*pos_color;
   }
-  // To hide vertices
-  //base_color = base_color*(1-use_back) + back_color*use_back;
-
+ 
   // pass 1 vert as a single primitive and set texture coords - see other shaders
   gl_Position = Projection * vec4(pos, 1.f);
 }
