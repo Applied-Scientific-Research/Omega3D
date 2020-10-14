@@ -453,7 +453,7 @@ int main(int argc, char const *argv[]) {
         // finish setting up and run
         is_viscous = sim.get_diffuse();
         currentItemIndex = 0;
-        sim_is_running = true;
+        sim_is_running = false;
       }
     }
 

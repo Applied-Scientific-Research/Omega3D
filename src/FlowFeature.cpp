@@ -681,6 +681,7 @@ SingularRing::to_json() const {
 
 //void create
 void SingularRing::generate_draw_geom() {
+  std::cout << "generate_draw_geom() called" << std::endl;
   // For sake of visualization, imagine the torus sitting on your table like a doughnut
   // Number of steps around the torus
   const int ts = 37;
@@ -747,9 +748,11 @@ void SingularRing::generate_draw_geom() {
   }
 
   // OpenGL expects a val for every point (3x's)
-  const int numPts = m_draw.x.size()/Dimensions;
-  m_draw.val.resize(numPts);
-  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
+  const int numPts = x.size()/Dimensions;
+  std::vector<float> val;
+  val.resize(numPts);
+  std::fill(val.begin(), val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
+  m_draw = ElementPacket<float>{x, idx, val, idx.size()/Dimensions, 2};
 }
 
 #ifdef USE_IMGUI
@@ -976,9 +979,11 @@ void ThickRing::generate_draw_geom() {
   }
 
   // OpenGL expects a val for every point (3x's)
-  const int numPts = m_draw.x.size()/Dimensions;
-  m_draw.val.resize(numPts);
-  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
+  const int numPts = x.size()/Dimensions;
+  std::vector<float> val;
+  val.resize(numPts);
+  std::fill(val.begin(), val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
+  m_draw = ElementPacket<float>{x, idx, val, idx.size()/Dimensions, 2};
 }
 
 #ifdef USE_IMGUI
