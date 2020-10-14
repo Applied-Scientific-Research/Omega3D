@@ -277,6 +277,7 @@ Ovoid::to_json() const {
 
 void Ovoid::generate_draw_geom() {
   m_draw = init_elements(0.125);
+  m_draw.val.resize(m_draw.val.size()/Dimensions);
 }
 
 #ifdef USE_IMGUI
@@ -395,6 +396,11 @@ SolidRect::to_json() const {
   return mesh;
 }
 
+void SolidRect::generate_draw_geom() {
+  m_draw = init_elements(1);
+  m_draw.val.resize(m_draw.val.size()/Dimensions);
+}
+
 #ifdef USE_IMGUI
 bool SolidRect::draw_info_gui(const std::string _action) {
   //static bool external_flow = true;
@@ -422,10 +428,6 @@ bool SolidRect::draw_info_gui(const std::string _action) {
   return add;
 }
 #endif
-
-void SolidRect::generate_draw_geom() {
-  m_draw = init_elements(1);
-}
 
 //
 // Create a triangulated quad of a solid boundary
@@ -552,6 +554,11 @@ BoundaryQuad::to_json() const {
   return mesh;
 }
 
+void BoundaryQuad::generate_draw_geom() {
+  m_draw = init_elements(1);
+  m_draw.val.resize(m_draw.val.size()/Dimensions);
+}
+
 #ifdef USE_IMGUI
 bool BoundaryQuad::draw_info_gui(const std::string _action) {
   float xc[3] = {m_x, m_y, m_z};
@@ -591,10 +598,6 @@ bool BoundaryQuad::draw_info_gui(const std::string _action) {
   return add;
 }
 #endif
-
-void BoundaryQuad::generate_draw_geom() {
-  m_draw = init_elements(1);
-}
 
 //
 // Create a closed object from a geometry file (fluid is outside)
@@ -682,6 +685,11 @@ ExteriorFromFile::to_json() const {
   return mesh;
 }
 
+void ExteriorFromFile::generate_draw_geom() {
+  m_draw = init_elements(1);
+  m_draw.val.resize(m_draw.val.size()/Dimensions);
+}
+
 #ifdef USE_IMGUI
 bool ExteriorFromFile::draw_info_gui(const std::string _action) {
   // load a geometry file
@@ -730,7 +738,3 @@ bool ExteriorFromFile::draw_info_gui(const std::string _action) {
   return add;
 }
 #endif
-
-void ExteriorFromFile::generate_draw_geom() {
-  m_draw = init_elements(1);
-}

@@ -58,9 +58,9 @@ void FeatureDraw::add_elements(const ElementPacket<float> _in, const bool _enabl
   // and set the str/val array for per-element color/strength
   const size_t nv_old = m_geom.val.size();
   m_geom.val.insert(std::end(m_geom.val), std::begin(_in.val), std::end(_in.val));
-  if (!_enabled) {
-    std::for_each(m_geom.val.begin()+nv_old, m_geom.val.end(), &disable);
-  }
+  //if (!_enabled) {
+  //  std::for_each(m_geom.val.begin()+nv_old, m_geom.val.end(), &disable);
+  //}
 
   // append to m_idx the start and end indices for this ElementPacket
   m_idx.push_back(std::make_pair((int)nv_old, (int)m_geom.val.size()));

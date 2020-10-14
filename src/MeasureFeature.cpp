@@ -187,6 +187,9 @@ void SinglePoint::generate_draw_geom() {
   const float diam = 0.005;
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
   m_draw = tmp->init_elements(diam/25.0);
+
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
 }
 
 #ifdef USE_IMGUI
@@ -320,6 +323,9 @@ MeasurementBlob::to_json() const {
 void MeasurementBlob::generate_draw_geom() {
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2.0, m_rad*2.0, m_rad*2.0);
   m_draw = tmp->init_elements(m_rad/12.5);
+
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
 }
 
 #ifdef USE_IMGUI
@@ -452,7 +458,9 @@ void MeasurementLine::generate_draw_geom() {
                                                                std::max(minS, m_xf-m_x), std::max(minS, m_yf-m_y),
                                                                std::max(minS, m_zf-m_z));
   m_draw = tmp->init_elements(1.0);
-  std::cout << tmp->to_string() << std::endl;
+
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
 }
 
 #ifdef USE_IMGUI
@@ -587,7 +595,9 @@ void Grid2dPoints::generate_draw_geom() {
                                                                               p1[0], p1[1], p1[2],
                                                                               0.0, 0.0, 0.0);
   m_draw = tmp->init_elements(1.0);
-  std::cout << tmp->to_string() << std::endl;
+  
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
 }
 
 #ifdef USE_IMGUI

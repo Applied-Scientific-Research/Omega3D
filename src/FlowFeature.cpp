@@ -178,11 +178,11 @@ void SingleParticle::generate_draw_geom() {
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z,
                                                        diam, diam, diam);
   m_draw = tmp->init_elements(diam/25.0);
-  for (size_t i=0; i<m_draw.val.size()/Dimensions; i++) {
-    m_draw.val[i] = m_sx;
-    m_draw.val[i+1] = m_sy;
-    m_draw.val[i+2] = m_sz;
-  }
+
+  // OpenGL expects a val for every point (3x's)
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_sx, m_sy, m_sz}));
 }
 
 #ifdef USE_IMGUI
@@ -201,8 +201,6 @@ bool SingleParticle::draw_info_gui(const std::string _action, const float _ips) 
   if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
-  m_z = xc[2];
-  m_sx = xs[0];
   m_sy = xs[1];
   m_sz = xs[2];
   
@@ -324,15 +322,14 @@ VortexBlob::to_json() const {
 
 void VortexBlob::generate_draw_geom() {
   // Based on irad in init_elems
-  const float rad = 1+2*m_rad+m_softness;
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z,
-                                                       2*rad, 2*rad, 2*rad);
-  m_draw = tmp->init_elements(0.125);
-  for (size_t i=0; i<m_draw.val.size()/Dimensions; i++) {
-    m_draw.val[i] = m_sx;
-    m_draw.val[i+1] = m_sy;
-    m_draw.val[i+2] = m_sz;
-  }
+                                                       2*m_rad, 2*m_rad, 2*m_rad);
+  m_draw = tmp->init_elements(2*m_rad/25.0);
+  
+  // OpenGL expects a val for every point (3x's)
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_sx, m_sy, m_sz}));
 }
 
 #ifdef USE_IMGUI
@@ -464,7 +461,10 @@ void BlockOfRandom::generate_draw_geom() {
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
-  for (size_t i = 0; i < m_draw.val.size(); i++) {
+  // OpenGL expects a val for every point (3x's)
+  const size_t numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  for (size_t i = 0; i < numPts; i++) {
     m_draw.val[i] = m_maxstr*zmean_dist(gen);
   }
 }
@@ -556,11 +556,11 @@ void ParticleEmitter::generate_draw_geom() {
   const float diam = 0.01;
   std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
   m_draw = tmp->init_elements(diam/25.0);
-  for (size_t i = 0; i<m_draw.val.size()/Dimensions; i++) {
-    m_draw.val[i] = m_sx;
-    m_draw.val[i+1] = m_sy;
-    m_draw.val[i+2] = m_sz;
-  }
+  
+  const int numPts = m_draw.val.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  const float sign = std::copysign(1.0, m_sx+m_sy+m_sz);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), sign*length(std::array<float,3>{m_sx, m_sy, m_sz}));
 }
 
 #ifdef USE_IMGUI
@@ -681,8 +681,8 @@ SingularRing::to_json() const {
 
 //void create
 void SingularRing::generate_draw_geom() {
+  std::cout << "generate_draw_geom() called" << std::endl;
   // For sake of visualization, imagine the torus sitting on your table like a doughnut
-
   // Number of steps around the torus
   const int ts = 37;
   // Number of steps around the circle perpendicular to the table
@@ -747,12 +747,12 @@ void SingularRing::generate_draw_geom() {
     idx.emplace_back(ir1);
   }
 
+  // OpenGL expects a val for every point (3x's)
+  const int numPts = x.size()/Dimensions;
   std::vector<float> val;
-  val.resize(idx.size());
-  std::fill(val.begin(), val.end(), 1.0);
-  ElementPacket epack {x, idx, val, val.size()/Dimensions, 2};
-  m_draw = epack;
-  if (VERBOSE) m_draw.print();
+  val.resize(numPts);
+  std::fill(val.begin(), val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
+  m_draw = ElementPacket<float>{x, idx, val, idx.size()/Dimensions, 2};
 }
 
 #ifdef USE_IMGUI
@@ -978,11 +978,12 @@ void ThickRing::generate_draw_geom() {
     idx.emplace_back(ir1);
   }
 
+  // OpenGL expects a val for every point (3x's)
+  const int numPts = x.size()/Dimensions;
   std::vector<float> val;
-  val.resize(idx.size());
-  std::fill(val.begin(), val.end(), 1.0);
-  ElementPacket epack {x, idx, val, val.size()/Dimensions, 2};
-  m_draw = epack;
+  val.resize(numPts);
+  std::fill(val.begin(), val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
+  m_draw = ElementPacket<float>{x, idx, val, idx.size()/Dimensions, 2};
 }
 
 #ifdef USE_IMGUI
