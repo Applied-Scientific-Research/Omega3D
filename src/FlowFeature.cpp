@@ -48,7 +48,7 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
 
-  std::cout << "  found " << ftype << std::endl;
+  std::cout << "  finished " << _flist.back()->to_string() << std::endl;
 }
 
 #ifdef USE_IMGUI
@@ -118,8 +118,8 @@ bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &f
 //
 ElementPacket<float>
 SingleParticle::init_elements(float _ips) const {
-  //if (this->is_enabled()) return std::vector<float>({m_x, m_y, m_z, m_sx, m_sy, m_sz, 0.0});
-  //else return std::vector<float>();
+  std::cout << "Creating single particle" << std::endl;
+
   std::vector<float> x = {m_x, m_y, m_z};
   std::vector<Int> idx = {};
   std::vector<float> vals = {m_sx, m_sy, m_sz, 0.0};
@@ -221,6 +221,8 @@ VortexBlob::init_elements(float _ips) const {
   // what size 2D integer array will we loop over
   int irad = 1 + (m_rad + 0.5*m_softness) / _ips;
   std::cout << "blob needs " << (-irad) << " to " << irad << " spaces" << std::endl;
+
+  std::cout << "Creating vortex blob with up to " << std::pow(2*irad+1,3) << " particles" << std::endl;
 
   // and a counter for the total circulation
   double tot_wgt = 0.0;
@@ -364,6 +366,8 @@ bool VortexBlob::draw_info_gui(const std::string _action, const float _ips) {
 ElementPacket<float>
 BlockOfRandom::init_elements(float _ips) const {
 
+  std::cout << "Creating random block with " << m_num << " particles" << std::endl;
+
   // set up the random number generator
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
@@ -499,6 +503,7 @@ bool BlockOfRandom::draw_info_gui(const std::string _action, const float _ips) {
 //
 ElementPacket<float>
 ParticleEmitter::init_elements(float _ips) const {
+  std::cout << "Creating particle emitter" << std::endl;
   return ElementPacket<float>();
 }
 
@@ -600,8 +605,9 @@ SingularRing::init_elements(float _ips) const {
 
   // what size 2D integer array will we loop over
   const int ndiam = 1 + (2.0 * M_PI * m_majrad) / _ips;
-  std::cout << "  ring needs " << ndiam << " particles" << std::endl;
   const float this_ips = (2.0 * M_PI * m_majrad) / (float)ndiam;
+
+  std::cout << "Creating singular ring with " << ndiam << " particles" << std::endl;
 
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
@@ -787,7 +793,7 @@ bool SingularRing::draw_info_gui(const std::string _action, const float _ips) {
 ElementPacket<float>
 ThickRing::init_elements(float _ips) const {
 
-  if (not this->is_enabled()) return std::vector<float>();
+  std::cout << "Creating thick vortex ring" << std::endl;
 
   // make a temporary array of the particles at one station around the ring (a disk)
   //   for each particle in the disk, this is the local x,y, and a length scale

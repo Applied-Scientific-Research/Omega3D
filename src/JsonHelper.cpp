@@ -2,7 +2,7 @@
  * JsonHelper.cpp - Methods to help with reading and writing JSON files
  *
  * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ *         Mark J Stock <markjstock@gmail.com>
  */
 
 #include "JsonHelper.h"
@@ -27,7 +27,7 @@ using json = nlohmann::json;
 // return a bool to indicate success (that might be overkill)
 json read_json (const std::string filename) {
   // read a JSON file
-  std::cout << std::endl << "Loading simulation from " << filename << std::endl;
+  std::cout << "  loading simulation " << filename << std::endl;
   std::ifstream json_in(filename);
   json j;
   json_in >> j;

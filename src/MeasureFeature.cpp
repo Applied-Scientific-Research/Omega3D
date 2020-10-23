@@ -47,7 +47,7 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
 
-  std::cout << "  found " << ftype << std::endl;
+  std::cout << "  finished " << _flist.back()->to_string() << std::endl;
 }
 
 #ifdef USE_IMGUI
@@ -75,7 +75,7 @@ bool MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeatur
       } break;
     }
     oldItem = item;
-    }
+  }
 
   bool created = false;  
   if (mf->draw_info_gui("Add", _tracerScale, _ips)) {
@@ -113,6 +113,7 @@ float MeasureFeature::jitter(const float _z, const float _ips) const {
 //
 ElementPacket<float>
 SinglePoint::init_elements(float _ips) const {
+  std::cout << "Creating single point" << std::endl;
   // created once
   std::vector<float> x = {m_x, m_y, m_z};
   std::vector<Int> idx;
@@ -151,7 +152,7 @@ std::string
 SinglePoint::to_string() const {
   std::stringstream ss;
   if (m_emits) {
-    ss << "emiter";
+    ss << "emitter";
   } else if (m_is_lagrangian) {
     ss << "tracer";
   } else {
@@ -235,6 +236,8 @@ MeasurementBlob::init_elements(float _ips) const {
   int irad = 1 + m_rad / _ips;
   //std::cout << "blob needs " << (-irad) << " to " << irad << " spaces" << std::endl;
 
+  std::cout << "Creating measure blob with up to " << std::pow(2*irad+1,3) << " points" << std::endl;
+
   // loop over integer indices
   for (int i=-irad; i<=irad; ++i) {
   for (int j=-irad; j<=irad; ++j) {
@@ -286,7 +289,7 @@ std::string
 MeasurementBlob::to_string() const {
   std::stringstream ss;
   if (m_emits) {
-    ss << "emiter";
+    ss << "emitter";
   } else if (m_is_lagrangian) {
     ss << "tracer";
   } else {
@@ -368,6 +371,8 @@ MeasurementLine::init_elements(float _ips) const {
   float llen = std::sqrt( std::pow(m_xf-m_x, 2) + std::pow(m_yf-m_y, 2) + std::pow(m_zf-m_z, 2));
   int ilen = 1 + llen / _ips;
 
+  std::cout << "Creating measure line with " << ilen << " points" << std::endl;
+
   // loop over integer indices
   for (int i=0; i<ilen; ++i) {
     // how far along the line?
@@ -379,7 +384,7 @@ MeasurementLine::init_elements(float _ips) const {
     x.emplace_back((1.0-frac)*m_z + frac*m_zf);
   }
 
-  ElementPacket<float> packet({x, idx, vals, (size_t)(Dimensions*ilen), (uint8_t)0});
+  ElementPacket<float> packet({x, idx, vals, (size_t)ilen, (uint8_t)0});
   if (packet.verify(packet.x.size(), Dimensions)) {
     return packet;
   } else {
@@ -413,7 +418,7 @@ std::string
 MeasurementLine::to_string() const {
   std::stringstream ss;
   if (m_emits) {
-    ss << "emiter";
+    ss << "emitter";
   } else if (m_is_lagrangian) {
     ss << "tracer";
   } else {
@@ -512,6 +517,8 @@ Grid2dPoints::init_elements(float _ips) const {
       x.emplace_back(m_z + m_zs*sp + m_zf*fp);
     }
   }
+
+  std::cout << "Creating measure grid with " << (x.size()/3) << " points" << std::endl;
 
   ElementPacket<float> packet({x, idx, vals, (size_t)(x.size()/Dimensions), (uint8_t)0});
   if (packet.verify(packet.x.size(), Dimensions)) {

@@ -46,7 +46,7 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
 
-  std::cout << "  found " << _flist.back()->to_string() << std::endl;
+  std::cout << "  finished " << _flist.back()->to_string() << std::endl;
 }
 
 #ifdef USE_IMGUI
@@ -173,6 +173,8 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
 //
 ElementPacket<float>
 Ovoid::init_elements(const float _ips) const {
+
+  std::cout << "Creating ovoid..." << std::endl;
 
   // first, make an icosahedron
   std::vector<float>   x = ico0;
@@ -307,6 +309,8 @@ bool Ovoid::draw_info_gui(const std::string _action) {
 //
 ElementPacket<float>
 SolidRect::init_elements(const float _ips) const {
+
+  std::cout << "Creating solid rectangle..." << std::endl;
 
   // first, make 12-triangle rectangle
   std::vector<float>   x = cube0;
@@ -605,7 +609,7 @@ bool BoundaryQuad::draw_info_gui(const std::string _action) {
 ElementPacket<float>
 ExteriorFromFile::init_elements(const float _ips) const {
 
-  if (not this->is_enabled()) return ElementPacket<float>();
+  std::cout << "Creating object from file..." << std::endl;
 
   ElementPacket<float> epack = read_geometry_file(m_infile);
 
