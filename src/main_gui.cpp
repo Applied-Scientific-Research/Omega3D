@@ -332,7 +332,7 @@ int main(int argc, char const *argv[]) {
       if (sim_err_msg.empty()) {
         // the last simulation step was fine, OK to continue
         // generate new particles from emitters
-        for (auto const& ff : ffeatures) {
+        for (auto const& ff: ffeatures) {
           if (ff->is_enabled()) {
             ElementPacket<float> newpacket = ff->step_elements(sim.get_ips());
             // echo any errors
@@ -340,8 +340,7 @@ int main(int argc, char const *argv[]) {
           }
         }
 
-        for (auto const& mf : mfeatures) {
-          //if (mf->is_enabled()) sim.add_fldpts( mf->init_particles(rparams.tracer_scale*sim.get_ips()), mf->moves() );
+        for (auto const& mf: mfeatures) {
           if (mf->is_enabled()) {
             const move_t newMoveType = (mf->get_is_lagrangian() ? lagrangian : fixed);
             sim.add_elements( mf->step_elements(rparams.tracer_scale*sim.get_ips()), inert, newMoveType, mf->get_body() );
