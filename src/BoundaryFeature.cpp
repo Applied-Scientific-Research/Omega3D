@@ -46,6 +46,10 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
   // and pass the json object to the specific parser
   _flist.back()->from_json(_jin);
 
+  // finally, generate the draw information
+  _flist.back()->create();
+  _flist.back()->generate_draw_geom();
+
   std::cout << "  finished " << _flist.back()->to_string() << std::endl;
 }
 
@@ -150,6 +154,7 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
       sim.add_body(bp);
     }
     bf->set_body(bp);
+    bf->create();
     bf->generate_draw_geom();
     bfs.emplace_back(std::move(bf));
     bf = nullptr;
@@ -165,6 +170,39 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
   }
 
   return created;
+}
+
+void BoundaryFeature::draw_feature_list(std::vector<std::unique_ptr<BoundaryFeature>> &feat,
+                                        std::unique_ptr<BoundaryFeature> &editingFeat, int &edit_feat_index, 
+                                        int &del_feat_index, bool &redraw, int &buttonIDs) {
+  for (int i=0; i<(int)feat.size(); ++i) {
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::Checkbox("", feat[i]->addr_enabled())) { redraw = true; }
+    ImGui::PopID();
+    
+    // add an "edit" button after the checkbox (so it's not easy to accidentally hit remove)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("edit")) {
+      editingFeat = std::unique_ptr<BoundaryFeature>(feat[i]->copy());
+      edit_feat_index = i;
+    }
+    ImGui::PopID();
+    
+    if (feat[i]->is_enabled()) {
+      ImGui::SameLine();
+      ImGui::Text("%s", feat[i]->to_string().c_str());
+    } else {
+      ImGui::SameLine();
+      ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", feat[i]->to_string().c_str());
+    }
+
+    // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("remove")) { del_feat_index = i; }
+    ImGui::PopID();
+  }
 }
 #endif
 
