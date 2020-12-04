@@ -30,18 +30,12 @@ public:
                   float _x,
                   float _y,
                   float _z)
-    : Feature(true),
-      m_bp(_bp),
-      m_external(_ext),
-      m_x(_x),
-      m_y(_y),
-      m_z(_z)
+    : Feature(_x, _y, _z, true, _bp),
+      m_external(_ext)
     {}
 
   virtual ~BoundaryFeature() = default;
   virtual BoundaryFeature* copy() const = 0;
-
-  std::shared_ptr<Body> get_body() { return m_bp; }
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
@@ -50,23 +44,20 @@ public:
   virtual nlohmann::json to_json() const = 0;
   virtual void create() = 0;
   virtual ElementPacket<float> init_elements(const float) const = 0;
-  //virtual std::vector<float> step_elements(const float) const = 0;
-  void set_body(std::shared_ptr<Body> _bp) { m_bp = _bp; }
   virtual void generate_draw_geom() = 0;
-  virtual ElementPacket<float> get_draw_packet() { return m_draw; }
 #ifdef USE_IMGUI
-  static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
-  static bool draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
   virtual bool draw_info_gui(const std::string) = 0;
 #endif
 
+#ifdef USE_IMGUI
+  static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
+  static bool draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
+  static void draw_feature_list(std::vector<std::unique_ptr<BoundaryFeature>> &, std::unique_ptr<BoundaryFeature> &,
+                                int &, int &, bool &, int &);
+#endif
+
 protected:
-  std::shared_ptr<Body> m_bp;
   bool m_external;
-  float m_x;
-  float m_y;
-  float m_z;
-  ElementPacket<float> m_draw;
 };
 
 std::ostream& operator<<(std::ostream& os, BoundaryFeature const& ff);
