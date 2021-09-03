@@ -172,12 +172,12 @@ SingleParticle::to_json() const {
   return j;
 }
 
-//Single Particles cant be made by user
+// Single Particles cant be made by user
 void SingleParticle::generate_draw_geom() {
   const float diam = 0.01;
-  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z,
-                                                       diam, diam, diam);
-  m_draw = tmp->init_elements(diam/25.0);
+  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
+
+  m_draw = tmp.init_elements(0.05*diam);
 
   // OpenGL expects a val for every point (3x's)
   const int numPts = m_draw.x.size()/Dimensions;
@@ -324,14 +324,21 @@ VortexBlob::to_json() const {
 
 void VortexBlob::generate_draw_geom() {
   // Based on irad in init_elems
-  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z,
-                                                       2*m_rad, 2*m_rad, 2*m_rad);
-  m_draw = tmp->init_elements(2*m_rad/25.0);
-  
+  const float rad = m_rad + 0.5*m_softness;
+  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, 2*rad, 2*rad, 2*rad);
+
+  m_draw = tmp.init_elements(0.1*rad);
+
   // OpenGL expects a val for every point (3x's)
   const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
   std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_sx, m_sy, m_sz}));
+
+  //for (size_t i=0; i<m_draw.val.size()/Dimensions; i+=Dimensions) {
+  //  m_draw.val[i] = m_sx;
+  //  m_draw.val[i+1] = m_sy;
+  //  m_draw.val[i+2] = m_sz;
+  //}
 }
 
 #ifdef USE_IMGUI
@@ -459,12 +466,14 @@ void BlockOfRandom::generate_draw_geom() {
   SolidRect tmp = SolidRect(nullptr, true,
                             m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize,
                             m_xsize, m_ysize, m_zsize);
+
   // generate draw geometry, OK to use more than 12 triangles
   m_draw = tmp.init_elements(0.05*(m_xsize+m_ysize+m_zsize));
   
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
+
   // OpenGL expects a val for every point (3x's)
   const size_t numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
@@ -559,8 +568,9 @@ ParticleEmitter::to_json() const {
 
 void ParticleEmitter::generate_draw_geom() {
   const float diam = 0.01;
-  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
-  m_draw = tmp->init_elements(diam/25.0);
+  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
+
+  m_draw = tmp.init_elements(0.05*diam);
   
   const int numPts = m_draw.val.size()/Dimensions;
   m_draw.val.resize(numPts);
@@ -685,12 +695,12 @@ SingularRing::to_json() const {
   return j;
 }
 
-//void create
 void SingularRing::generate_draw_geom() {
+
   std::cout << "generate_draw_geom() called" << std::endl;
   // For sake of visualization, imagine the torus sitting on your table like a doughnut
   // Number of steps around the torus
-  const int ts = 37;
+  const int ts = 77;
   // Number of steps around the circle perpendicular to the table
   const int cs = 7;
   const float m_minrad = m_majrad * 0.02;
@@ -763,6 +773,7 @@ void SingularRing::generate_draw_geom() {
 
 #ifdef USE_IMGUI
 bool SingularRing::draw_info_gui(const std::string _action, const float _ips) {
+
   float xc[3] = {m_x, m_y, m_z};
   float vstr[3] = {m_nx, m_ny, m_nz};
   float guess_n = 1 + (2.0f * 3.1416f * m_majrad / _ips);
@@ -922,7 +933,7 @@ void ThickRing::generate_draw_geom() {
   // For sake of visualization, imagine the torus sitting on your table like a doughnut
 
   // Number of steps around the torus
-  const int ts = 37;
+  const int ts = 77;
   // Number of steps around the circle perpendicular to the table
   const int cs = std::max(15, (int)std::floor(230*m_minrad));
 
