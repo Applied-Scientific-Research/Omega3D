@@ -2,7 +2,7 @@
  * main_batch.cpp - Driver code for Omega3D + Vc vortex particle method
  *                  and boundary element method solver, batch version
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
@@ -16,8 +16,10 @@
 
 #ifdef _WIN32
   // for glad
-  #define APIENTRY __stdcall
-  // for C++11 stuff
+  #ifndef APIENTRY
+    #define APIENTRY __stdcall
+  #endif
+  // for C++11 stuff that Windows can't get right
   #include <ciso646>
 #endif
 
@@ -28,6 +30,7 @@
 // execution starts here
 
 int main(int argc, char const *argv[]) {
+
   std::cout << std::endl << "Omega3D Batch" << std::endl;
 
   // Set up vortex particle simulation
@@ -79,6 +82,8 @@ int main(int argc, char const *argv[]) {
     }
   }
 
+  // initialize hybrid features (when ready)
+
   sim.set_initialized();
 
   // check init for blow-up or errors
@@ -121,6 +126,7 @@ int main(int argc, char const *argv[]) {
 
       // begin a new dynamic step: convection and diffusion
       sim.step();
+
     } else {
       // the last step had some difficulty
       std::cout << std::endl << "ERROR: " << sim_err_msg;
@@ -146,6 +152,13 @@ int main(int argc, char const *argv[]) {
     std::cout << std::endl << "Wrote simulation to " << outfile << std::endl;
   }
 
+  // save data at final step
+  if (true) {
+    //sim.write_vtk();
+  }
+
+  // Cleanup
+  std::cout << "Starting shutdown procedure" << std::endl;
   sim.reset();
   std::cout << "Quitting" << std::endl;
 

@@ -2,7 +2,7 @@
  * main_gui.cpp - Driver code for Omega3D + ImGui + Vc vortex particle method
  *                and boundary element method solver, GUI version
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
@@ -44,6 +44,9 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>	// for setfill, setw
+
+
+// execution starts here
 
 int main(int argc, char const *argv[]) {
 
@@ -1041,7 +1044,7 @@ int main(int argc, char const *argv[]) {
       ImGui::SameLine();
       */
 
-      if (ImGui::Button("ImGui Samples")) show_demo_window ^= 1;
+      //if (ImGui::Button("ImGui Samples")) show_demo_window ^= 1;
       // use ASCII table for number: http://www.asciitable.com/
       // but use CAPITAL letter for a letter, jesus, really?!?
       //if (ImGui::IsKeyPressed(84) and not show_file_output_window) show_demo_window ^= 1;

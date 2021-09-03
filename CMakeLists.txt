@@ -1,25 +1,26 @@
 #
 # Omega3D
-# (c)2017-2020 Applied Scientific Research, Inc.
+# (c)2017-2021 Applied Scientific Research, Inc.
 #
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
 PROJECT( Omega3D )
 
 # User-serviceable variables here
-SET (CMAKE_CONFIGURATION_TYPES "Debug" "Release" "RelWithDebInfo")
+SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo")
 IF (NOT CMAKE_BUILD_TYPE)
   SET (CMAKE_BUILD_TYPE "Release")
 ENDIF ()
-SET (CMAKE_BUILD_TYPE "Release" CACHE STRING "Select which configuration to build" )
+SET (CMAKE_BUILD_TYPE "Release" CACHE STRING "Select which configuration to build")
 SET (BUILD_GUI TRUE CACHE BOOL "Build the GUI version")
-SET (BUILD_BATCH TRUE CACHE BOOL "Build the batch (no GUI) version")
+SET (BUILD_BATCH FALSE CACHE BOOL "Build the batch (no GUI) version")
 SET (CMAKE_INSTALL_PREFIX CACHE PATH "Installation location for binaries, sample inputs, and licenses")
-SET (USE_OMP FALSE CACHE BOOL "Use OpenMP multithreading")
+SET (USE_OMP TRUE CACHE BOOL "Use OpenMP multithreading")
 SET (USE_VC FALSE CACHE BOOL "Use Vc for vector arithmetic")
 SET (USE_OGL_COMPUTE FALSE CACHE BOOL "Use OpenGL compute shaders")
 SET (USE_PLUGIN_AVRM FALSE CACHE BOOL "Enable adaptive VRM plugin")
-SET (USE_PLUGIN_SIMPLEX FALSE CACHE BOOL "Enable simplex solver plugin")
+SET (USE_PLUGIN_SIMPLEX FALSE CACHE BOOL "Enable simplex solver plugin for VRM")
 SET (USE_EXTERNAL_SUM FALSE CACHE BOOL "Enable external velocity solver")
+SET (DO_PROFILE FALSE CACHE BOOL "Enable profiling via gprof")
 SET (CMAKE_VERBOSE_MAKEFILE on)
 SET (CMAKE_EXPORT_COMPILE_COMMANDS on)
 
@@ -41,7 +42,9 @@ ELSE ()
   ADD_DEFINITIONS(-DEXAMPLES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/3Dexamples")
 ENDIF ()
 
-# Split on compiler
+
+# Define compiler-specific options
+
 IF (CMAKE_COMPILER_IS_GNUCXX)
   # support Core2 at a minimum, haswell ideally
   #SET (CMAKE_CXX_FLAGS "-Wall -Wformat -Wno-int-in-bool-context -std=c++17 -march=core2 -mtune=haswell")
@@ -53,6 +56,9 @@ IF (CMAKE_COMPILER_IS_GNUCXX)
   ENDIF()
   SET (CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
   SET (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -march=native -g -ggdb3")
+  IF (DO_PROFILE)
+    SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+  ENDIF ()
 ELSEIF (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   SET (CMAKE_CXX_FLAGS "-Wall -Wformat -std=c++17 -stdlib=libc++")
   SET (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -ggdb")
@@ -67,7 +73,9 @@ ELSEIF (MSVC)
   SET (CMAKE_CXX_FLAGS_RELEASE "/O2")
 ENDIF ()
 
-# Split on operating system
+
+# Define platform-specific libraries and options
+
 IF( WIN32 )
   # because clang is stupid
   IF (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -151,6 +159,17 @@ ELSEIF( APPLE )
     ENDIF()
   ENDIF()
 
+  # Vc for explicit vectorization
+  IF( USE_VC )
+    SET (CPREPROCDEFS ${CPREPROCDEFS} -DUSE_VC)
+    SET (VC_ROOT "/opt/Vc" CACHE STRING "Vc root" )
+    INCLUDE_DIRECTORIES( "${VC_ROOT}/include" )
+    FIND_LIBRARY( VC_LIBS NAMES Vc PATHS "${VC_ROOT}/lib" )
+  ELSE()
+    SET (VC_LIBS "")
+  ENDIF()
+
+  SET( CMAKE_MACOSX_RPATH 1 )
   SET( BASE_LIBS ${VC_LIBS} ${CMAKE_THREAD_LIBS_INIT} )
   SET( GUI_LIBS ${FRAMEWORK_LIBS} ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${COREVIDEO_LIBRARY} ${OpenGL_LIBRARY} )
 
@@ -206,6 +225,7 @@ ELSEIF( UNIX )
   SET( GUI_LIBS ${FRAMEWORK_LIBS} ${GLFW_LIBRARIES} )
 ENDIF()
 
+
 # Enable plugins
 
 # adaptive VRM
@@ -237,7 +257,6 @@ SET( EXTERNAL_LIBS ${FASTSUM_LIBS} )
 ADD_DEFINITIONS (${CPREPROCDEFS})
 
 INCLUDE_DIRECTORIES( "src/glad" )
-FILE(GLOB IMGUISOURCES "src/imgui/*.cpp" )
 INCLUDE_DIRECTORIES( "src/tinyxml2" )
 INCLUDE_DIRECTORIES( "src/tinyexpr" )
 INCLUDE_DIRECTORIES( "src/cppcodec" )
@@ -248,6 +267,7 @@ IF (CMAKE_COMPILER_IS_GNUCXX)
   SET_SOURCE_FILES_PROPERTIES("src/imgui/imgui_draw.cpp" PROPERTIES COMPILE_FLAGS -Wno-maybe-uninitialized)
 ENDIF()
 
+FILE(GLOB IMGUISOURCES "src/imgui/*.cpp" )
 FILE(GLOB HEADERS "src/*.h" )
 SET(SOURCES ${HEADERS}
             "src/Simulation.cpp"
@@ -292,3 +312,4 @@ ENDIF()
 
 INSTALL( DIRECTORY 3Dexamples/ DESTINATION 3Dexamples )
 #INSTALL( FILES LICENSE DESTINATION LICENSE )
+
