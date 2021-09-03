@@ -10,7 +10,7 @@
 #include "Core.h"
 #include "VectorHelper.h"
 #include "MathHelper.h"
-#include "nanoflann.hpp"
+#include "nanoflann/nanoflann.hpp"
 
 #include <cstdlib>
 #include <cstdio>

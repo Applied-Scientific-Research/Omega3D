@@ -13,7 +13,7 @@
 #include "Points.h"
 #include "Surfaces.h"
 
-#include "tinyxml2.h"
+#include "tinyxml2/tinyxml2.h"
 #include "cppcodec/base64_rfc4648.hpp"
 
 #include <vector>

@@ -10,7 +10,7 @@
 #include "Core.h"
 #include "Icosahedron.h"
 #include "VectorHelper.h"
-#include "nanoflann.hpp"
+#include "nanoflann/nanoflann.hpp"
 #ifdef PLUGIN_SIMPLEX
 #include "simplex.h"
 #endif

@@ -256,21 +256,20 @@ SET( EXTERNAL_LIBS ${FASTSUM_LIBS} )
 
 ADD_DEFINITIONS (${CPREPROCDEFS})
 
-INCLUDE_DIRECTORIES( "src/glad" )
-INCLUDE_DIRECTORIES( "src/tinyxml2" )
-INCLUDE_DIRECTORIES( "src/tinyexpr" )
-INCLUDE_DIRECTORIES( "src/cppcodec" )
-INCLUDE_DIRECTORIES( "src/miniz" )
+INCLUDE_DIRECTORIES( "lib" )
+# For some of the libraries who need glad
+INCLUDE_DIRECTORIES( "lib/glad" )
+# For some of the internal libraries who need nanoflann
+INCLUDE_DIRECTORIES( "lib/nanoflann" )
 INCLUDE_DIRECTORIES( "src" )
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
-  SET_SOURCE_FILES_PROPERTIES("src/imgui/imgui_draw.cpp" PROPERTIES COMPILE_FLAGS -Wno-maybe-uninitialized)
+  SET_SOURCE_FILES_PROPERTIES("lib/imgui/imgui_draw.cpp" PROPERTIES COMPILE_FLAGS -Wno-maybe-uninitialized)
 ENDIF()
 
-FILE(GLOB IMGUISOURCES "src/imgui/*.cpp" )
+FILE(GLOB IMGUISOURCES "lib/imgui/*.cpp" )
 FILE(GLOB HEADERS "src/*.h" )
-SET(SOURCES ${HEADERS}
-            "src/Simulation.cpp"
+SET(SOURCES "src/Simulation.cpp"
             "src/FlowFeature.cpp"
             "src/CollectionHelper.cpp"
             "src/BoundaryFeature.cpp"
@@ -281,13 +280,13 @@ SET(SOURCES ${HEADERS}
             "src/IglReadGeom.cpp"
             "src/IglRefine.cpp"
             "src/StatusFile.cpp"
-            "src/tinyxml2/tinyxml2.cpp"
-            "src/tinyexpr/tinyexpr.c" )
-SET(GUI_SOURCES "src/glad/glad.c"
+            "lib/tinyxml2/tinyxml2.cpp"
+            "lib/tinyexpr/tinyexpr.c" )
+SET(GUI_SOURCES "lib/glad/glad.c"
                 "src/ShaderHelper.cpp"
                 "src/FeatureDraw.cpp"
-                "src/miniz/miniz.c"
-                "src/miniz/FrameBufferToImage.cpp" )
+                "lib/miniz/miniz.c"
+                "lib/miniz/FrameBufferToImage.cpp" )
 
 # create a binary for the GUI version
 IF( BUILD_GUI )
