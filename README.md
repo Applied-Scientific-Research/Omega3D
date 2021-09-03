@@ -15,7 +15,7 @@ Omega3D aims to be an accurate combined Lagrangian-Eulerian fluid flow solver fo
 This code uses some C++17 features, so should compile on GCC 7, Clang 4, and MSVC 19.10 (Visual Studio 15 2017) compilers.
 
 #### Prerequisites
-Both the GUI and batch versions require CMake and Eigen to compile. To build the GUI version, users will also need GLFW3. These can be installed in Red Hat/Fedora with
+Users will also need CMake, Eigen (version 3.3 or newer), and GLFW version 3 on their machines to build this, other requirements are included in this distribution. Get these on Fedora with
 
     sudo dnf install cmake glfw3-devel eigen3-devel
 
@@ -53,12 +53,16 @@ Upon installation of the prerequisites, the following commands should build Omeg
 
 If you were able to build and install Vc, then you should set `-DUSE_VC=ON` in the above `cmake` command.
 
+To use the system Clang on Linux, you will want the following variables defined:
+
+    cmake -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ ..
+
 On OSX, to get OpenMP parallelization of the solver, you may need to install GCC with brew (as above), and add a few more arguments to the `cmake` command:
 
     brew install gcc
     cmake -DCMAKE_C_COMPILER=/usr/local/bin/gcc-x -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-x ..
-    
-where x is the latest version on your machine (you can check this by going to /usr/local/bin).
+
+where x is the latest version on your machine (you can check this by going to `/usr/local/bin`).
 
 ## Run a simulation in the GUI
 If you were able to build the software, you should be able to run
@@ -99,7 +103,7 @@ Tasks to consider or implement:
 ## Thanks
 This project is funded by the [National Institutes of Health (NIH)](https://www.nih.gov/) under grant number 1 R01 EB022180-01A1 ("A Fast High-Order CFD for Turbulent Flow Simulation in Cardio-Devices").
 
-Thanks to [Omar Cornut](http://www.miracleworld.net/) for his [dear imgui](https://github.com/ocornut/imgui) library, file browser dialogs from [Imgui-IGS-Snippets](https://github.com/gileoo/Imgui-IGS-Snippets), png writing from [stb\_image\_write](https://github.com/nothings/stb/blob/master/stb_image_write.h), sol-prog's [OpenGL Tutorials](https://github.com/sol-prog/OpenGL-101), and Jim Susinno's [OpenGL-Boilerplate](https://github.com/jimbo00000/OpenGL-Boilerplate). Reading triangle mesh files was easy with [libigl](https://github.com/libigl/libigl/).
+Thanks to [Omar Cornut](http://www.miracleworld.net/) for his [dear imgui](https://github.com/ocornut/imgui) library, file browser dialogs from [Imgui-IGS-Snippets](https://github.com/gileoo/Imgui-IGS-Snippets), sol-prog's [OpenGL Tutorials](https://github.com/sol-prog/OpenGL-101), Jim Susinno's [OpenGL-Boilerplate](https://github.com/jimbo00000/OpenGL-Boilerplate), and the [miniz](https://github.com/richgel999/miniz/tree/master) compression library. Reading triangle mesh files was easy with [libigl](https://github.com/libigl/libigl/).
 
 VRM code is functional thanks to jlblancoc for [Nanoflann](https://github.com/jlblancoc/nanoflann) (a header-only tree search library), and to all of the developers of [Eigen](http://eigen.tuxfamily.org/) (a C++ matrix/vector library). The BEM code also relies heavily on [Eigen](http://eigen.tuxfamily.org/). We also love [Vc](https://github.com/VcDevel/Vc), an excellent SIMD library by Matthias Kretz.
 
