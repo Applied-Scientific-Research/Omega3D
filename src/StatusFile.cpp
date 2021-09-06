@@ -42,13 +42,27 @@ StatusFile::reset_sim() {
   }
 }
 
+// append a title and an int or float to the list to write
+void
+StatusFile::append_value(const std::string _name, const float _val) {
+  names.push_back(_name);
+  vals.push_back(_val);
+}
+void
+StatusFile::append_value(const std::string _name, const int _val) {
+  names.push_back(_name);
+  vals.push_back(_val);
+}
+
 // append an int or float to the list to write
 void
 StatusFile::append_value(const float _val) {
+  names.push_back("float");
   vals.push_back(_val);
 }
 void
 StatusFile::append_value(const int _val) {
+  names.push_back("int");
   vals.push_back(_val);
 }
 
@@ -62,18 +76,32 @@ StatusFile::write_line() {
 
     // is this a new data set?
     if (num_lines == 0) {
+      // new data set needs white space
       if (num_sims > 0) outfile << std::endl;
-      outfile << "# new run" << std::endl;
+
+      // write header text line
+      if (format != csv) outfile << "# ";
+      for (size_t i=0; i<names.size(); ++i) {
+        outfile << names[i];
+        if (i == names.size()-1) break;
+        if (format == csv) outfile << ",";
+        else outfile << " ";
+      }
+      outfile << std::endl;
+
+      // keep count
       num_sims++;
     }
 
     // write data line
-    for (auto &val : vals) {
+    for (size_t i=0; i<vals.size(); ++i) {
+      auto& val = vals[i];
       std::visit([&outfile](const auto& v) { outfile << v; }, val);
-      if (val == vals.back()) {
+      if (i == vals.size()-1) {
         outfile << std::endl;
       } else {
-        outfile << " ";
+        if (format == csv) outfile << ",";
+        else outfile << " ";
       }
     }
     num_lines++;
@@ -92,6 +120,12 @@ StatusFile::from_json(const nlohmann::json j) {
     std::cout << "  status file name= " << sfile << std::endl;
     set_filename(sfile);
   }
+  if (j.find("statusFormat") != j.end()) {
+    std::string formatstr = j["statusFormat"];
+    std::cout << "  status file format= " << formatstr << std::endl;
+    if (formatstr == "csv") format = csv;
+    else format = dat;
+  }
 }
 
 // write to "runtime" json object
@@ -100,6 +134,9 @@ StatusFile::add_to_json(nlohmann::json& j) const {
 
   if (not fn.empty()) {
     j["statusFile"] = fn;
+
+    // since we only have dat (default) and csv, this is easy
+    if (format != dat) j["statusFormat"] = "csv";
   }
 }
 
