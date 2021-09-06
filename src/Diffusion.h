@@ -258,7 +258,7 @@ void Diffusion<S,A,I>::step(const double                _time,
 
         // generate particles above the surface at the centroid of one step of
         //   diffusion from a flat plate
-        std::vector<S> new_pts = surf.represent_as_particles(h_nu*std::sqrt(4.0/M_PI), _vdelta/_overlap);
+        std::vector<S> new_pts = surf.represent_as_particles(h_nu*std::sqrt(4.0/M_PI), _vdelta);
 
         // add those particles to the main particle list
         if (_vort.size() == 0) {
