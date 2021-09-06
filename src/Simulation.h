@@ -137,6 +137,8 @@ public:
   nlohmann::json to_json() const;
   void flow_from_json(const nlohmann::json);
   nlohmann::json flow_to_json() const;
+  void runtime_from_json(const nlohmann::json);
+  nlohmann::json runtime_to_json() const;
 
 #ifdef USE_GL
   // graphics pass-through calls
@@ -201,6 +203,8 @@ private:
   double output_dt;
   double end_time;
   bool use_end_time;
+  float overlap_ratio;
+  float core_size_ratio;
   size_t nstep;
   bool use_max_steps;
   size_t max_steps;

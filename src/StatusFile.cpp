@@ -1,8 +1,8 @@
 /*
  * StatusFile.cpp - Class to contain and compose a line-per-step status file
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2019,21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #include "StatusFile.h"
@@ -81,5 +81,25 @@ StatusFile::write_line() {
 
   // empty the vector
   vals.clear();
+}
+
+// read from "runtime" json object
+void
+StatusFile::from_json(const nlohmann::json j) {
+
+  if (j.find("statusFile") != j.end()) {
+    std::string sfile = j["statusFile"];
+    std::cout << "  status file name= " << sfile << std::endl;
+    set_filename(sfile);
+  }
+}
+
+// write to "runtime" json object
+void
+StatusFile::add_to_json(nlohmann::json& j) const {
+
+  if (not fn.empty()) {
+    j["statusFile"] = fn;
+  }
 }
 

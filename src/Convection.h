@@ -1,7 +1,7 @@
 /*
  * Convection.h - a class for forward integration of elements and their strengths
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  */
 
@@ -17,6 +17,8 @@
 #include "GuiHelper.h"
 #include "ExecEnv.h"
 
+#include "json/json.hpp"
+
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -31,7 +33,11 @@
 template <class S, class A, class I>
 class Convection {
 public:
-  Convection() {}
+  Convection()
+    : convection_order(2),
+      conv_env()
+    {}
+
   void find_vels( const std::array<double,Dimensions>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
@@ -58,9 +64,16 @@ public:
   void draw_advanced();
 #endif
 
+  // read/write parameters
+  void from_json(const nlohmann::json);
+  void add_to_json(nlohmann::json&) const;
+
 private:
   // local copies of particle data
   //Particles<S> temp;
+
+  // integrator order
+  int32_t convection_order;
 
   // execution environment for velocity summations (not BEM)
   ExecEnv conv_env;
@@ -338,4 +351,26 @@ void Convection<S,A,I>::draw_advanced() {
   }
 }
 #endif
+
+//
+// read/write parameters to json
+//
+
+// read "simparams" json object
+template <class S, class A, class I>
+void Convection<S,A,I>::from_json(const nlohmann::json j) {
+
+  if (j.find("timeOrder") != j.end()) {
+    convection_order = j["timeOrder"];
+    std::cout << "  setting forward integrator order= " << convection_order << std::endl;
+  }
+
+  // may eventually set method by name?
+}
+
+// create and write a json object for all diffusion parameters
+template <class S, class A, class I>
+void Convection<S,A,I>::add_to_json(nlohmann::json& j) const {
+  j["timeOrder"] = convection_order;
+}
 

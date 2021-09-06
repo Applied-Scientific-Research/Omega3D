@@ -1,7 +1,7 @@
 /*
  * Simulation.cpp - a class to control a 3D vortex particle sim
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  */
 
@@ -14,8 +14,14 @@
 
 #include <cassert>
 #include <cmath>
+#include <cfenv> // Catch fp exceptions
 #include <limits>
 #include <variant>
+
+#ifdef _WIN32
+#pragma STDC FENV_ACCESS ON // For fp exceptions
+#endif
+
 
 // constructor
 Simulation::Simulation()
@@ -35,6 +41,8 @@ Simulation::Simulation()
     output_dt(0.0),
     end_time(100.0),
     use_end_time(false),
+    overlap_ratio(1.5),
+    core_size_ratio(std::sqrt(8.0)),
     nstep(0),
     use_max_steps(false),
     max_steps(100),
@@ -54,8 +62,8 @@ float* Simulation::addr_fs() { return fs; }
 float Simulation::get_re() const { return re; }
 float Simulation::get_dt() const { return dt; }
 float Simulation::get_hnu() const { return std::sqrt(dt/re); }
-float Simulation::get_ips() const { return diff.get_nom_sep_scaled() * get_hnu(); }
-float Simulation::get_vdelta() const { return diff.get_particle_overlap() * get_ips(); }
+float Simulation::get_ips() const { return core_size_ratio * get_hnu(); }
+float Simulation::get_vdelta() const { return overlap_ratio * get_ips(); }
 float Simulation::get_time() const { return (float)time; }
 float Simulation::get_end_time() const { return (float)end_time; }
 bool Simulation::using_end_time() const { return use_end_time; }
@@ -113,7 +121,7 @@ size_t Simulation::get_nfldpts() {
 
 // like a setter
 void Simulation::set_re_for_ips(const float _ips) {
-  re = std::pow(diff.get_nom_sep_scaled(), 2) * dt / pow(_ips, 2);
+  re = std::pow(core_size_ratio, 2) * dt / pow(_ips, 2);
   diff.set_diffuse(false);
 }
 
@@ -129,6 +137,79 @@ void Simulation::set_amr(const bool _do_amr) {
 //
 // json read/write
 //
+
+// read "simparams" json object
+void
+Simulation::from_json(const nlohmann::json j) {
+
+  if (j.find("nominalDt") != j.end()) {
+    dt = j["nominalDt"];
+    std::cout << "  setting dt= " << dt << std::endl;
+  }
+
+  if (j.find("outputDt") != j.end()) {
+    output_dt = j["outputDt"];
+    std::cout << "  setting output dt= " << output_dt << std::endl;
+  }
+
+  //if (j.find("nominalDx") != j.end()) {
+  //  dx = j["nominalDx"];
+  //  std::cout << "  setting dx= " << dx << std::endl;
+  //}
+
+  if (j.find("maxSteps") != j.end()) {
+    use_max_steps = true;
+    max_steps = j["maxSteps"];
+    std::cout << "  setting max_steps= " << max_steps << std::endl;
+  } else {
+    use_max_steps = false;
+  }
+
+  if (j.find("endTime") != j.end()) {
+    use_end_time = true;
+    end_time = j["endTime"];
+    std::cout << "  setting end_time= " << end_time << std::endl;
+  } else {
+    use_end_time = false;
+  }
+
+  if (j.find("overlapRatio") != j.end()) {
+    overlap_ratio = j["overlapRatio"];
+    std::cout << "  setting overlap ratio= " << overlap_ratio << std::endl;
+  }
+
+  if (j.find("coreSizeRatioSqrd") != j.end()) {
+    core_size_ratio = std::sqrt((float)j["coreSizeRatioSqrd"]);
+    std::cout << "  setting core size ratio (nominal separation over h_nu) = " << core_size_ratio << std::endl;
+  }
+
+  // Convection will find and set "timeOrder"
+  conv.from_json(j);
+
+  // Diffusion will find and set "viscous", "VRM" and "AMR" parameters
+  diff.from_json(j);
+}
+
+// create and write a json object for "simparams"
+nlohmann::json
+Simulation::to_json() const {
+  nlohmann::json j;
+
+  j["nominalDt"] = dt;
+  j["outputDt"] = output_dt;
+  if (using_max_steps()) j["maxSteps"] = get_max_steps();
+  if (using_end_time()) j["endTime"] = get_end_time();
+  j["overlapRatio"] = overlap_ratio;
+  j["coreSizeRatioSqrd"] = std::pow(core_size_ratio,2);
+
+  // Convection will write "timeOrder"
+  conv.add_to_json(j);
+
+  // Diffusion will write "viscous", "VRM" and "AMR" parameters
+  diff.add_to_json(j);
+
+  return j;
+}
 
 // set "flowparams" json object
 void
@@ -163,53 +244,33 @@ Simulation::flow_to_json() const {
   return j;
 }
 
-// read "simparams" json object
+// set "runtime" json object
 void
-Simulation::from_json(const nlohmann::json j) {
+Simulation::runtime_from_json(const nlohmann::json j) {
 
-  if (j.find("nominalDt") != j.end()) {
-    dt = j["nominalDt"];
-    std::cout << "  setting dt= " << dt << std::endl;
+  sf.from_json(j);
+
+  if (j.find("autoStart") != j.end()) {
+    bool autostart = j["autoStart"];
+    set_auto_start(autostart);
+    std::cout << "  autostart? " << autostart << std::endl;
   }
-
-  if (j.find("outputDt") != j.end()) {
-    output_dt = j["outputDt"];
-    std::cout << "  setting output dt= " << output_dt << std::endl;
+  if (j.find("quitOnStop") != j.end()) {
+    bool qos = j["quitOnStop"];
+    set_quit_on_stop(qos);
+    std::cout << "  quit on stop? " << qos << std::endl;
   }
-
-  if (j.find("maxSteps") != j.end()) {
-    use_max_steps = true;
-    max_steps = j["maxSteps"];
-    std::cout << "  setting max_steps= " << max_steps << std::endl;
-  } else {
-    use_max_steps = false;
-  }
-
-  if (j.find("endTime") != j.end()) {
-    use_end_time = true;
-    end_time = j["endTime"];
-    std::cout << "  setting end_time= " << end_time << std::endl;
-  } else {
-    use_end_time = false;
-  }
-
-  // set diffusion-specific parameters
-  // Diffusion will find and set "viscous", "VRM" and "AMR" parameters
-  diff.from_json(j);
 }
 
-// create and write a json object for "simparams"
+// create and write a json object for "runtime"
 nlohmann::json
-Simulation::to_json() const {
+Simulation::runtime_to_json() const {
   nlohmann::json j;
 
-  j["nominalDt"] = dt;
-  j["outputDt"] = output_dt;
-  if (using_max_steps()) j["maxSteps"] = get_max_steps();
-  if (using_end_time()) j["endTime"] = get_end_time();
+  sf.add_to_json(j);
 
-  // Diffusion will write "viscous", "VRM" and "AMR" parameters
-  diff.add_to_json(j);
+  j["autoStart"] = auto_start;
+  j["quitOnStop"] = quit_on_stop;
 
   return j;
 }
@@ -722,17 +783,17 @@ void Simulation::step() {
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
   // for simplicity's sake, just run one full diffusion step here
-  diff.step(time, dt, re, get_vdelta(), thisfs, vort, bdry, bem);
+  diff.step(time, dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
 
   // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
-  //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
+  //diff.step(time, 0.5*dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
 
   // advect with no diffusion (must update BEM strengths)
   //conv.advect_1st(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
   conv.advect_2nd(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
 
   // operator splitting requires another half-step diffuse (must compute new coefficients)
-  //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
+  //diff.step(time, 0.5*dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
 
   // push field points out of objects every few steps
   if (nstep%5 == 0) clear_inner_layer<STORE>(1, bdry, fldpt, (STORE)0.0, (STORE)(0.5*get_ips()));
@@ -756,7 +817,7 @@ void Simulation::step() {
       // last two arguments are: relative distance, allow variable core radii
       (void)split_elongated<float>(x[0], x[1], x[2], r, elong, s[0], s[1], s[2],
                                    diff.get_core_func(),
-                                   diff.get_particle_overlap(),
+                                   overlap_ratio,
                                    1.2);
 
       // we probably have a different number of particles now, resize the u, ug, elong arrays

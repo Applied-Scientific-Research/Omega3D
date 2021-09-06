@@ -1,11 +1,13 @@
 /*
  * StatusFile.h - Class to contain and compose a line-per-step status file
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2019,21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
+
+#include "json/json.hpp"
 
 #include <variant>
 #include <string>
@@ -35,6 +37,10 @@ public:
   void append_value(const float);
   void append_value(const int);
   void write_line();
+
+  // in/out
+  void from_json(const nlohmann::json);
+  void add_to_json(nlohmann::json&) const;
 
   // member variables
   bool use_it;

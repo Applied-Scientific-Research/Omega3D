@@ -1,7 +1,7 @@
 /*
  * Diffusion.h - a class for diffusion of strength from bodies to particles and among particles
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  */
 
@@ -52,8 +52,6 @@ public:
       core_func(gaussian),
       is_inviscid(true),
       adaptive_radii(false),
-      nom_sep_scaled(std::sqrt(8.0)),
-      particle_overlap(1.5),
       merge_thresh(0.2),
       shed_before_diffuse(true)
     {}
@@ -62,15 +60,12 @@ public:
   void set_amr(const bool _do_amr);
   const bool get_diffuse() const { return !is_inviscid; }
   const bool get_amr() const { return adaptive_radii; }
-  S get_nom_sep_scaled() const { return nom_sep_scaled; }
-  S get_nom_sep(const S _hnu) { return nom_sep_scaled * _hnu; }
-  S get_nom_sep(const double _dt, const S _re) { return nom_sep_scaled * std::sqrt(_dt/_re); }
-  S get_particle_overlap() const { return particle_overlap; }
   CoreType get_core_func() const { return core_func; }
 
   // take a full diffusion step
   void step(const double,
             const double,
+            const S,
             const S,
             const S,
             const std::array<double,Dimensions>&,
@@ -103,12 +98,6 @@ private:
   // toggle adaptive particle sizes
   bool adaptive_radii;
 
-  // nominal separation normalized by h_nu
-  S nom_sep_scaled;
-
-  // particle core size is nominal separation times this
-  S particle_overlap;
-
   // merge aggressivity
   S merge_thresh;
 
@@ -131,6 +120,7 @@ template <class S, class A, class I>
 void Diffusion<S,A,I>::step(const double                _time,
                             const double                _dt,
                             const S                     _re,
+                            const S                     _overlap,
                             const S                     _vdelta,
                             const std::array<double,Dimensions>& _fs,
                             std::vector<Collection>&    _vort,
@@ -155,7 +145,7 @@ void Diffusion<S,A,I>::step(const double                _time,
   //
   // first push away particles inside or too close to the body
   assert(M_PI != 0); // Can't divide by 0
-  clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), get_nom_sep(h_nu));
+  clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _vdelta/_overlap);
   solve_bem<S,A,I>(_time, _fs, _vort, _bdry, _bem);
 
   //
@@ -222,7 +212,7 @@ void Diffusion<S,A,I>::step(const double                _time,
                       pts.get_str(),
                       pts.get_rad(),
                       h_nu, core_func,
-                      particle_overlap);
+                      _overlap);
 
       // resize the rest of the arrays
       pts.resize(pts.get_rad().size());
@@ -239,7 +229,7 @@ void Diffusion<S,A,I>::step(const double                _time,
   //
   // merge any close particles to clean up potentially-dense areas
   //
-  (void) merge_operation<S>(_vort, particle_overlap, merge_thresh, adaptive_radii);
+  (void) merge_operation<S>(_vort, _overlap, merge_thresh, adaptive_radii);
 
 
   //
@@ -248,11 +238,11 @@ void Diffusion<S,A,I>::step(const double                _time,
   if (shed_before_diffuse) {
     // use method which trims circulations under the threshold
     //(void) clear_inner_layer<S>(0, _bdry, _vort, 0.0, _vdelta/particle_overlap); // THIS IS BAD
-    (void) clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _vdelta/particle_overlap);
+    (void) clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _vdelta/_overlap);
   } else {
     // use method which simply pushes all still-active particles to be at or above a threshold distance
     // cutoff is a multiple of ips (these are the last two arguments)
-    (void) clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _vdelta/particle_overlap);
+    (void) clear_inner_layer<S>(1, _bdry, _vort, 1.0/std::sqrt(2.0*M_PI), _vdelta/_overlap);
   }
 
 
@@ -268,7 +258,7 @@ void Diffusion<S,A,I>::step(const double                _time,
 
         // generate particles above the surface at the centroid of one step of
         //   diffusion from a flat plate
-        std::vector<S> new_pts = surf.represent_as_particles(h_nu*std::sqrt(4.0/M_PI), _vdelta);
+        std::vector<S> new_pts = surf.represent_as_particles(h_nu*std::sqrt(4.0/M_PI), _vdelta/_overlap);
 
         // add those particles to the main particle list
         if (_vort.size() == 0) {
@@ -302,7 +292,7 @@ void Diffusion<S,A,I>::step(const double                _time,
   //
   // merge again if clear did any work
   //
-  if (_bdry.size() > 0) merge_operation<S>(_vort, particle_overlap, merge_thresh, adaptive_radii);
+  if (_bdry.size() > 0) merge_operation<S>(_vort, _overlap, merge_thresh, adaptive_radii);
 
 
   // now is a fine time to reset the max active/particle strength
@@ -393,13 +383,15 @@ void Diffusion<S,A,I>::from_json(const nlohmann::json j) {
     if (viscous == "vrm") {
       set_diffuse(true);
     } else {
+      // "none" or unsupported
       set_diffuse(false);
     }
   } else {
     set_diffuse(false);
   }
+  std::cout << "  setting is_viscous= " << get_diffuse() << std::endl;
 
-  // regardless, load VRM settings as they were
+  // regardless, load some settings as they were
   vrm.from_json(j);
 
 #ifdef PLUGIN_AVRM
@@ -424,7 +416,6 @@ void Diffusion<S,A,I>::add_to_json(nlohmann::json& j) const {
 #endif
 
   // eventually write other parameters
-  //j["overlap"] = particle_overlap;
   //j["core"] = core_func;
 
   // VRM always writes "VRM" and "AMR" parameters
