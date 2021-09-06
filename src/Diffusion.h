@@ -2,7 +2,7 @@
  * Diffusion.h - a class for diffusion of strength from bodies to particles and among particles
  *
  * (c)2017-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -24,6 +24,18 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
+
+
+// eventually support multiple diffusion types, both inter-particle and boundary-to-fluid
+enum PartDiffuseType {
+  pd_none,
+  pd_core,
+  pd_rvm,
+  pd_pse,
+  pd_vrm,
+  pd_avrm
+  };
+//enum BdryDiffuseType { none, single, vrm, hybrid };
 
 
 //
@@ -84,6 +96,9 @@ private:
 
   // toggle inviscid
   bool is_inviscid;
+
+  // diffusion method
+  //PartDiffuseType pd_type;
 
   // toggle adaptive particle sizes
   bool adaptive_radii;

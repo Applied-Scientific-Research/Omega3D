@@ -2,7 +2,7 @@
  * Coefficients.h - Non-class influence coefficients calculations
  *
  * (c)2017-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -99,6 +99,7 @@ Vector<S> panels_on_points_coeff (Surfaces<S> const& src, Points<S>& targ) {
   return coeffs;
 }
 
+// ===========================================================================================================
 
 template <class S>
 Vector<S> points_on_panels_coeff (Points<S> const& src, Surfaces<S>& targ) {
@@ -576,6 +577,9 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
   return augcoeff;
 }
+
+
+// ===========================================================================================================
 
 
 // helper struct for dispatching through a variant

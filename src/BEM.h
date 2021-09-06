@@ -13,6 +13,7 @@
 #include <Eigen/IterativeLinearSolvers>		// for BiCGSTAB and GMRES
 #include <unsupported/Eigen/src/IterativeSolvers/GMRES.h>	// for GMRES
 
+#include <ciso646>
 #include <cstdlib>
 #include <cstdio>
 #include <cstdint>
@@ -155,14 +156,14 @@ void BEM<S,I>::set_rhs(const size_t cstart, const size_t ncols, std::vector<S>& 
 template <class S, class I>
 void BEM<S,I>::solve() {
 
-  bool verbose = false;
-
   // ensure that the solution vector is the right size
   strengths.resizeLike(b);
 
-  //std::cout << "A is " << A.size() << std::endl;
-  //std::cout << "b is " << b.size() << std::endl;
-  //std::cout << "x is " << strengths.size() << std::endl;
+  if (VERBOSE and false) {
+    std::cout << "A is " << A.size() << std::endl;
+    std::cout << "b is " << b.size() << std::endl;
+    std::cout << "x is " << strengths.size() << std::endl;
+  }
 
   // the Eigen solver object - persistent from call to call
   static Eigen::GMRES<Eigen::Matrix<S, Eigen::Dynamic, Eigen::Dynamic> > solver(A);
@@ -190,7 +191,7 @@ void BEM<S,I>::solve() {
   std::chrono::duration<double> elapsed_seconds = end-start;
   printf("    solver.solve:\t[%.6f] cpu seconds\n", (float)elapsed_seconds.count());
 
-  if (false) {
+  if (VERBOSE and false) {
     const size_t nr = 20;
     //const size_t nr = b.size();
     std::cout << "Matrix equation is" << std::endl;
@@ -203,8 +204,8 @@ void BEM<S,I>::solve() {
     std::cout << strengths.head(nr) << std::endl;
   }
 
-  if (verbose) printf("    num iterations:     %d\n", (uint32_t)solver.iterations());
-  if (verbose) printf("    estimated error: %g\n", solver.error());
+  if (VERBOSE) printf("    num iterations:     %d\n", (uint32_t)solver.iterations());
+  if (VERBOSE) printf("    estimated error: %g\n", solver.error());
 
   // find L2 norm of error
   start = std::chrono::system_clock::now();
@@ -213,9 +214,9 @@ void BEM<S,I>::solve() {
   double b_norm = b.norm(); // norm() is L2 norm
   if (b_norm == 0) { b_norm = 1.0; }
   double relative_error = (A*strengths - b).norm() / b_norm;
-  if (verbose) printf("    L2 norm of error is %g\n", relative_error);
+  if (VERBOSE) printf("    L2 norm of error is %g\n", relative_error);
   end = std::chrono::system_clock::now();
   elapsed_seconds = end-start;
-  if (verbose) printf("    solver.error:\t[%.6f] cpu seconds\n", (float)elapsed_seconds.count());
+  if (VERBOSE) printf("    solver.error:\t[%.6f] cpu seconds\n", (float)elapsed_seconds.count());
 }
 

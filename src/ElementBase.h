@@ -2,7 +2,7 @@
  * ElementBase.h - abstract class for arrays of any computational elements
  *
  * (c)2018-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ *           Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -184,6 +184,7 @@ public:
     n = _nnew;
   }
 
+  // should rename these zero_results
   void zero_vels() {
     for (size_t d=0; d<Dimensions; ++d) {
       std::fill(u[d].begin(), u[d].end(), 0.0);
@@ -389,6 +390,8 @@ protected:
 
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity at nodes
+  //std::optional<Vector<S>> w;                           // vorticity at nodes
+  //std::optional<Vector<S>> e;                           // shear rate at nodes
   //std::optional<std::array<Vector<S>,Dimensions>> dsdt; // strength change
 
   // for objects moving with a body

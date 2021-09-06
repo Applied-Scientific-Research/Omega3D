@@ -268,7 +268,6 @@ IF (CMAKE_COMPILER_IS_GNUCXX)
 ENDIF()
 
 FILE(GLOB IMGUISOURCES "lib/imgui/*.cpp" )
-FILE(GLOB HEADERS "src/*.h" )
 SET(SOURCES "src/Simulation.cpp"
             "src/FlowFeature.cpp"
             "src/CollectionHelper.cpp"

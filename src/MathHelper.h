@@ -2,7 +2,7 @@
  * MathHelper.h - Useful functions to operate on 3-tuples ("vectors", not "std::vector")
  *
  * (c)2018 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ *         Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once

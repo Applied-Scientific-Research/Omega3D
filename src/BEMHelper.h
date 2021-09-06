@@ -2,7 +2,7 @@
  * BEMHelper.h - non-class to coordinate solving the BEM problem
  *
  * (c)2019-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once

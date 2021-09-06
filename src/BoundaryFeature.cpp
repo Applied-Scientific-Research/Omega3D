@@ -7,11 +7,11 @@
  */
 
 #include "BoundaryFeature.h"
+#include "GuiHelper.h"
 #include "IglReadGeom.h"
 #include "IglRefine.h"
 #include "Icosahedron.h"
 #include "Cube.h"
-#include "GuiHelper.h"
 
 #include <cmath>
 #include <iostream>
