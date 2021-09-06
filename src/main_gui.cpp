@@ -132,7 +132,6 @@ int main(int argc, char const *argv[]) {
   ImGuiIO& io = ImGui::GetIO();
   io.IniFilename = ".omega3d.ini";
   std::vector<std::string> recent_json_files;
-  //sim.set_status_file_name("status.dat");
 
   // Load Fonts
   // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
@@ -181,7 +180,7 @@ int main(int argc, char const *argv[]) {
   bool show_json_input_window = false;
   bool show_file_output_window = false;
   //static bool show_origin = true;
-  static bool is_viscous = sim.get_diffuse();
+  static bool is_viscous = false;
 
   // colors, modelview, and projection matrix for the render view
   RenderParams rparams;
@@ -345,7 +344,10 @@ int main(int argc, char const *argv[]) {
 
         for (auto const& mf: mfeatures) {
           if (mf->is_enabled()) {
-            const move_t newMoveType = (mf->get_is_lagrangian() ? lagrangian : fixed);
+            move_t newMoveType = fixed;
+            if (mf->moves() or mf->emits()) {
+              newMoveType = lagrangian;
+            }
             sim.add_elements( mf->step_elements(rparams.tracer_scale*sim.get_ips()), inert, newMoveType, mf->get_body() );
           }
         }
@@ -468,7 +470,6 @@ int main(int argc, char const *argv[]) {
     if (show_json_input_window) {
       bool try_it = false;
       static std::string infile = "input.json";
-
       if (fileIOWindow( try_it, infile, recent_json_files, "Open", {"*.json", "*.*"}, true, ImVec2(200+26*fontSize,300))) {
         show_json_input_window = false;
 
@@ -569,7 +570,7 @@ int main(int argc, char const *argv[]) {
     }
 
 
-    //if (ImGui::CollapsingHeader("Simulation globals", ImGuiTreeNodeFlags_DefaultOpen)) {
+    //if (ImGui::CollapsingHeader("Simulation globals", ImGuiTreeNodeFlags_DefaultOpen))
     if (ImGui::CollapsingHeader("Simulation globals")) {
 
       // save current versions, so we know which changed
@@ -652,7 +653,7 @@ int main(int argc, char const *argv[]) {
     } // end Simulation Globals
 
     ImGui::Spacing();
-    //if (ImGui::CollapsingHeader("Flow structures", ImGuiTreeNodeFlags_DefaultOpen)) {
+    //if (ImGui::CollapsingHeader("Flow structures", ImGuiTreeNodeFlags_DefaultOpen)) 
     if (ImGui::CollapsingHeader("Startup structures")) {
 
       if (ffeatures.size() + bfeatures.size() == 0) {
