@@ -793,8 +793,7 @@ void Simulation::step() {
   }
 
   // advect with no diffusion (must update BEM strengths)
-  //conv.advect_1st(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
-  conv.advect_2nd(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
+  conv.advect(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
 
   if (use_2nd_order_operator_splitting) {
     // operator splitting requires another half-step diffuse (must compute new coefficients)
