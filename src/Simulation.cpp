@@ -801,31 +801,7 @@ void Simulation::step() {
   }
 
   // step complete, now split any elongated particles (move this to Split)
-  for (auto &coll: vort) {
-  
-    // but only check particles ("Points")
-    if (std::holds_alternative<Points<float>>(coll)) {
-
-      Points<float>& pts = std::get<Points<float>>(coll);
-      //std::cout << "    check split for " << pts.get_n() << " particles" << std::endl;
-      //std::cout << std::endl;
-
-      // none of these are passed as const, because both may be extended with new particles
-      std::array<Vector<float>,Dimensions>&       x = pts.get_pos();
-      Vector<float>&                              r = pts.get_rad();
-      Vector<float>&                              elong = pts.get_elong();
-      std::array<Vector<float>, numStrenPerNode>& s = pts.get_str();
-
-      // last two arguments are: relative distance, allow variable core radii
-      (void)split_elongated<float>(x[0], x[1], x[2], r, elong, s[0], s[1], s[2],
-                                   diff.get_core_func(),
-                                   overlap_ratio,
-                                   1.2);
-
-      // we probably have a different number of particles now, resize the u, ug, elong arrays
-      pts.resize(r.size());
-    }
-  }
+  split_operation<float>(vort, diff.get_core_func(), overlap_ratio, 1.2);
 
   // update time
   time += (double)dt;

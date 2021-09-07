@@ -254,3 +254,39 @@ size_t split_elongated(Vector<S>& x, Vector<S>& y, Vector<S>& z,
   return num_split;
 }
 
+
+//
+// split any collections of Points due to stretching
+//
+template <class S>
+void split_operation(std::vector<Collection>& _vort,
+                     const CoreType _corefunc,
+                     const S _overlap,
+                     const S _threshold) {
+
+  for (auto &coll: _vort) {
+
+    // but only check particles ("Points")
+    if (std::holds_alternative<Points<S>>(coll)) {
+
+      Points<S>& pts = std::get<Points<S>>(coll);
+      //std::cout << "    check split for " << pts.get_n() << " particles" << std::endl;
+      //std::cout << std::endl;
+
+      // none of these are passed as const, because both may be extended with new particles
+      std::array<Vector<S>,Dimensions>&       x = pts.get_pos();
+      Vector<S>&                              r = pts.get_rad();
+      Vector<S>&                              elong = pts.get_elong();
+      std::array<Vector<S>, numStrenPerNode>& s = pts.get_str();
+
+      // last two arguments are: relative distance, allow variable core radii
+      (void)split_elongated<S>(x[0], x[1], x[2], r, elong, s[0], s[1], s[2],
+                               _corefunc,
+                               _overlap,
+                               _threshold);
+
+      // we probably have a different number of particles now, resize the u, ug, elong arrays
+      pts.resize(r.size());
+    }
+  }
+}
