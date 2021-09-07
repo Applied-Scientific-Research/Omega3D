@@ -779,26 +779,29 @@ void Simulation::async_step() {
 void Simulation::step() {
   std::cout << std::endl << "Taking step " << nstep << " at t=" << time << " with n=" << get_nparts() << std::endl;
 
+  const bool use_2nd_order_operator_splitting = true;
+
   // we wind up using this a lot
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
-  // for simplicity's sake, just run one full diffusion step here
-  diff.step(time, dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
-
-  // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
-  //diff.step(time, 0.5*dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
+  if (use_2nd_order_operator_splitting) {
+    // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
+    diff.step(time, 0.5*dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
+  } else {
+    // for simplicity's sake, just run one full diffusion step here
+    diff.step(time, dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
+  }
 
   // advect with no diffusion (must update BEM strengths)
   //conv.advect_1st(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
   conv.advect_2nd(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
 
-  // operator splitting requires another half-step diffuse (must compute new coefficients)
-  //diff.step(time, 0.5*dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
+  if (use_2nd_order_operator_splitting) {
+    // operator splitting requires another half-step diffuse (must compute new coefficients)
+    diff.step(time+dt, 0.5*dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
+  }
 
-  // push field points out of objects every few steps
-  if (nstep%5 == 0) clear_inner_layer<STORE>(1, bdry, fldpt, (STORE)0.0, (STORE)(0.5*get_ips()));
-
-  // step complete, now split any elongated particles
+  // step complete, now split any elongated particles (move this to Split)
   for (auto &coll: vort) {
   
     // but only check particles ("Points")
@@ -825,11 +828,11 @@ void Simulation::step() {
     }
   }
 
-  // update strengths for coloring purposes (eventually should be taken care of automatically)
-  //vort.update_max_str();
-
-  // update dt and return
+  // update time
   time += (double)dt;
+
+  // push field points out of objects every few steps
+  if (nstep%5 == 0) clear_inner_layer<STORE>(1, bdry, fldpt, (STORE)0.0, (STORE)(0.5*get_ips()));
 
   // only increment step here!
   nstep++;
