@@ -56,8 +56,8 @@ void solve_bem(const double                         _time,
 
   // need this for dispatching velocity influence calls, template param is accumulator type,
   //   member variable is default execution environment
-  InfluenceVisitor<A> ivisitor = {ExecEnv()};
-  RHSVisitor rvisitor;
+  InfluenceVisitor<S,A> ivisitor = {ExecEnv()};
+  RHSVisitor<S> rvisitor;
 
   //
   // update rhs first
@@ -160,7 +160,7 @@ void solve_bem(const double                         _time,
     _bem.panels_changed();
 
     // this is the dispatcher for Points/Surfaces on Points/Surfaces
-    CoefficientVisitor cvisitor;
+    CoefficientVisitor<S> cvisitor;
 
     // loop over boundary collections
     for (auto &targ : _bdry) {

@@ -1,8 +1,8 @@
 /*
  * Influence.h - Non-class influence calculations
  *
- * (c)2017-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -1207,13 +1207,13 @@ void panels_affect_panels (Surfaces<S> const& src, Surfaces<S>& targ, ExecEnv& e
 //
 // helper struct for dispatching through a variant
 //
-template <class A>
+template <class S, class A>
 struct InfluenceVisitor {
   // source collection, target collection, execution environment
-  void operator()(Points<float> const& src,   Points<float>& targ)   { points_affect_points<float,A>(src, targ, env); }
-  void operator()(Surfaces<float> const& src, Points<float>& targ)   { panels_affect_points<float,A>(src, targ, env); }
-  void operator()(Points<float> const& src,   Surfaces<float>& targ) { points_affect_panels<float,A>(src, targ, env); }
-  void operator()(Surfaces<float> const& src, Surfaces<float>& targ) { panels_affect_panels<float,A>(src, targ, env); }
+  void operator()(Points<S> const& src,   Points<S>& targ)   { points_affect_points<S,A>(src, targ, env); }
+  void operator()(Surfaces<S> const& src, Points<S>& targ)   { panels_affect_points<S,A>(src, targ, env); }
+  void operator()(Points<S> const& src,   Surfaces<S>& targ) { points_affect_panels<S,A>(src, targ, env); }
+  void operator()(Surfaces<S> const& src, Surfaces<S>& targ) { panels_affect_panels<S,A>(src, targ, env); }
 
   ExecEnv env;
 };

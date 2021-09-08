@@ -118,7 +118,7 @@ void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
   // need this for dispatching velocity influence calls, template param is accumulator type
   // should the solution_t be an argument to the constructor?
   // member variable is passed-in execution environment
-  InfluenceVisitor<A> visitor = {conv_env};
+  InfluenceVisitor<S,A> visitor = {conv_env};
 
   // add vortex and source strengths to account for rotating bodies
   for (auto &src : _bdry) {

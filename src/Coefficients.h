@@ -583,11 +583,12 @@ Vector<S> panels_on_panels_coeff (Surfaces<S> const& src, Surfaces<S>& targ) {
 
 
 // helper struct for dispatching through a variant
+template <class S>
 struct CoefficientVisitor {
   // source collection, target collection
-  Vector<float> operator()(Points<float> const& src,   Points<float>& targ)   { return points_on_points_coeff<float>(src, targ); } 
-  Vector<float> operator()(Surfaces<float> const& src, Points<float>& targ)   { return panels_on_points_coeff<float>(src, targ); } 
-  Vector<float> operator()(Points<float> const& src,   Surfaces<float>& targ) { return points_on_panels_coeff<float>(src, targ); } 
-  Vector<float> operator()(Surfaces<float> const& src, Surfaces<float>& targ) { return panels_on_panels_coeff<float>(src, targ); } 
+  Vector<S> operator()(Points<S> const& src,   Points<S>& targ)   { return points_on_points_coeff<S>(src, targ); } 
+  Vector<S> operator()(Surfaces<S> const& src, Points<S>& targ)   { return panels_on_points_coeff<S>(src, targ); } 
+  Vector<S> operator()(Points<S> const& src,   Surfaces<S>& targ) { return points_on_panels_coeff<S>(src, targ); } 
+  Vector<S> operator()(Surfaces<S> const& src, Surfaces<S>& targ) { return panels_on_panels_coeff<S>(src, targ); } 
 };
 

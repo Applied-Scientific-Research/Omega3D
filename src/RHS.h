@@ -2,7 +2,7 @@
  * RHS.h - Non-class velocity-to-right-hand-side calculations
  *
  * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ *           Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -17,6 +17,7 @@
 #include <cassert>
 
 
+// No need to return anything because points currently cannot be reactive
 template <class S>
 std::vector<S> vels_to_rhs_points (Points<S> const& targ) {
   std::cout << "    NOT converting vels to RHS vector for " << targ.to_string() << std::endl;
@@ -25,9 +26,9 @@ std::vector<S> vels_to_rhs_points (Points<S> const& targ) {
   //float flops = 0.0;
 
   // size the return vector
-  size_t ntarg  = targ.get_n();
+  //size_t ntarg  = targ.get_n();
   std::vector<S> rhs;
-  rhs.resize(ntarg);
+  rhs.resize(0);
 
   //auto end = std::chrono::system_clock::now();
   //std::chrono::duration<double> elapsed_seconds = end-start;
@@ -110,9 +111,10 @@ std::vector<S> vels_to_rhs_panels (Surfaces<S> const& targ) {
 
 
 // helper struct for dispatching through a variant
+template <class S>
 struct RHSVisitor {
   // source collection, target collection
-  std::vector<float> operator()(Points<float> const& targ)   { return vels_to_rhs_points<float>(targ); } 
-  std::vector<float> operator()(Surfaces<float> const& targ) { return vels_to_rhs_panels<float>(targ); } 
+  std::vector<S> operator()(Points<S> const& targ)   { return vels_to_rhs_points<S>(targ); } 
+  std::vector<S> operator()(Surfaces<S> const& targ) { return vels_to_rhs_panels<S>(targ); } 
 };
 
