@@ -11,6 +11,8 @@
 #define __restrict__ __restrict
 #endif
 
+#include "MathHelper.h"
+
 #ifdef USE_VC
 #include <Vc/Vc>
 #endif
@@ -23,133 +25,6 @@
 //#define USE_V2_KERNEL
 //#define USE_V3_KERNEL	// not programmed
 
-// helper functions: sqrt, recip, oor1p5
-#ifdef USE_VC
-template <class S>
-static inline S my_sqrt(const S _in) {
-  return Vc::sqrt(_in);
-}
-template <>
-inline float my_sqrt(const float _in) {
-  return std::sqrt(_in);
-}
-template <>
-inline double my_sqrt(const double _in) {
-  return std::sqrt(_in);
-}
-#else
-template <class S>
-static inline S my_sqrt(const S _in) {
-  return std::sqrt(_in);
-}
-#endif
-
-#ifdef USE_VC
-template <class S>
-static inline S my_rsqrt(const S _in) {
-  return Vc::rsqrt(_in);
-}
-template <>
-inline float my_rsqrt(const float _in) {
-  return 1.0f / std::sqrt(_in);
-}
-template <>
-inline double my_rsqrt(const double _in) {
-  return 1.0 / std::sqrt(_in);
-}
-#else
-template <class S>
-static inline S my_rsqrt(const S _in) {
-  return (S)1.0 / std::sqrt(_in);
-}
-#endif
-
-#ifdef USE_VC
-template <class S>
-static inline S my_recip(const S _in) {
-  return Vc::reciprocal(_in);
-}
-template <>
-inline float my_recip(const float _in) {
-  return 1.0f / _in;
-}
-template <>
-inline double my_recip(const double _in) {
-  return 1.0 / _in;
-}
-#else
-template <class S>
-static inline S my_recip(const S _in) {
-  return S(1.0) / _in;
-}
-#endif
-
-#ifdef USE_VC
-template <class S>
-static inline S oor2p5(const S _in) {
-  //return Vc::reciprocal(_in*_in*Vc::sqrt(_in));	// 234 GFlop/s
-  return Vc::rsqrt(_in) * Vc::reciprocal(_in*_in);	// 269 GFlop/s
-}
-template <>
-inline float oor2p5(const float _in) {
-  return 1.0f / (_in*_in*std::sqrt(_in));
-}
-template <>
-inline double oor2p5(const double _in) {
-  return 1.0 / (_in*_in*std::sqrt(_in));
-}
-#else
-template <class S>
-static inline S oor2p5(const S _in) {
-  return S(1.0) / (_in*_in*std::sqrt(_in));
-}
-#endif
-
-#ifdef USE_VC
-template <class S>
-static inline S oor1p5(const S _in) {
-  //return Vc::reciprocal(_in*Vc::sqrt(_in));		// 243 GFlop/s
-  return Vc::rsqrt(_in) * Vc::reciprocal(_in);		// 302 GFlop/s
-}
-template <>
-inline float oor1p5(const float _in) {
-  return 1.0f / (_in*std::sqrt(_in));
-}
-template <>
-inline double oor1p5(const double _in) {
-  return 1.0 / (_in*std::sqrt(_in));
-}
-#else
-template <class S>
-static inline S oor1p5(const S _in) {
-  return S(1.0) / (_in*std::sqrt(_in));
-}
-#endif
-
-#ifdef USE_VC
-template <class S>
-static inline S oor0p75(const S _in) {
-  const S rsqd = Vc::rsqrt(_in);
-  //return rsqd*Vc::sqrt(rsqd);				// 265 GFlop/s
-  return rsqd*rsqd*Vc::rsqrt(rsqd);			// 301 GFlop/s
-}
-template <>
-inline float oor0p75(const float _in) {
-  const float sqd = std::sqrt(_in);
-  return 1.0f / (sqd*std::sqrt(sqd));
-}
-template <>
-inline double oor0p75(const double _in) {
-  const double sqd = std::sqrt(_in);
-  return 1.0 / (sqd*std::sqrt(sqd));
-}
-#else
-template <class S>
-static inline S oor0p75(const S _in) {
-  const S sqd = std::sqrt(_in);
-  return S(1.0) / (sqd*std::sqrt(sqd));
-}
-#endif
 
 
 #ifdef USE_RM_KERNEL
@@ -163,6 +38,7 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 }
 template <class S> inline size_t flops_tv_nograds () { return 7; }
 
+// and the one for non-singular targets
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S r2 = distsq + sr*sr;
@@ -182,6 +58,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 }
 template <class S> inline size_t flops_tv_grads () { return 9; }
 
+// and the one for non-singular targets
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -194,7 +71,9 @@ template <class S> inline size_t flops_tp_grads () { return 7; }
 
 
 #ifdef USE_EXPONENTIAL_KERNEL
-// a helper conditional
+//
+// exponential core - velocity only
+//
 #ifdef USE_VC
 template <class S>
 static inline S exp_cond (const S ood3, const S corefac, const S reld3) {
@@ -348,7 +227,7 @@ template <class S> inline size_t flops_tv_grads () { return 14; }
 
 #ifdef USE_WL_KERNEL
 //
-// Winckelmans–Leonard - velocity only
+// Winckelmans-Leonard - velocity only
 //
 template <class S>
 static inline S core_func (const S distsq, const S sr, const S tr) {
@@ -358,6 +237,7 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 }
 template <class S> inline size_t flops_tv_nograds () { return 10; }
 
+// and the one for non-singular targets
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S r2 = sr*sr;
@@ -367,7 +247,7 @@ static inline S core_func (const S distsq, const S sr) {
 template <class S> inline size_t flops_tp_nograds () { return 8; }
 
 //
-// Winckelmans–Leonard - with gradients
+// Winckelmans-Leonard - with gradients
 //
 template <class S>
 static inline void core_func (const S distsq, const S sr, const S tr,
@@ -381,6 +261,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 }
 template <class S> inline size_t flops_tv_grads () { return 16; }
 
+// and the one for non-singular targets
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -408,6 +289,7 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 }
 template <class S> inline size_t flops_tv_nograds () { return 11; }
 
+// and for non-singular targets
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S s2 = sr*sr;
@@ -433,6 +315,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 }
 template <class S> inline size_t flops_tv_grads () { return 13; }
 
+// and the one for non-singular targets
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
