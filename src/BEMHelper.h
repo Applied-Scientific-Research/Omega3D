@@ -1,7 +1,7 @@
 /*
  * BEMHelper.h - non-class to coordinate solving the BEM problem
  *
- * (c)2019-20 Applied Scientific Research, Inc.
+ * (c)2019-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  */
 
@@ -14,6 +14,7 @@
 #include "Coefficients.h"
 #include "RHS.h"
 #include "BEM.h"
+#include "ResultsType.h"
 #include "ExecEnv.h"
 
 #include <cstdlib>
@@ -56,7 +57,7 @@ void solve_bem(const double                         _time,
 
   // need this for dispatching velocity influence calls, template param is accumulator type,
   //   member variable is default execution environment
-  InfluenceVisitor<S,A> ivisitor = {ExecEnv()};
+  InfluenceVisitor<S,A> ivisitor = {ResultsType(velonly), ExecEnv()};
   RHSVisitor<S> rvisitor;
 
   //

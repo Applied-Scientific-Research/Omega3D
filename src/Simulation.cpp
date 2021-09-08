@@ -583,9 +583,10 @@ std::vector<std::string> Simulation::write_vtk(const int _index,
   //clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
   solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
 
-  if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, true);
-  if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt, true);
-  if (_do_bdry)    conv.find_vels(thisfs, vort, bdry, bdry, true);
+  // why not velandvort ? Oh, because we can't compute that yet
+  if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, velonly, true);
+  if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt, velonly, true);
+  if (_do_bdry)    conv.find_vels(thisfs, vort, bdry, bdry, velonly, true);
 #endif
 
   // may eventually want to avoid clobbering by maintaining an internal count of the
