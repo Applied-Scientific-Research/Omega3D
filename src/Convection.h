@@ -227,13 +227,13 @@ void Convection<S,A,I>::advect_1st(const double                         _time,
 
   // move every movable element
   for (auto &coll : _vort) {
-    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt, 1.0, elem); }, coll);
   }
   for (auto &coll : _bdry) {
-    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt, 1.0, elem); }, coll);
   }
   for (auto &coll : _fldpt) {
-    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt, 1.0, elem); }, coll);
   }
 
   // wrap up movement by pushing away particles inside or too close to the body
@@ -265,7 +265,7 @@ void Convection<S,A,I>::advect_2nd_heun(const double                         _ti
   // advect into an intermediate system
   std::vector<Collection> interim_vort = _vort;
   for (auto &coll : interim_vort) {
-    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt, 1.0, elem); }, coll);
   }
   clear_inner_layer<S>(1, _bdry, interim_vort, 0.5/std::sqrt(2.0*M_PI), _ips);
   // now _vort has its original positions and the velocities evaluated there
@@ -274,7 +274,7 @@ void Convection<S,A,I>::advect_2nd_heun(const double                         _ti
   // do the same for fldpt
   std::vector<Collection> interim_fldpt = _fldpt;
   for (auto &coll : interim_fldpt) {
-    std::visit([=](auto& elem) { elem.move(_time, _dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, _dt, 1.0, elem); }, coll);
   }
   clear_inner_layer<S>(1, _bdry, interim_fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
 
@@ -347,7 +347,7 @@ void Convection<S,A,I>::advect_2nd_ralston(const double                         
   // advect into an intermediate system
   std::vector<Collection> interim_vort = _vort;
   for (auto &coll : interim_vort) {
-    std::visit([=](auto& elem) { elem.move(_time, twothirds*_dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, twothirds*_dt, 1.0, elem); }, coll);
   }
   clear_inner_layer<S>(1, _bdry, interim_vort, 0.5/std::sqrt(2.0*M_PI), _ips);
   // now _vort has its original positions and the velocities evaluated there
@@ -356,7 +356,7 @@ void Convection<S,A,I>::advect_2nd_ralston(const double                         
   // do the same for fldpt
   std::vector<Collection> interim_fldpt = _fldpt;
   for (auto &coll : interim_fldpt) {
-    std::visit([=](auto& elem) { elem.move(_time, twothirds*_dt); }, coll);
+    std::visit([=](auto& elem) { elem.move(_time, twothirds*_dt, 1.0, elem); }, coll);
   }
   clear_inner_layer<S>(1, _bdry, interim_fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
 

@@ -87,7 +87,7 @@ public:
 
       // optional strength in base class
       // need to assign it a vector first!
-      std::array<Vector<S>,numStrenPerNode> new_s;
+      std::array<Vector<S>,numStrPerNode> new_s;
       for (size_t d=0; d<3; ++d) {
         new_s[d].resize(this->n);
         for (size_t i=0; i<this->n; ++i) {
@@ -128,10 +128,10 @@ public:
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
     // and that it has the right number of values per particle
-    //std::cout << _in.val.size()/(numStrenPerNode+1) << " " << _in.nelem << std::endl;
+    //std::cout << _in.val.size()/(numStrPerNode+1) << " " << _in.nelem << std::endl;
     if (_e == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
     else if (_e == reactive) assert(false && "Input ElementPacket with reactive points is unsupported");
-    else assert(_in.val.size()/(numStrenPerNode+1) == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
+    else assert(_in.val.size()/(numStrPerNode+1) == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
 
     // tell the world that we're legit
     std::cout << "  new collection with " << (_in.nelem);
@@ -173,9 +173,9 @@ public:
       
       // optional strength in base class
       // need to assign it a vector first!
-      std::array<Vector<S>, numStrenPerNode> new_s;
+      std::array<Vector<S>, numStrPerNode> new_s;
       const size_t nper = _in.val.size() / this->n;
-      for (size_t j = 0; j < numStrenPerNode; j++) {
+      for (size_t j=0; j<numStrPerNode; j++) {
         new_s[j].resize(this->n);
         for (size_t i = 0; i < this->n; i++) {
           new_s[j][i] = _in.val[i*nper+j];
@@ -263,7 +263,7 @@ public:
     if (VERBOSE) { std::cout << "  val size " << _in.val.size() << std::endl; }
     if (this->E == inert) { assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array"); }
     else if (this->E == reactive) { assert("Input ElementPacket with reactive points is unsupported"); }
-    else { assert(_in.val.size()/(numStrenPerNode+1) == _in.nelem && "Input ElementPacket with vortons has bad sized val array"); }
+    else { assert(_in.val.size()/(numStrPerNode+1) == _in.nelem && "Input ElementPacket with vortons has bad sized val array"); }
 
     // remember old size and incoming size (note that Points nelems = nnodes)
     const size_t nold = this->n;
@@ -377,9 +377,11 @@ public:
   //
   // 1st order Euler advection and stretch
   //
-  void move(const double _time, const double _dt) {
+  void move(const double _time, const double _dt,
+            const double _wt1, Points<S> const & _u1) {
+
     // must explicitly call the method in the base class
-    ElementBase<S>::move(_time, _dt);
+    ElementBase<S>::move(_time, _dt, _wt1, _u1);
 
     // and specialize
     if (this->M == lagrangian and ug and this->E != inert) {
@@ -387,12 +389,14 @@ public:
       S thismax = 0.0;
 
       for (size_t i=0; i<this->n; ++i) {
+
+        // set up some convenient temporaries
         std::array<S,Dimensions*Dimensions> this_ug = {0.0};
         for (size_t d=0; d<Dimensions*Dimensions; ++d) {
           this_ug[d] = (*ug)[d][i];
         }
-        std::array<S,numStrenPerNode> this_s = {0.0};
-        for (size_t d=0; d<numStrenPerNode; ++d) {
+        std::array<S,numStrPerNode> this_s = {0.0};
+        for (size_t d=0; d<numStrPerNode; ++d) {
           this_s[d] = (*this->s)[d][i];
         }
 
@@ -407,16 +411,16 @@ public:
         // update elongation
         const S circmagsqrd = this_s[0]*this_s[0] + this_s[1]*this_s[1] + this_s[2]*this_s[2];
         if (circmagsqrd > 0.0) {
-          const S elongfactor = (S)_dt * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmagsqrd;
+          const S elongfactor = (S)_dt * _wt1 * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmagsqrd;
           elong[i] *= 1.0 + elongfactor;
         }
 
         // add Cottet SFS into stretch term (after elongation)
 
         // update strengths
-        (*this->s)[0][i] = this_s[0] + _dt * wdu[0];
-        (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
-        (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
+        (*this->s)[0][i] = this_s[0] + _dt * _wt1 * wdu[0];
+        (*this->s)[1][i] = this_s[1] + _dt * _wt1 * wdu[1];
+        (*this->s)[2][i] = this_s[2] + _dt * _wt1 * wdu[2];
 
         // check for max strength
         S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
@@ -437,12 +441,15 @@ public:
           std::cout << std::endl;
         }
       }
+
+      // and update the max strength measure
       if (max_strength < 0.0) {
         max_strength = std::sqrt(thismax);
       } else {
         max_strength = 0.1*std::sqrt(thismax) + 0.9*max_strength;
       }
       //std::cout << "  New max_strength is " << max_strength << std::endl;
+
     } else {
       //std::cout << "  Not stretching" << to_string() << std::endl;
       max_strength = 1.0;
@@ -455,10 +462,11 @@ public:
   void move(const double _time, const double _dt,
             const double _wt1, Points<S> const & _u1,
             const double _wt2, Points<S> const & _u2) {
+
     // must explicitly call the method in the base class
     ElementBase<S>::move(_time, _dt, _wt1, _u1, _wt2, _u2);
 
-    // must confirm that incoming time derivates include velocity
+    // must confirm that incoming time derivates include velocity (?)
 
     // and specialize
     if (this->M == lagrangian and this->E != inert and _u1.ug and _u2.ug) {
@@ -468,9 +476,9 @@ public:
       for (size_t i=0; i<this->n; ++i) {
 
         // set up some convenient temporaries
-        std::array<S,numStrenPerNode> this_s = {0.0};
+        std::array<S,numStrPerNode> this_s = {0.0};
         std::array<S,Dimensions*Dimensions> this_ug = {0.0};
-        for (size_t d=0; d<numStrenPerNode; ++d) {
+        for (size_t d=0; d<numStrPerNode; ++d) {
           this_s[d] = (*this->s)[d][i];
         }
         auto& optug1 = _u1.ug;

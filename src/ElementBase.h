@@ -83,7 +83,7 @@ public:
     // strength
     if (s and nper==7) {
       // must dereference s to get the actual vector
-      for (size_t d=0; d<numStrenPerNode; ++d) {
+      for (size_t d=0; d<numStrPerNode; ++d) {
         (*s)[d].resize(n+nnew);
         for (size_t i=0; i<nnew; ++i) {
           (*s)[d][n+i] = _in[7*i+d+3];
@@ -130,7 +130,7 @@ public:
       assert(_in.val.size() >= nnew && "Input ElementPacket does not have enough values in val");
       const size_t nper = _in.val.size() / nnew;
       // must dereference s to get the actual vector
-      for (size_t j = 0; j < numStrenPerNode; j++) {
+      for (size_t j=0; j<numStrPerNode; j++) {
         (*s)[j].resize(n+nnew);
         for (size_t i=0; i<nnew; ++i) {
           (*s)[j][n+i] = _in.val[nper*i+j];
@@ -166,7 +166,7 @@ public:
 
     // strength
     if (s) {
-      for (size_t d=0; d<numStrenPerNode; ++d) {
+      for (size_t d=0; d<numStrPerNode; ++d) {
         const size_t thisn = (*s)[d].size();
         (*s)[d].resize(_nnew);
         for (size_t i=thisn; i<_nnew; ++i) {
@@ -206,7 +206,7 @@ public:
 
   void zero_strengths() {
     if (s) {
-      for (size_t d=0; d<numStrenPerNode; ++d) {
+      for (size_t d=0; d<numStrPerNode; ++d) {
         std::fill((*s)[d].begin(), (*s)[d].end(), 0.0);
       }
     }
@@ -244,9 +244,44 @@ public:
   }
 
   // time is the starting time, time+dt is the ending time
-  void move(const double _time, const double _dt) {
+  void move(const double _time, const double _dt,
+            const double _wt1, ElementBase<S> const & _u1) {
+
     if (M == lagrangian) {
       std::cout << "  Moving" << to_string() << std::endl;
+
+      // we do not need to update vels because _u1 is the same as this
+
+      // update positions
+      for (size_t d=0; d<Dimensions; ++d) {
+        for (size_t i=0; i<n; ++i) {
+          x[d][i] += (S)_dt * _wt1*_u1.u[d][i];
+        }
+      }
+
+      // update strengths (in derived class)
+
+    } else if (B and M == bodybound) {
+      transform(_time+_dt);
+    }
+  }
+
+  // time is the starting time, time+dt is the ending time
+  void move(const double _time, const double _dt,
+            const double _wt1, ElementBase<S> const & _u1,
+            const double _wt2, ElementBase<S> const & _u2) {
+
+    // must confirm that incoming time derivates include velocity
+    // if this has vels, then lets advect it
+    if (M == lagrangian) {
+      std::cout << "  Moving" << to_string() << std::endl;
+
+      // update vels, note that _u1 is the same as this
+      for (size_t d=0; d<Dimensions; ++d) {
+        for (size_t i=0; i<n; ++i) {
+          u[d][i] = _wt1*_u1.u[d][i] + _wt2*_u2.u[d][i];
+        }
+      }
 
       // update positions
       for (size_t d=0; d<Dimensions; ++d) {
@@ -264,17 +299,26 @@ public:
 
   // time is the starting time, time+dt is the ending time
   void move(const double _time, const double _dt,
+            const double _wt0, ElementBase<S> const & _u0,
             const double _wt1, ElementBase<S> const & _u1,
             const double _wt2, ElementBase<S> const & _u2) {
+
     // must confirm that incoming time derivates include velocity
     // if this has vels, then lets advect it
     if (M == lagrangian) {
       std::cout << "  Moving" << to_string() << std::endl;
 
+      // update vels, note that _u1 is the same as this
+      for (size_t d=0; d<Dimensions; ++d) {
+        for (size_t i=0; i<n; ++i) {
+          u[d][i] = _wt0*_u0.u[d][i] + _wt1*_u1.u[d][i] + _wt2*_u2.u[d][i];
+        }
+      }
+
       // update positions
       for (size_t d=0; d<Dimensions; ++d) {
         for (size_t i=0; i<n; ++i) {
-          x[d][i] += (S)_dt * (_wt1*_u1.u[d][i] + _wt2*_u2.u[d][i]);
+          x[d][i] += (S)_dt * u[d][i];
         }
       }
 
@@ -310,7 +354,7 @@ public:
       // this is the c++17 way
       //return std::reduce(std::execution::par, s->begin(), s->end());
       // this is the c++11 way
-      for (size_t d=0; d<numStrenPerNode; ++d) {
+      for (size_t d=0; d<numStrPerNode; ++d) {
         circ[d] = std::accumulate((*s)[d].begin(), (*s)[d].end(), 0.0);
       }
     }
@@ -386,7 +430,7 @@ protected:
 
   // state vector
   std::array<Vector<S>,Dimensions> x;                   // position of nodes
-  std::optional<std::array<Vector<S>,numStrenPerNode>> s;    // strength at nodes
+  std::optional<std::array<Vector<S>,numStrPerNode>> s; // strength at nodes
 
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity at nodes

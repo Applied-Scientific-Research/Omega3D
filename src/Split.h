@@ -276,8 +276,8 @@ void split_operation(std::vector<Collection>& _vort,
       // none of these are passed as const, because both may be extended with new particles
       std::array<Vector<S>,Dimensions>&       x = pts.get_pos();
       Vector<S>&                              r = pts.get_rad();
-      Vector<S>&                              elong = pts.get_elong();
-      std::array<Vector<S>, numStrenPerNode>& s = pts.get_str();
+      Vector<S>&                          elong = pts.get_elong();
+      std::array<Vector<S>, numStrPerNode>&   s = pts.get_str();
 
       // last two arguments are: relative distance, allow variable core radii
       (void)split_elongated<S>(x[0], x[1], x[2], r, elong, s[0], s[1], s[2],

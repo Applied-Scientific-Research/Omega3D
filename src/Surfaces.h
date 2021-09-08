@@ -1,7 +1,7 @@
 /*
  * Surfaces.h - Specialized class for trimesh surfaces in 3D
  *
- * (c)2019-20 Applied Scientific Research, Inc.
+ * (c)2019-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  */
 
@@ -185,11 +185,11 @@ public:
     // debug print
     if (VERBOSE) {
       std::cout << "Nodes" << std::endl;
-      for (size_t i=0; i<nnodes; ++i) {
+      for (size_t i=0; i<std::min((size_t)100,nnodes); ++i) {
         std::cout << "  " << i << " " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i] << std::endl;
       }
       std::cout << "Triangles" << std::endl;
-      for (size_t i=0; i<nsurfs; ++i) {
+      for (size_t i=0; i<std::min((size_t)100,nsurfs); ++i) {
         std::cout << "  " << i << " " << idx[3*i] << " " << idx[3*i+1] << " " << idx[3*i+2] << std::endl;
       }
     }
@@ -212,20 +212,20 @@ public:
     : Surfaces(_elems.x, _elems.idx, _elems.val, _e, _m, _bp)
   { }
 
-  size_t                         get_npanels()     const { return np; }
-  const S                        get_vol()         const { return vol; }
-  const std::array<S,Dimensions> get_geom_center() const { return tc; }
+  size_t                            get_npanels()     const { return np; }
+  const S                           get_vol()         const { return vol; }
+  const std::array<S,Dimensions>    get_geom_center() const { return tc; }
 
   // panel geometry
-  const std::vector<Int>&                 get_idx()  const { return idx; }
-  const std::array<Vector<S>,Dimensions>& get_x1()   const { return b[0]; }
-  const std::array<Vector<S>,Dimensions>& get_x2()   const { return b[1]; }
-  const std::array<Vector<S>,Dimensions>& get_norm() const { return b[2]; }
-  const Vector<S>&                        get_area() const { return area; }
+  const std::vector<Int>&                  get_idx()  const { return idx; }
+  const std::array<Vector<S>,Dimensions>&  get_x1()   const { return b[0]; }
+  const std::array<Vector<S>,Dimensions>&  get_x2()   const { return b[1]; }
+  const std::array<Vector<S>,Dimensions>&  get_norm() const { return b[2]; }
+  const Vector<S>&                         get_area() const { return area; }
 
   // override the ElementBase versions and send the panel-center vels and strengths
-  const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
-  std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
+  const std::array<Vector<S>,Dimensions>&   get_vel() const { return pu; }
+  std::array<Vector<S>,Dimensions>&         get_vel()       { return pu; }
 
   // fixed or unknown surface strengths, or those due to rotation
   const std::array<Vector<S>,Dimensions>& get_str() const { return ts; }
@@ -239,9 +239,9 @@ public:
   Vector<S>&                          get_src_str()       { return *ps[2]; }
 
   // and (reactive only) boundary conditions
-  const Vector<S>&                  get_tang1_bcs() const { return *bc[0]; }
-  const Vector<S>&                  get_tang2_bcs() const { return *bc[1]; }
-  const Vector<S>&                   get_norm_bcs() const { return *bc[2]; }
+  const Vector<S>&                    get_tang1_bcs() const { return *bc[0]; }
+  const Vector<S>&                    get_tang2_bcs() const { return *bc[1]; }
+  const Vector<S>&                     get_norm_bcs() const { return *bc[2]; }
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
@@ -709,31 +709,32 @@ public:
 
     std::cout << "  inside Surfaces::set_geom_center with " << get_npanels() << " panels" << std::endl;
 
-    // iterate over panels, accumulating vol and CM
-    double vsum = 0.0;
-    double xsum = 0.0;
-    double ysum = 0.0;
-    double zsum = 0.0;
+    // iterate over panels, accumulating vol and CM in double precision
+    using A = double;
+    A vsum = 0.0;
+    A xsum = 0.0;
+    A ysum = 0.0;
+    A zsum = 0.0;
     for (size_t i=0; i<get_npanels(); i++) {
       const size_t jp0 = idx[Dimensions*i];
       const size_t jp1 = idx[Dimensions*i+1];
       const size_t jp2 = idx[Dimensions*i+2];
       // assume a triangle from 0,0 to two ends of each panel
-      double thisvol = (*this->ux)[0][jp0] * (double)(*this->ux)[1][jp1] * (*this->ux)[2][jp2]
-                     - (*this->ux)[0][jp0] * (double)(*this->ux)[1][jp2] * (*this->ux)[2][jp1]
-                     - (*this->ux)[0][jp1] * (double)(*this->ux)[1][jp0] * (*this->ux)[2][jp2]
-                     + (*this->ux)[0][jp1] * (double)(*this->ux)[1][jp2] * (*this->ux)[2][jp0]
-                     + (*this->ux)[0][jp2] * (double)(*this->ux)[1][jp0] * (*this->ux)[2][jp1]
-                     - (*this->ux)[0][jp2] * (double)(*this->ux)[1][jp1] * (*this->ux)[2][jp0];
+      A thisvol = (*this->ux)[0][jp0] * (A)(*this->ux)[1][jp1] * (*this->ux)[2][jp2]
+                - (*this->ux)[0][jp0] * (A)(*this->ux)[1][jp2] * (*this->ux)[2][jp1]
+                - (*this->ux)[0][jp1] * (A)(*this->ux)[1][jp0] * (*this->ux)[2][jp2]
+                + (*this->ux)[0][jp1] * (A)(*this->ux)[1][jp2] * (*this->ux)[2][jp0]
+                + (*this->ux)[0][jp2] * (A)(*this->ux)[1][jp0] * (*this->ux)[2][jp1]
+                - (*this->ux)[0][jp2] * (A)(*this->ux)[1][jp1] * (*this->ux)[2][jp0];
       thisvol /= 6.0;
       // add this to the running sums
       if (VERBOSE) { std::cout << "    and area " << thisvol << std::endl;
-        std::cout << (*this->ux)[0][jp0] << " " << (double)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp2] << std::endl;
-        std::cout << (*this->ux)[0][jp0] << " " << (double)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp1] << std::endl;
-        std::cout << (*this->ux)[0][jp1] << " " << (double)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp2] << std::endl;
-        std::cout << (*this->ux)[0][jp1] << " " << (double)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp0] << std::endl;
-        std::cout << (*this->ux)[0][jp2] << " " << (double)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp1] << std::endl;
-        std::cout << (*this->ux)[0][jp2] << " " << (double)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp0] << std::endl;
+        std::cout << (*this->ux)[0][jp0] << " " << (A)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp2] << std::endl;
+        std::cout << (*this->ux)[0][jp0] << " " << (A)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp1] << std::endl;
+        std::cout << (*this->ux)[0][jp1] << " " << (A)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp2] << std::endl;
+        std::cout << (*this->ux)[0][jp1] << " " << (A)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp0] << std::endl;
+        std::cout << (*this->ux)[0][jp2] << " " << (A)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp1] << std::endl;
+        std::cout << (*this->ux)[0][jp2] << " " << (A)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp0] << std::endl;
       }
       vsum += thisvol;
       xsum += 0.25 * thisvol * ((*this->ux)[0][jp0] + (*this->ux)[0][jp1] + (*this->ux)[0][jp2]);
@@ -874,31 +875,17 @@ public:
     ElementBase<S>::finalize_vels(_fs);
   }
 
-/*
-  // up-size all arrays to the new size, filling with sane values
-  void resize(const size_t _nnew) {
-    const size_t currn = this->n;
-    //std::cout << "  inside Surfaces::resize with " << currn << " " << _nnew << std::endl;
-
-    // must explicitly call the method in the base class - this sets n
-    ElementBase<S>::resize(_nnew);
-
-    if (_nnew == currn) return;
-
-    // radii here
-    const size_t thisn = r.size();
-    r.resize(_nnew);
-    for (size_t i=thisn; i<_nnew; ++i) {
-      r[i] = 1.0;
-    }
-  }
 
   //
   // 1st order Euler advection and stretch
   //
-  void move(const double _time, const double _dt) {
+  void move(const double _time, const double _dt,
+            const double _wt1, Surfaces<S> const & _u1) {
+
     // must explicitly call the method in the base class
-    ElementBase<S>::move(_time, _dt);
+    ElementBase<S>::move(_time, _dt, _wt1, _u1);
+
+    assert(this->M != lagrangian && "Lagrangian surfaces are not yet supported");
 
     // no specialization needed
     if (this->M == lagrangian and this->E != inert) {
@@ -906,21 +893,22 @@ public:
       S thismax = 0.0;
 
       for (size_t i=0; i<this->n; ++i) {
-        S this_s = (*this->s)[i];
+        //S this_s = (*this->s)[i];
 
         // compute stretch term
-        std::array<S,2> wdu = {0.0};
+        //std::array<S,2> wdu = {0.0};
 
         // add Cottet SFS
 
         // update strengths
-        (*this->s)[i] = this_s + _dt * wdu[0];
+        //(*this->s)[i] = this_s + _dt * wdu[0];
 
         // check for max strength
-        S thisstr = std::abs((*this->s)[i]);
-        if (thisstr > thismax) thismax = thisstr;
-
+        //S thisstr = std::abs((*this->s)[i]);
+        //if (thisstr > thismax) thismax = thisstr;
       }
+
+    // and update the max strength measure
       if (max_strength < 0.0) {
         max_strength = thismax;
       } else {
@@ -932,7 +920,26 @@ public:
       max_strength = 1.0;
     }
   }
-*/
+
+
+  //
+  // 2nd order RK advection and stretch
+  //
+  void move(const double _time, const double _dt,
+            const double _wt1, Surfaces<S> const & _u1,
+            const double _wt2, Surfaces<S> const & _u2) {
+
+    // must explicitly call the method in the base class
+    ElementBase<S>::move(_time, _dt, _wt1, _u1, _wt2, _u2);
+
+    assert(this->M != lagrangian && "Lagrangian surfaces are not yet supported");
+
+    // must confirm that incoming time derivates include velocity (?)
+
+    // and update the max strength measure
+    (void) update_max_str();
+  }
+
 
   //
   // return a particle version of the panels (useful during Diffusion)
