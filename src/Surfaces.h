@@ -47,12 +47,9 @@ template <class S> using Basis = std::array<std::array<Vector<S>,Dimensions>,Dim
 template <class S>
 class Surfaces: public ElementBase<S> {
 public:
-  // constructor - accepts vector of (x,y,z) triples, vector of indicies, vector of BCs
-  //               and makes one closed body
-  //               last parameter (_val) is either fixed strength or boundary condition
-  Surfaces(const std::vector<S>&   _x,
-           const std::vector<Int>& _idx,
-           const std::vector<S>&   _val,
+  // constructor - accepts standard ElementPacket now
+  //               last parameter (_val) is either fixed strength or BC for each panel
+  Surfaces(const ElementPacket<S>& _elems,
            const elem_t _e,
            const move_t _m,
            std::shared_ptr<Body> _bp)
@@ -60,16 +57,21 @@ public:
       np(0),
       source_str_is_unknown(true),
       vol(-1.0),
-      //solved_omega(0.0),
       max_strength(-1.0) {
+
+    // pull out the vectors
+    const std::vector<S>& _x   = _elems.x;
+    const std::vector<Int>&   _idx = _elems.idx;
+    const std::vector<S>& _val = _elems.val;
 
     // make sure input arrays are correctly-sized
     assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
-    const size_t nsurfs = _idx.size() / Dimensions;
+    assert(_elems.ndim == 2 && "Input elements are not (2D) surfaces");
+    assert(_idx.size() / Dimensions == _elems.nelem && "Index array is not the right size for nelems");
+    const size_t nsurfs = _elems.nelem;
 
     // always initialize the ps panel strength optionals
     if (this->E != inert) {
-      //for (size_t d=0; d<num_unknowns_per_panel(); ++d) {
       for (size_t d=0; d<3; ++d) {
         Vector<S> new_s;
         ps[d] = std::move(new_s);
@@ -106,7 +108,9 @@ public:
     // copy over the node indices (with a possible type change)
     bool idx_are_all_good = true;
     idx.resize(_idx.size());
-    for (size_t i=0; i<3*nsurfs; ++i) {
+    const size_t nper = _idx.size() / nsurfs;	// we can have >3 nodes per elem now
+    assert(nper == 3 && "Surfaces ctor cannot handle elems other than flat triangles");
+    for (size_t i=0; i<nper*nsurfs; ++i) {
       // make sure it exists in the nodes array
       if (_idx[i] >= nnodes) idx_are_all_good = false;
       idx[i] = _idx[i];
@@ -119,9 +123,10 @@ public:
     // are strengths/values on a per-node or per-panel basis? - per panel now
 
     // now, depending on the element type, put the value somewhere
+    const size_t nvalper = _val.size() / nsurfs;
     if (this->E == active) {
       // value is a fixed strength for the panel
-      assert(_val.size() == 3*nsurfs && "Value array is not an even multiple of panel count");
+      assert(_val.size() == nvalper*nsurfs && "Value array is not an even multiple of panel count");
       // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths and source sheet str
       for (size_t d=0; d<Dimensions; ++d) {
         if (ps[d]) {
@@ -157,11 +162,13 @@ public:
       // convert the bc from velocities to basis-vector quantities
       bcs_to_bcs(0,nsurfs);
 
-      // make space for the unknown sheet strengths
-      for (size_t d=0; d<Dimensions; ++d) {
-        if (ps[d]) {
-          ps[d]->resize(nsurfs);
-          std::fill(ps[d]->begin(), ps[d]->end(), 0.0);
+      // make space for the unknown sheet strengths (only if reactive)
+      if (this->E == reactive) {
+        for (size_t d=0; d<Dimensions; ++d) {
+          if (ps[d]) {
+            ps[d]->resize(nsurfs);
+            std::fill(ps[d]->begin(), ps[d]->end(), 0.0);
+          }
         }
       }
 
@@ -183,7 +190,7 @@ public:
     }
 
     // debug print
-    if (VERBOSE) {
+    if (false) {
       std::cout << "Nodes" << std::endl;
       for (size_t i=0; i<std::min((size_t)100,nnodes); ++i) {
         std::cout << "  " << i << " " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i] << std::endl;
@@ -203,14 +210,6 @@ public:
       set_geom_center();
     }
   }
-
-  // delegating constructor
-  Surfaces(const ElementPacket<S>& _elems,
-           const elem_t _e,
-           const move_t _m,
-           std::shared_ptr<Body> _bp)
-    : Surfaces(_elems.x, _elems.idx, _elems.val, _e, _m, _bp)
-  { }
 
   size_t                            get_npanels()     const { return np; }
   const S                           get_vol()         const { return vol; }
@@ -728,7 +727,8 @@ public:
                 - (*this->ux)[0][jp2] * (A)(*this->ux)[1][jp1] * (*this->ux)[2][jp0];
       thisvol /= 6.0;
       // add this to the running sums
-      if (VERBOSE) { std::cout << "    and area " << thisvol << std::endl;
+      if (VERBOSE and false) {
+        std::cout << "    and area " << thisvol << std::endl;
         std::cout << (*this->ux)[0][jp0] << " " << (A)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp2] << std::endl;
         std::cout << (*this->ux)[0][jp0] << " " << (A)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp1] << std::endl;
         std::cout << (*this->ux)[0][jp1] << " " << (A)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp2] << std::endl;
@@ -945,16 +945,22 @@ public:
   // return a particle version of the panels (useful during Diffusion)
   // offset is in world units - NOT scaled
   //
-  std::vector<S> represent_as_particles(const S _offset, const S _vdelta) {
+  ElementPacket<float> represent_as_particles(const S _offset, const S _ips) {
+
+    // prepare the vectors
+    std::vector<float> _x;
+    std::vector<Int> _idx;
+    std::vector<float> _vals;
 
     // how many panels?
     const size_t num_pts = get_npanels();
 
+    // since there may be more points than panels, reserve space and emplace_back
+    _x.reserve(Dimensions*num_pts);
+    _vals.reserve(num_pts);
+
     // recompute the total strengths (ts)
     vortex_sheet_to_panel_strength(num_pts);
-
-    // init the output vector (x, y, z, sx, sy, sz, r)
-    std::vector<S> px(num_pts*7);
 
     // get basis vectors
     std::array<Vector<S>,3>&   x1 = b[0];
@@ -963,30 +969,33 @@ public:
     Vector<S>&                bc1 = *bc[0];
     Vector<S>&                bc2 = *bc[1];
 
-    for (size_t i=0; i<num_pts; i++) {
-      const Int id0 = idx[3*i];
-      const Int id1 = idx[3*i+1];
-      const Int id2 = idx[3*i+2];
-      const Int idx = 7*i;
+    const size_t nper = idx.size() / get_npanels();	// we can have >3 nodes per elem now
+
+    for (size_t i=0; i<num_pts; ++i) {
+      // panel corner points
+      const Int id0 = idx[nper*i];
+      const Int id1 = idx[nper*i+1];
+      const Int id2 = idx[nper*i+2];
+
       // start at center of panel
-      for (size_t j=0; j<3; ++j) px[idx+j] = (1./3.) * (this->x[j][id0] + this->x[j][id1] + this->x[j][id2]);
+      std::array<S,3> px;
+      for (size_t j=0; j<3; ++j) px[j] = (1./3.) * (this->x[j][id0] + this->x[j][id1] + this->x[j][id2]);
       // push out a fixed distance
       // this assumes properly resolved, vdelta and dt
-      for (size_t j=0; j<3; ++j) px[idx+j] += _offset * norm[j][i];
+      for (size_t j=0; j<3; ++j) px[j] += _offset * norm[j][i];
+      for (size_t j=0; j<3; ++j) _x.emplace_back(px[j]);
+
       // the panel strength is the solved strength plus the boundary condition
-      for (size_t j=0; j<3; ++j) px[idx+3+j] = ts[j][i];
+      for (size_t j=0; j<3; ++j) px[j] = ts[j][i];
       // add on the (vortex) bc values here
       if (this->E == reactive) {
-        for (size_t j=0; j<3; ++j) px[idx+3+j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
+        for (size_t j=0; j<3; ++j) px[j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
       }
-      // IGNORE SOURCE SHEET STRENGTHS
-      // and the core size
-      px[idx+6] = _vdelta;
-      //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2];
-      //std::cout << "     with str " << px[idx+3] << " " << px[idx+4] << " " << px[idx+5] << std::endl;
+      for (size_t j=0; j<3; ++j) _vals.emplace_back(px[j]);
+      // IGNORE SOURCE SHEET STRENGTHS AND ELONG
     }
 
-    return px;
+    return ElementPacket<float>({_x, _idx, _vals, num_pts, 0});
   }
 
   // find the new peak vortex sheet strength magnitude
@@ -1026,15 +1035,14 @@ public:
     circ.fill(0.0);
 
     if (this->E != inert) {
-      // make this easy - represent as particles
-      std::vector<S> pts = represent_as_particles(0.0, 1.0);
+      // make this easy - set ts and use it
+      vortex_sheet_to_panel_strength(get_npanels());
 
       // now compute impulse of those
       for (size_t i=0; i<get_npanels(); ++i) {
-        const size_t idx = 7*i;
-        circ[0] += pts[idx+3+0];
-        circ[1] += pts[idx+3+1];
-        circ[2] += pts[idx+3+2];
+        circ[0] += ts[0][i];
+        circ[1] += ts[1][i];
+        circ[2] += ts[2][i];
       }
     }
 
@@ -1068,15 +1076,24 @@ public:
     imp.fill(0.0);
 
     if (this->E != inert) {
-      // make this easy - represent as particles
-      std::vector<S> pts = represent_as_particles(0.0, 1.0);
+      // make this easy - set ts and use it
+      vortex_sheet_to_panel_strength(get_npanels());
 
       // now compute impulse of those
       for (size_t i=0; i<get_npanels(); ++i) {
-        const size_t idx = 7*i;
-        imp[0] += pts[idx+3+1] * pts[idx+2] - pts[idx+3+2] * pts[idx+1];
-        imp[1] += pts[idx+3+2] * pts[idx+0] - pts[idx+3+0] * pts[idx+2];
-        imp[2] += pts[idx+3+0] * pts[idx+1] - pts[idx+3+1] * pts[idx+0];
+
+        // indices for this panel
+        const Int id0 = idx[3*i];
+        const Int id1 = idx[3*i+1];
+        const Int id2 = idx[3*i+2];
+        // panel center
+        const S xc = (this->x[0][id0] + this->x[0][id1] + this->x[0][id2])/3.0;
+        const S yc = (this->x[1][id0] + this->x[1][id1] + this->x[1][id2])/3.0;
+        const S zc = (this->x[2][id0] + this->x[2][id1] + this->x[2][id2])/3.0;
+
+        imp[0] += ts[i][1]*zc - ts[i][2]*yc;
+        imp[1] += ts[i][2]*xc - ts[i][0]*zc;
+        imp[2] += ts[i][0]*yc - ts[i][1]*xc;
       }
     }
 

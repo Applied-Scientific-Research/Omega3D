@@ -1,8 +1,8 @@
 /*
  * ElementBase.h - abstract class for arrays of any computational elements
  *
- * (c)2018-9 Applied Scientific Research, Inc.
- *           Mark J Stock <markjstock@gmail.com>
+ * (c)2018-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -10,8 +10,8 @@
 #include "VectorHelper.h"
 #include "Omega3D.h"
 #include "Body.h"
-#include "GlComputeState.h"
 #include "ElementPacket.h"
+#include "GlComputeState.h"
 
 #include <Eigen/Geometry>
 
@@ -41,13 +41,25 @@ public:
   elem_t                                  get_elemt() const { return E; }
   move_t                                  get_movet() const { return M; }
   const std::shared_ptr<Body>             get_body_ptr() const { return B; }
-  std::shared_ptr<Body>                   get_body_ptr()  { return B; }
-  const std::array<Vector<S>,Dimensions>& get_pos() const { return x; }
-  std::array<Vector<S>,Dimensions>&       get_pos()       { return x; }
-  const std::array<Vector<S>,Dimensions>& get_str() const { return *s; }
-  std::array<Vector<S>,Dimensions>&       get_str()       { return *s; }
-  const std::array<Vector<S>,Dimensions>& get_vel() const { return u; }
-  std::array<Vector<S>,Dimensions>&       get_vel()       { return u; }
+  std::shared_ptr<Body>                   get_body_ptr()   { return B; }
+  const std::array<Vector<S>,Dimensions>& get_pos() const  { return x; }
+  std::array<Vector<S>,Dimensions>&       get_pos()        { return x; }
+  const std::array<Vector<S>,Dimensions>& get_str() const  { return *s; }
+  std::array<Vector<S>,Dimensions>&       get_str()        { return *s; }
+  const std::array<Vector<S>,Dimensions>& get_vel() const  { return u; }
+  std::array<Vector<S>,Dimensions>&       get_vel()        { return u; }
+
+  const bool has_vort() const { return (bool)w; }
+  const std::array<Vector<S>,Dimensions>& get_vort() const {
+    // can't change this object, so return what we have
+    return *w;
+  }
+
+  const bool has_shear() const { return (bool)e; }
+  const Vector<S>& get_shear() const {
+    // can't change this object, so return what we have
+    return *e;
+  }
 
   void set_str(const size_t ioffset, const size_t icnt, Vector<S> _in) {
     // only Points use s, and only Surfaces are supported in BEM
@@ -59,50 +71,6 @@ public:
 
     // copy over the strengths
     //*s = _in;
-  }
-
-  // child class calls here to add nodes and other properties
-  void add_new(const std::vector<float>& _in) {
-
-    // check inputs
-    if (_in.size() == 0) return;
-    const size_t nper = (this->E == inert) ? 3 : 7;
-    assert(_in.size() % nper == 0 && "Input vector not a multiple of 3 or 7");
-    const size_t nnew = _in.size()/nper;
-
-    // this initialization is specific to Points - so should we do it there?
-    for (size_t d=0; d<Dimensions; ++d) {
-      // extend with more space for new values
-      x[d].resize(n+nnew);
-      // copy new values to end of vector
-      for (size_t i=0; i<nnew; ++i) {
-        x[d][n+i] = _in[nper*i+d];
-      }
-    }
-
-    // strength
-    if (s and nper==7) {
-      // must dereference s to get the actual vector
-      for (size_t d=0; d<numStrPerNode; ++d) {
-        (*s)[d].resize(n+nnew);
-        for (size_t i=0; i<nnew; ++i) {
-          (*s)[d][n+i] = _in[7*i+d+3];
-        }
-      }
-    }
-
-    // extend the other vectors as well
-    for (size_t d=0; d<Dimensions; ++d) {
-      u[d].resize(n+nnew);
-    }
-    //if (dsdt) {
-    //  for (size_t d=0; d<Dimensions; ++d) {
-    //    (*dsdt)[d].resize(n+nnew);
-    //  }
-    //}
-
-    // finally, update n
-    n += nnew;
   }
 
   // child class calls here to add nodes and other properties
@@ -189,13 +157,38 @@ public:
     for (size_t d=0; d<Dimensions; ++d) {
       std::fill(u[d].begin(), u[d].end(), 0.0);
     }
+    if (w) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        if ((*w)[d].size() != n) (*w)[d].resize(n);
+        std::fill((*w)[d].begin(), (*w)[d].end(), 0.0);
+      }
+    }
+    if (e) {
+      if (e->size() != n) e->resize(n);
+      std::fill((*e).begin(), (*e).end(), 0.0);
+    }
   }
 
+  // should rename these finalize_results
   void finalize_vels(const std::array<double,Dimensions>& _fs) {
     const double factor = 0.25/M_PI;
     for (size_t d=0; d<Dimensions; ++d) {
       for (size_t i=0; i<get_n(); ++i) {
         u[d][i] = _fs[d] + u[d][i] * factor;
+      }
+    }
+    if (w) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        assert((*w)[d].size() == n && "Vorticity vector not sized properly in finalize_vels");
+        for (size_t i=0; i<get_n(); ++i) {
+          (*w)[d][i] *= factor;
+        }
+      }
+    }
+    if (e) {
+      assert(e->size() == n && "Shear rate vector not sized properly in finalize_vels");
+      for (size_t i=0; i<get_n(); ++i) {
+        (*e)[i] *= factor;
       }
     }
   }
@@ -216,7 +209,6 @@ public:
   void add_unit_rot_strengths(const int _d) {}
   void add_solved_rot_strengths(const S _factor) {}
 
-  // this should work in 3D now
   void transform(const double _time) {
     // reset positions according to prescribed motion
     if (B and M == bodybound) {
@@ -350,12 +342,21 @@ public:
     circ.fill(0.0);
 
     if (s) {
-      // we have strengths, add them up
-      // this is the c++17 way
-      //return std::reduce(std::execution::par, s->begin(), s->end());
-      // this is the c++11 way
-      for (size_t d=0; d<numStrPerNode; ++d) {
-        circ[d] = std::accumulate((*s)[d].begin(), (*s)[d].end(), 0.0);
+      if (s->size() < 40000) {
+        // we have strengths, add them up
+        // this is the c++17 way
+        //return std::reduce(std::execution::par, s->begin(), s->end());
+        // this is the c++11 way
+        for (size_t d=0; d<numStrPerNode; ++d) {
+          circ[d] = std::accumulate((*s)[d].begin(), (*s)[d].end(), 0.0);
+        }
+      } else {
+        // do it in double precision instead
+        for (size_t d=0; d<numStrPerNode; ++d) {
+          Vector<double> dblstr((*s)[d].begin(), (*s)[d].end());
+          double dblcirc = std::accumulate(dblstr.begin(), dblstr.end(), 0.0);
+          circ[d] = (float)dblcirc;
+        }
       }
     }
 
@@ -434,15 +435,15 @@ protected:
 
   // time derivative of state vector
   std::array<Vector<S>,Dimensions> u;                   // velocity at nodes
-  //std::optional<Vector<S>> w;                           // vorticity at nodes
-  //std::optional<Vector<S>> e;                           // shear rate at nodes
+  std::optional<std::array<Vector<S>,Dimensions>> w;    // vorticity at nodes
+  std::optional<Vector<S>> e;                           // shear rate at nodes
   //std::optional<std::array<Vector<S>,Dimensions>> dsdt; // strength change
 
   // for objects moving with a body
   std::optional<std::array<Vector<S>,Dimensions>> ux;   // untransformed position of nodes
 
 #ifdef USE_OGL_COMPUTE
-  std::shared_ptr<GlComputeState<S>> gcs;		// global compute state
+  std::shared_ptr<GlComputeState<S>> gcs;               // global compute state
 #endif
 };
 

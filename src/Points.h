@@ -1,8 +1,8 @@
 /*
  * Points.h - Specialized class for 3D stretchable points with optional vel gradients
  *
- * (c)2018-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2018-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -37,84 +37,7 @@
 template <class S>
 class Points: public ElementBase<S> {
 public:
-  // flexible constructor - use input 7*n vector (x, y, z, sx, sy, sz, r)
-  //                         or input 3*n vector (x, y, z)
-  Points(const std::vector<S>& _in,
-         const elem_t _e,
-         const move_t _m,
-         std::shared_ptr<Body> _bp)
-    : ElementBase<S>(0, _e, _m, _bp),
-      max_strength(-1.0) {
-
-    const size_t nper = (_e == inert) ? 3 : 7;
-    std::cout << "  new collection with " << (_in.size()/nper);
-    std::cout << ((_e == inert) ? " tracers" : " vortons") << std::endl;
-
-    // need to reset the base class n
-    this->n = _in.size()/nper;
-
-    // make sure we have a complete input vector
-    assert(_in.size() % nper == 0 && "Input array size is not a multiple of 3 or 7");
-
-    // this initialization specific to Points
-    for (size_t d=0; d<Dimensions; ++d) {
-      this->x[d].resize(this->n);
-      for (size_t i=0; i<this->n; ++i) {
-        this->x[d][i] = _in[nper*i+d];
-      }
-    }
-
-    // save untransformed positions if we are given a Body pointer
-    if (_bp) {
-      this->ux = this->x;
-    }
-
-    if (_e == inert) {
-      // field points need neither radius, elong, nor strength
-
-    } else {
-      // active vortons need a radius
-      r.resize(this->n);
-      for (size_t i=0; i<this->n; ++i) {
-        r[i] = _in[7*i+6];
-      }
-
-      // and elongation
-      this->elong.resize(this->n);
-      for (size_t i=0; i<this->n; ++i) {
-        this->elong[i] = 1.0;
-      }
-
-      // optional strength in base class
-      // need to assign it a vector first!
-      std::array<Vector<S>,numStrPerNode> new_s;
-      for (size_t d=0; d<3; ++d) {
-        new_s[d].resize(this->n);
-        for (size_t i=0; i<this->n; ++i) {
-          new_s[d][i] = _in[7*i+d+3];
-        }
-      }
-      this->s = std::move(new_s);
-    }
-
-    // velocity in base class
-    for (size_t d=0; d<Dimensions; ++d) {
-      this->u[d].resize(this->n);
-    }
-
-    // optional velgrads here
-    if (_e != inert or _m != lagrangian) {
-      // i.e. all active particles get grads, as do all fixed field points
-      //      but lagrangian field points do not
-      std::array<Vector<S>,Dimensions*Dimensions> new_ug;
-      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
-        new_ug[d].resize(this->n);
-      }
-      ug = std::move(new_ug);
-    }
-  }
-
-  // alternate constructor - accepting ElementPacket
+  // only constructor now - using ElementPacket
   Points(const ElementPacket<S>& _in,
          const elem_t _e,
          const move_t _m,
@@ -127,11 +50,12 @@ public:
     assert(_in.idx.size() == 0 && "Input ElementPacket is not Points");
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
+    std::cerr << "Packet sizes are " << _in.x.size() << " " << _in.idx.size() << " " << _in.val.size() << std::endl;
+
     // and that it has the right number of values per particle
-    //std::cout << _in.val.size()/(numStrPerNode+1) << " " << _in.nelem << std::endl;
     if (_e == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
     else if (_e == reactive) assert(false && "Input ElementPacket with reactive points is unsupported");
-    else assert(_in.val.size()/(numStrPerNode+1) == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
+    else assert(_in.val.size()/numStrPerNode == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
 
     // tell the world that we're legit
     std::cout << "  new collection with " << (_in.nelem);
@@ -209,6 +133,8 @@ public:
   const Vector<S>& get_rad() const { return r; }
   Vector<S>&       get_rad()       { return r; }
 
+  const S get_averaged_max_str() const { return max_strength; }
+
   // a little logic to see if we should augment the BEM equations for this object (see Surfaces.h)
   const bool is_augmented() const { return false; }
 
@@ -222,48 +148,17 @@ public:
   const float get_max_bc_value() const { return 0.0; }
 
   // append more elements this collection
-  void add_new(const std::vector<S>& _in) {
-    // remember old size and incoming size
-    const size_t nold = this->n;
+  void add_new(const ElementPacket<float>& _in, const float _vd) {
 
-    const size_t nper = (this->E == inert) ? 3 : 7;
-    assert(_in.size() % nper == 0 && "Input array size is not a multiple of 3 or 7");
-
-    const size_t nnew = _in.size()/nper;
-    std::cout << "  adding " << nnew << " particles to collection..." << std::endl;
-
-    // must explicitly call the method in the base class first
-    ElementBase<S>::add_new(_in);
-
-    // then do local stuff
-    if (this->E == inert) {
-      // no radius needed
-
-    } else {
-      // active points need radius and elongation
-      r.resize(nold+nnew);
-      for (size_t i=0; i<nnew; ++i) {
-        r[nold+i] = _in[7*i+6];
-      }
-
-      elong.resize(nold+nnew);
-      for (size_t i=nold; i<nold+nnew; ++i) {
-        elong[i] = 1.0;
-      }
-    }
-  }
-
-  // append more elements this collection
-  void add_new(const ElementPacket<S>& _in, const float _vd) {
     // ensure that this packet really is Points
     assert(_in.idx.size() == 0 && "Input ElementPacket is not Points");
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
     // and that it has the right number of values per particle
     if (VERBOSE) { std::cout << "  val size " << _in.val.size() << std::endl; }
-    if (this->E == inert) { assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array"); }
-    else if (this->E == reactive) { assert("Input ElementPacket with reactive points is unsupported"); }
-    else { assert(_in.val.size()/(numStrPerNode+1) == _in.nelem && "Input ElementPacket with vortons has bad sized val array"); }
+    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
+    else if (this->E == reactive) assert("Input ElementPacket with reactive points is unsupported");
+    else assert(_in.val.size()/numStrPerNode == _in.nelem && "Input ElementPacket with vortons has bad sized val array");
 
     // remember old size and incoming size (note that Points nelems = nnodes)
     const size_t nold = this->n;
@@ -280,7 +175,7 @@ public:
     } else {
       r.resize(nold+nnew);
       std::fill(r.begin()+nold, r.end(), _vd);
-      
+
       elong.resize(nold+nnew);
       for (size_t i=nold; i<nold+nnew; ++i) {
         elong[i] = 1.0;
@@ -426,7 +321,7 @@ public:
         S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
         if (thisstr > thismax) thismax = thisstr;
 
-        if (VERBOSE) {
+        if (VERBOSE and false) {
         //if (i == 0) {
         //if (i < 10) {
         //if (i%100 == 0) {
@@ -526,7 +421,7 @@ public:
         S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
         if (thisstr > thismax) thismax = thisstr;
 
-        if (VERBOSE) {
+        if (VERBOSE and false) {
         //if (i == 0) {
         //if (i == this->n - 1) {
         //if (i%100 == 0) {
