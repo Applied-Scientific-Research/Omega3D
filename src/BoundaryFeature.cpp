@@ -1,7 +1,7 @@
 /*
  * BoundaryFeature.cpp - GUI-side descriptions of boundary features
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
@@ -51,17 +51,23 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
 
 #ifdef USE_IMGUI
 int BoundaryFeature::obj_movement_gui(int &mitem, char* strx, char* stry, char* strz,
-                                       char* strrx, char* strry, char* strrz) {
+                                      char* strrx, char* strry, char* strrz) {
+
+  // fixed to ground      - this geometry is fixed (attached to inertial)
+  // attached to previous - this geometry is attached to the previous geometry
+  // according to formula - this geometry is attached to a new moving body
+  // may someday add "dynamic"
+
   const char* mitems[] = { "fixed to ground", "attached to previous", "according to formula" };
   int changed = 0;
   static int tmp = -1;
-  //const char* mitems [] = { "fixed", "attached to previous", "according to formula", "dynamic" };
   ImGui::Combo("movement", &mitem, mitems, 3);
   if (tmp != mitem) {
     tmp = mitem;
     changed += 1;
   }
 
+  // show different inputs based on what is selected
   if (mitem == 2) {
     ImGui::InputText("x position", strx, 512);
     ImGui::SameLine();
@@ -168,7 +174,41 @@ int BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeatu
 
   return created;
 }
+
+void BoundaryFeature::draw_feature_list(std::vector<std::unique_ptr<BoundaryFeature>> &feat,
+                                        std::unique_ptr<BoundaryFeature> &editingFeat, int &edit_feat_index, 
+                                        int &del_feat_index, bool &redraw, int &buttonIDs) {
+  for (int i=0; i<(int)feat.size(); ++i) {
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::Checkbox("", feat[i]->addr_enabled())) { redraw = true; }
+    ImGui::PopID();
+    
+    // add an "edit" button after the checkbox (so it's not easy to accidentally hit remove)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("edit")) {
+      editingFeat = std::unique_ptr<BoundaryFeature>(feat[i]->copy());
+      edit_feat_index = i;
+    }
+    ImGui::PopID();
+    
+    if (feat[i]->is_enabled()) {
+      ImGui::SameLine();
+      ImGui::Text("%s", feat[i]->to_string().c_str());
+    } else {
+      ImGui::SameLine();
+      ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", feat[i]->to_string().c_str());
+    }
+
+    // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("remove")) { del_feat_index = i; }
+    ImGui::PopID();
+  }
+}
 #endif
+
 
 //
 // Create a closed spherical/ovoid object from a icosahedron

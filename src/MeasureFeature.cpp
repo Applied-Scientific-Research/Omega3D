@@ -1,12 +1,14 @@
 /*
  * MeasureFeature.cpp - GUI-side descriptions of flow features
  *
- * (c)2018-20 Applied Scientific Research, Inc.
+ * (c)2018-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
 #include "BoundaryFeature.h"
 #include "MeasureFeature.h"
+
 #include "imgui/imgui.h"
 
 #include <cmath>
@@ -96,6 +98,39 @@ int MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature
   }
 
   return created;
+}
+
+void MeasureFeature::draw_feature_list(std::vector<std::unique_ptr<MeasureFeature>> &feat,
+                                       std::unique_ptr<MeasureFeature> &editingFeat, int &edit_feat_index,
+                                       int &del_feat_index, bool &redraw, int &buttonIDs) {
+  for (int i=0; i<(int)feat.size(); ++i) {
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::Checkbox("", feat[i]->addr_enabled())) { redraw = true; }
+    ImGui::PopID();
+
+    // add an "edit" button after the checkbox (so it's not easy to accidentally hit remove)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("edit")) {
+      editingFeat = std::unique_ptr<MeasureFeature>(feat[i]->copy());
+      edit_feat_index = i;
+    }
+    ImGui::PopID();
+
+    if (feat[i]->is_enabled()) {
+      ImGui::SameLine();
+      ImGui::Text("%s", feat[i]->to_string().c_str());
+    } else {
+      ImGui::SameLine();
+      ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", feat[i]->to_string().c_str());
+    }
+
+    // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("remove")) { del_feat_index = i; }
+    ImGui::PopID();
+  }
 }
 #endif
 

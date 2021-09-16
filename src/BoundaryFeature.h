@@ -1,7 +1,7 @@
 /*
  * BoundaryFeature.h - GUI-side descriptions of boundary features
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
@@ -61,6 +61,9 @@ public:
   virtual bool draw_info_gui(const std::string) = 0;
   static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
   static int draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
+  static void draw_feature_list(std::vector<std::unique_ptr<BoundaryFeature>> &,
+                                std::unique_ptr<BoundaryFeature> &,
+                                int &, int &, bool &, int &);
 #endif
 
 protected:

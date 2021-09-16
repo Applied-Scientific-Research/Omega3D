@@ -1,7 +1,7 @@
 /*
  * FlowFeature.h - GUI-side descriptions of flow features
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
@@ -52,6 +52,9 @@ public:
 #ifdef USE_IMGUI
   virtual bool draw_info_gui(const std::string, const float) = 0;
   static int draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
+  static void draw_feature_list(std::vector<std::unique_ptr<FlowFeature>> &,
+                                std::unique_ptr<FlowFeature> &, int &,
+                                int &, bool &, int &);
 #endif
 
 protected:

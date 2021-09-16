@@ -1,8 +1,9 @@
 /*
  * MeasureFeature.h - GUI-side descriptions of flow measurement features
  *
- * (c)2018-9 Applied Scientific Research, Inc.
- *           Mark J Stock <markjstock@gmail.com>
+ * (c)2018-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
 #pragma once
@@ -41,13 +42,6 @@ public:
   virtual ~MeasureFeature() {}
   virtual MeasureFeature* copy() const = 0;
 
-  bool moves() const { return m_is_lagrangian; }
-  bool emits() const { return m_emits; }
-  float jitter(const float, const float) const;
-  ElementPacket<float> get_draw_packet() const { return m_draw; }
-  bool get_is_lagrangian() { return m_is_lagrangian; }
-  std::shared_ptr<Body> get_body() { return m_bp; }
-
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
   virtual void from_json(const nlohmann::json) = 0;
@@ -56,8 +50,21 @@ public:
   virtual ElementPacket<float> step_elements(float) const = 0;
   virtual void generate_draw_geom() = 0;
 #ifdef USE_IMGUI
-  static int draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &, const float, const float &);
   virtual bool draw_info_gui(const std::string, const float &, const float) = 0;
+#endif
+
+  bool moves() const { return m_is_lagrangian; }
+  bool emits() const { return m_emits; }
+  float jitter(const float, const float) const;
+  ElementPacket<float> get_draw_packet() const { return m_draw; }
+  bool get_is_lagrangian() { return m_is_lagrangian; }
+  std::shared_ptr<Body> get_body() { return m_bp; }
+
+#ifdef USE_IMGUI
+  static int draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &, const float, const float &);
+  static void draw_feature_list(std::vector<std::unique_ptr<MeasureFeature>> &,
+                                std::unique_ptr<MeasureFeature> &,
+                                int &, int &, bool &, int &);
 #endif
 
 protected:
