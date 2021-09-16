@@ -2,7 +2,7 @@
  * Feature.h - Parent class to all features
  *
  * (c)2019-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once

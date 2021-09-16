@@ -11,10 +11,13 @@
 #include "Body.h"
 #include "Feature.h"
 #include "ElementPacket.h"
+
 #include "json/json.hpp"
 
+#include <memory>
 #include <iostream>
 #include <vector>
+#include <string>
 
 //
 // Abstract class for any flow feature present initially
@@ -32,7 +35,7 @@ public:
       m_z(_z),
       m_bp(_bp)
     {}
-  virtual ~FlowFeature() {}
+  virtual ~FlowFeature() = default; 
   virtual FlowFeature* copy() const = 0;
 
   std::shared_ptr<Body> get_body() { return m_bp; }
@@ -45,11 +48,11 @@ public:
   virtual ElementPacket<float> step_elements(float) const = 0;
   virtual void generate_draw_geom() = 0;
   virtual ElementPacket<float> get_draw_packet() { return m_draw; }
+
 #ifdef USE_IMGUI
-  static bool draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
   virtual bool draw_info_gui(const std::string, const float) = 0;
+  static int draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
 #endif
-  // emit particles as vector of float4
 
 protected:
   float m_x;
@@ -297,13 +300,15 @@ protected:
   float m_minrad;
 };
 
+// uniformly-spaced particles
 
 // how about an oval ring? requires no radii, but two basis vectors: long axis and short axis
 // vortex ring emitter (singular)
-// particles from file
 
+// read particles from file
 
 //
 // Parser for converting json object to new feature
 //
 void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>&, const nlohmann::json);
+

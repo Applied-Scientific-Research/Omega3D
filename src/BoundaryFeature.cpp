@@ -78,7 +78,9 @@ int BoundaryFeature::obj_movement_gui(int &mitem, char* strx, char* stry, char* 
   return changed;
 }
 
-bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &bfs, Simulation &sim) {
+// 0 means keep open, 1 means create, 2 means cancel
+int BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>>& _bfs, Simulation& _sim) {
+  // define movement first
   static int mitem = 0;
   static char strx[512] = "0.0*t";
   static char stry[512] = "0.0*t";
@@ -87,17 +89,19 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
   static char strry[512] = "0.0*t";
   static char strrz[512] = "0.0*t";
   int changed = BoundaryFeature::obj_movement_gui(mitem, strx, stry, strz, strrx, strry, strrz);
-  
-  static std::shared_ptr<Body> bp = nullptr; 
+
+  // static bp prevents a bunch of pointers from being created during the same boundary creation
+  // The switch prevents constant assignment (mainly to prevent the terminal from being flooded from messages)
+  static std::shared_ptr<Body> bp = nullptr;
   if (changed) {
     switch(mitem) {
       case 0:
         // this geometry is fixed (attached to inertial)
-        bp = sim.get_pointer_to_body("ground");
+        bp = _sim.get_pointer_to_body("ground");
         break;
       case 1:
         // this geometry is attached to the previous geometry (or ground)
-        bp = sim.get_last_body();
+        bp = _sim.get_last_body();
         break;
       case 2:
         // this geometry is attached to a new moving body
@@ -115,19 +119,16 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
   // define geometry second
   static int item = 0;
   static int oldItem = -1;
-  const int numItems = 4;
-  const char* items[] = { "sphere", "rectangle", "Boundary Quad", "from file" };
+  const char* items[] = { "sphere", "rectangle", "boundary quad", "from file" };
   ImGui::Spacing();
-  ImGui::Combo("geometry type", &item, items, numItems);
+  ImGui::Combo("geometry type", &item, items, 4);
 
 
   // show different inputs based on what is selected
-  bool created = false;
   static std::unique_ptr<BoundaryFeature> bf = nullptr;
   if (oldItem != item) {
     switch(item) {
       case 0: {
-        // Need to create the object first
         bf = std::make_unique<Ovoid>(bp);
       } break;
       case 1: {
@@ -139,29 +140,30 @@ bool BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeat
       case 3: {
         bf = std::make_unique<ExteriorFromFile>(bp);
       } break;
-    }
+    } // end switch for geometry
     oldItem = item;
-  } 
+  }
 
+  int created = 0;
   if (bf->draw_info_gui("Add")) {
     if (!bp) { abort(); }
     if (mitem == 2) {
       bp->set_name(bf->to_short_string());
-      sim.add_body(bp);
+      _sim.add_body(bp);
     }
     bf->set_body(bp);
     bf->generate_draw_geom();
-    bfs.emplace_back(std::move(bf));
+    _bfs.emplace_back(std::move(bf));
     bf = nullptr;
     oldItem = -1;
-    created = true;
+    created = 1;
   }
 
   ImGui::SameLine();
   if (ImGui::Button("Cancel", ImVec2(120,0))) {
-    ImGui::CloseCurrentPopup();
     oldItem = -1;
-    created = false;
+    created = 2;
+    bf = nullptr;
   }
 
   return created;

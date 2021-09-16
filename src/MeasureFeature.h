@@ -2,19 +2,21 @@
  * MeasureFeature.h - GUI-side descriptions of flow measurement features
  *
  * (c)2018-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ *           Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
 
 #include "Body.h"
-#include "ElementPacket.h"
-#include "Feature.h"
-#include "json/json.hpp"
 #include "Omega3D.h"
+#include "Feature.h"
+#include "ElementPacket.h"
+
+#include "json/json.hpp"
 
 #include <iostream>
 #include <vector>
+#include <string>
 
 //
 // Abstract class for any measurement feature (streamlines, rakes, tracers, etc.) present initially
@@ -54,7 +56,7 @@ public:
   virtual ElementPacket<float> step_elements(float) const = 0;
   virtual void generate_draw_geom() = 0;
 #ifdef USE_IMGUI
-  static bool draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &, const float, const float &);
+  static int draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &, const float, const float &);
   virtual bool draw_info_gui(const std::string, const float &, const float) = 0;
 #endif
 

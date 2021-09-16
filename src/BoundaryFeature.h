@@ -19,6 +19,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <string>
 
 //
 // Abstract class for any boundary feature present initially
@@ -55,10 +56,11 @@ public:
   void set_body(std::shared_ptr<Body> _bp) { m_bp = _bp; }
   virtual void generate_draw_geom() = 0;
   virtual ElementPacket<float> get_draw_packet() { return m_draw; }
+
 #ifdef USE_IMGUI
-  static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
-  static bool draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
   virtual bool draw_info_gui(const std::string) = 0;
+  static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
+  static int draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
 #endif
 
 protected:
