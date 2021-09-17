@@ -29,16 +29,10 @@ public:
               float _y,
               float _z,
               std::shared_ptr<Body> _bp)
-    : Feature(true),
-      m_x(_x),
-      m_y(_y),
-      m_z(_z),
-      m_bp(_bp)
+    : Feature(_x, _y, _z, true, _bp)
     {}
   virtual ~FlowFeature() = default; 
   virtual FlowFeature* copy() const = 0;
-
-  std::shared_ptr<Body> get_body() { return m_bp; }
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
@@ -47,7 +41,6 @@ public:
   virtual ElementPacket<float> init_elements(float) const = 0;
   virtual ElementPacket<float> step_elements(float) const = 0;
   virtual void generate_draw_geom() = 0;
-  virtual ElementPacket<float> get_draw_packet() { return m_draw; }
 
 #ifdef USE_IMGUI
   virtual bool draw_info_gui(const std::string, const float) = 0;
@@ -57,12 +50,6 @@ public:
                                 int &, bool &, int &);
 #endif
 
-protected:
-  float m_x;
-  float m_y;
-  float m_z;
-  ElementPacket<float> m_draw;
-  std::shared_ptr<Body> m_bp;
 };
 
 std::ostream& operator<<(std::ostream& os, FlowFeature const& ff);

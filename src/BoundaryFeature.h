@@ -32,18 +32,12 @@ public:
                   float _x,
                   float _y,
                   float _z)
-    : Feature(true),
-      m_bp(_bp),
-      m_external(_ext),
-      m_x(_x),
-      m_y(_y),
-      m_z(_z)
+    : Feature(_x, _y, _z, true, _bp),
+      m_external(_ext)
     {}
 
   virtual ~BoundaryFeature() = default;
   virtual BoundaryFeature* copy() const = 0;
-
-  std::shared_ptr<Body> get_body() { return m_bp; }
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
@@ -53,9 +47,7 @@ public:
   virtual void create() = 0;
   virtual ElementPacket<float> init_elements(const float) const = 0;
   //virtual std::vector<float> step_elements(const float) const = 0;
-  void set_body(std::shared_ptr<Body> _bp) { m_bp = _bp; }
   virtual void generate_draw_geom() = 0;
-  virtual ElementPacket<float> get_draw_packet() { return m_draw; }
 
 #ifdef USE_IMGUI
   virtual bool draw_info_gui(const std::string) = 0;
@@ -67,12 +59,7 @@ public:
 #endif
 
 protected:
-  std::shared_ptr<Body> m_bp;
   bool m_external;
-  float m_x;
-  float m_y;
-  float m_z;
-  ElementPacket<float> m_draw;
 };
 
 std::ostream& operator<<(std::ostream& os, BoundaryFeature const& ff);
