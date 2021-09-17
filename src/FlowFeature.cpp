@@ -152,9 +152,9 @@ SingleParticle::init_elements(float _ips) const {
 
   std::vector<float> x = {m_x, m_y, m_z};
   std::vector<Int> idx = {};
-  std::vector<float> vals = {m_sx, m_sy, m_sz, 0.0};
+  std::vector<float> vals = {m_sx, m_sy, m_sz};
   ElementPacket<float> packet({x, idx, vals, (size_t)1, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -283,7 +283,7 @@ VortexBlob::init_elements(float _ips) const {
       tot_wgt += this_wgt;
 
       // this is the radius - still zero for now
-      vals.emplace_back(0.0f);
+      //vals.emplace_back(0.0f);
     }
   }
   }
@@ -293,14 +293,14 @@ VortexBlob::init_elements(float _ips) const {
   //   has exactly the right strength
   std::cout << "blob had " << tot_wgt << " initial circulation" << std::endl;
   double str_scale = 1.0 / tot_wgt;
-  for (size_t i=0; i<vals.size(); i+=4) {
+  for (size_t i=0; i<vals.size(); i+=3) {
     vals[i+0] = (float)((double)vals[i+0] * str_scale);
     vals[i+1] = (float)((double)vals[i+1] * str_scale);
     vals[i+2] = (float)((double)vals[i+2] * str_scale);
   }
 
-  ElementPacket<float> packet({x, idx, vals, x.size()/3, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+  ElementPacket<float> packet({x, idx, vals, x.size()/Dimensions, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -416,7 +416,7 @@ BlockOfRandom::init_elements(float _ips) const {
   std::vector<Int> idx;
   std::vector<float> vals;
   x.resize(Dimensions*m_num);
-  vals.resize(4*m_num);
+  vals.resize(m_num);
 
   // initialize the particles' locations and strengths, leave radius zero for now
   for (size_t i=0; i<(size_t)m_num; ++i) {
@@ -428,17 +428,17 @@ BlockOfRandom::init_elements(float _ips) const {
   }
 
   for (size_t i=0; i<(size_t)m_num; ++i) {
-    size_t idx = 4*i;
+    size_t idx = 3*i;
     // strengths
     vals[idx+0] = m_maxstr * zmean_dist(gen) / (float)m_num;
     vals[idx+1] = m_maxstr * zmean_dist(gen) / (float)m_num;
     vals[idx+2] = m_maxstr * zmean_dist(gen) / (float)m_num;
     // radius will get set later
-    vals[idx+3] = 0.0f;
+    //vals[idx+3] = 0.0f;
   }
 
-  ElementPacket<float> packet({x, idx, vals, x.size()/3, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 1)) {
+  ElementPacket<float> packet({x, idx, vals, x.size()/Dimensions, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -669,11 +669,11 @@ SingularRing::init_elements(float _ips) const {
     vals.emplace_back(this_ips * m_circ * (b2[1]*std::cos(theta) - b1[1]*std::sin(theta)));
     vals.emplace_back(this_ips * m_circ * (b2[2]*std::cos(theta) - b1[2]*std::sin(theta)));
     // this is the radius - still zero for now
-    vals.emplace_back(0.0f);
+    //vals.emplace_back(0.0f);
   }
 
   ElementPacket<float> packet({x, idx, vals, (size_t)ndiam, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -900,12 +900,12 @@ ThickRing::init_elements(float _ips) const {
       vals.emplace_back(sscale * (b2[2]*ct - b1[2]*st));
 
       // this is the radius - still zero for now
-      vals.emplace_back(0.0f);
+      //vals.emplace_back(0.0f);
     }
   }
 
-  ElementPacket<float> packet({x, idx, vals, (size_t)x.size()/3, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 1)) {
+  ElementPacket<float> packet({x, idx, vals, (size_t)x.size()/Dimensions, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
