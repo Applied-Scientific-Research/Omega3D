@@ -148,7 +148,48 @@ protected:
 
 
 //
-// Concrete class for a rectangle of randomly-placed particles
+// Concrete class for a block of constant-strength particles
+//
+class UniformBlock : public SingleParticle {
+public:
+  UniformBlock(float _x = 0.0,
+               float _y = 0.0,
+               float _z = 0.0,
+               float _xsize = 1.0,
+               float _ysize = 1.0,
+               float _zsize = 1.0,
+               float _sx = 0.0,
+               float _sy = 0.0,
+               float _sz = 1.0,
+               std::shared_ptr<Body> _bp = nullptr)
+    : SingleParticle(_x, _y, _z, _sx, _sy, _sz, _bp),
+      m_xsize(_xsize),
+      m_ysize(_ysize),
+      m_zsize(_zsize)
+    {}
+  UniformBlock* copy() const override 
+                { return new UniformBlock(*this); }
+
+  void debug(std::ostream& os) const override;
+  std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
+  nlohmann::json to_json() const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
+  void generate_draw_geom() override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string, const float) override;
+#endif
+
+private:
+  float m_xsize;
+  float m_ysize;
+  float m_zsize;
+};
+
+
+//
+// Concrete class for a block of randomly-placed particles
 //
 class BlockOfRandom : public FlowFeature {
 public:

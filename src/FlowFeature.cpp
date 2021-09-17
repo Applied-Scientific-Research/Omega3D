@@ -1,7 +1,7 @@
 /*
  * FlowFeature.cpp - GUI-side descriptions of flow features
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
@@ -36,6 +36,7 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 
   if      (ftype == "single particle") {  _flist.emplace_back(std::make_unique<SingleParticle>()); }
   else if (ftype == "vortex blob") {      _flist.emplace_back(std::make_unique<VortexBlob>()); }
+  else if (ftype == "uniform block") {    _flist.emplace_back(std::make_unique<UniformBlock>()); }
   else if (ftype == "block of random") {  _flist.emplace_back(std::make_unique<BlockOfRandom>()); }
   else if (ftype == "particle emitter") { _flist.emplace_back(std::make_unique<ParticleEmitter>()); }
   else if (ftype == "singular ring") {    _flist.emplace_back(std::make_unique<SingularRing>()); }
@@ -56,9 +57,9 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 int FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
   static int item = 1;
   static int oldItem = -1;
-  const char* items[] = { "vortex particle", "vortex blob", "random particles", "singular vortex ring", 
-                          "thick vortex ring", "particle emitter" };
-  ImGui::Combo("type", &item, items, 6);
+  const char* items[] = { "vortex particle", "vortex blob", "uniform block", "random particles",  
+                          "singular vortex ring", "thick vortex ring", "particle emitter" };
+  ImGui::Combo("type", &item, items, 7);
 
   // show different inputs based on what is selected
   static std::unique_ptr<FlowFeature> ff = nullptr;
@@ -71,15 +72,18 @@ int FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ff
         ff = std::make_unique<VortexBlob>();
       } break;
       case 2: {
-        ff = std::make_unique<BlockOfRandom>();
+        ff = std::make_unique<UniformBlock>();
       } break;
       case 3: {
-        ff = std::make_unique<SingularRing>();
+        ff = std::make_unique<BlockOfRandom>();
       } break;
       case 4: {
-        ff = std::make_unique<ThickRing>();
+        ff = std::make_unique<SingularRing>();
       } break;
       case 5: {
+        ff = std::make_unique<ThickRing>();
+      } break;
+      case 6: {
         ff = std::make_unique<ParticleEmitter>();
       } break;
     }
@@ -231,9 +235,11 @@ bool SingleParticle::draw_info_gui(const std::string _action, const float _ips) 
   if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
+  m_z = xc[2];
+  m_sx = xs[0];
   m_sy = xs[1];
   m_sz = xs[2];
-  
+
   return add;
 }
 #endif
@@ -398,6 +404,142 @@ bool VortexBlob::draw_info_gui(const std::string _action, const float _ips) {
 #endif
 
 //
+// make the block of regular, and uniform-strength particles
+//
+ElementPacket<float>
+UniformBlock::init_elements(float _ips) const {
+
+  // what size 2D integer array will we loop over
+  const int isize = 1 + m_xsize / _ips;
+  const int jsize = 1 + m_ysize / _ips;
+  const int ksize = 1 + m_ysize / _ips;
+  const size_t totn = isize*jsize*ksize;
+  std::cout << "Creating block with " << totn << " particles" << std::endl;
+  //std::cout << "block needs " << isize << " by " << jsize << " particles" << std::endl;
+
+  // create a new vector to pass on
+  std::vector<float> x(Dimensions*totn);
+  std::vector<Int> idx;
+  std::vector<float> vals(numStrPerNode*totn);
+
+  const float each_str = 1.0 / (float)(totn);
+
+  // initialize the particles' locations and strengths, leave radius zero for now
+  size_t ix = 0;
+  size_t iv = 0;
+  for (int i=0; i<isize; ++i) {
+  for (int j=0; j<jsize; ++j) {
+  for (int k=0; k<ksize; ++k) {
+    x[ix++] = m_x + m_xsize * (((float)i + 0.5)/(float)isize - 0.5);
+    x[ix++] = m_y + m_ysize * (((float)j + 0.5)/(float)jsize - 0.5);
+    x[ix++] = m_z + m_zsize * (((float)k + 0.5)/(float)ksize - 0.5);
+    vals[iv++] = m_sx * each_str;
+    vals[iv++] = m_sy * each_str;
+    vals[iv++] = m_sz * each_str;
+  }
+  }
+  }
+
+  ElementPacket<float> packet({x, idx, vals, totn, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
+    return packet;
+  } else {
+    return ElementPacket<float>();
+  }
+}
+
+ElementPacket<float>
+UniformBlock::step_elements(float _ips) const {
+  return ElementPacket<float>();
+}
+
+void
+UniformBlock::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+UniformBlock::to_string() const {
+  std::stringstream ss;
+  ss << "block of uniform particles in [" << (m_x-0.5*m_xsize) << " " << (m_x+0.5*m_xsize) << "] ["
+                                          << (m_y-0.5*m_ysize) << " " << (m_y+0.5*m_ysize) << "] ["
+                                          << (m_z-0.5*m_zsize) << " " << (m_z+0.5*m_zsize) <<
+                                        "] with str " << m_sx << " " << m_sy << " " << m_sz;
+  return ss.str();
+}
+
+void
+UniformBlock::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> z = j["size"];
+  m_xsize = z[0];
+  m_ysize = z[1];
+  m_zsize = z[2];
+  const std::vector<float> s = j["strength"];
+  m_sx = s[0];
+  m_sy = s[1];
+  m_sz = s[2];
+  m_enabled = j.value("enabled", true);
+}
+
+nlohmann::json
+UniformBlock::to_json() const {
+  nlohmann::json j;
+  j["type"] = "uniform block";
+  j["center"] = {m_x, m_y, m_z};
+  j["size"] = {m_xsize, m_ysize, m_zsize};
+  j["strength"] = {m_sx, m_sy, m_sz};
+  j["enabled"] = m_enabled;
+  return j;
+}
+
+void UniformBlock::generate_draw_geom() {
+  SolidRect tmp = SolidRect(nullptr, true,
+                            m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize,
+                            m_xsize, m_ysize, m_zsize);
+
+  // generate draw geometry, OK to use more than 12 triangles
+  m_draw = tmp.init_elements(0.1*(m_xsize+m_ysize+m_zsize));
+  
+  // OpenGL expects a val for every point (3x's)
+  const size_t numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  const float maxval = std::sqrt(m_sx*m_sx + m_sy*m_sy + m_sz*m_sz);
+  for (size_t i = 0; i < numPts; i++) {
+    m_draw.val[i] = maxval;
+  }
+}
+
+#ifdef USE_IMGUI
+bool UniformBlock::draw_info_gui(const std::string action, const float ips) {
+  bool add = false;
+  static float xc[3] = {m_x, m_y, m_z};
+  static float xs[3] = {m_xsize, m_ysize, m_zsize};
+  static float vstr[3] = {m_sx, m_sy, m_sz};
+  const std::string buttonText = action+" block of vorticies";
+
+  ImGui::InputFloat3("center", xc);
+  ImGui::InputFloat3("strength", vstr);
+  ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
+  ImGui::TextWrapped("This feature will add about %d particles", (int)(xs[0]*xs[1]*xs[2]/std::pow(ips,3)));
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_xsize = xs[0];
+  m_ysize = xs[1];
+  m_zsize = xs[2];
+  m_sx = vstr[0];
+  m_sy = vstr[1];
+  m_sz = vstr[2];
+  return add;
+}
+#endif
+
+//
 // make the block of randomly-placed and random-strength particles
 //
 ElementPacket<float>
@@ -416,7 +558,7 @@ BlockOfRandom::init_elements(float _ips) const {
   std::vector<Int> idx;
   std::vector<float> vals;
   x.resize(Dimensions*m_num);
-  vals.resize(m_num);
+  vals.resize(numStrPerNode*m_num);
 
   // initialize the particles' locations and strengths, leave radius zero for now
   for (size_t i=0; i<(size_t)m_num; ++i) {
