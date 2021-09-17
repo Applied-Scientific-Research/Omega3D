@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 // two tris per side
@@ -33,6 +34,7 @@ const std::vector<uint32_t> cube0idx = {{
 
 
 // 8 tris per side - corners all have 6 tris meet there
+// THIS IS INCOMPLETE
 const std::vector<float> cube1 = {{
 0.0, 0.0, 0.0,
 0.0, 0.0, 1.0,

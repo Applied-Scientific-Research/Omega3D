@@ -6,9 +6,10 @@
  *            Blake B Hillier <blakehillier@mac.com>
  */
 
-#include "BoundaryFeature.h"
 #include "FlowFeature.h"
 #include "MathHelper.h"
+#include "GeomHelper.h"
+
 #include "imgui/imgui.h"
 
 #include <cmath>
@@ -209,9 +210,8 @@ SingleParticle::to_json() const {
 // Single Particles cant be made by user
 void SingleParticle::generate_draw_geom() {
   const float diam = 0.01;
-  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
-
-  m_draw = tmp.init_elements(0.05*diam);
+  m_draw = generate_ovoid(diam, diam, diam, 0.05*diam);
+  m_draw.translate(m_x, m_y, m_z);
 
   // OpenGL expects a val for every point (3x's)
   const int numPts = m_draw.x.size()/Dimensions;
@@ -359,11 +359,9 @@ VortexBlob::to_json() const {
 }
 
 void VortexBlob::generate_draw_geom() {
-  // Based on irad in init_elems
-  const float rad = m_rad + 0.5*m_softness;
-  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, 2*rad, 2*rad, 2*rad);
-
-  m_draw = tmp.init_elements(0.1*rad);
+  const float diam = 2.0*m_rad + m_softness;
+  m_draw = generate_ovoid(diam, diam, diam, 0.05*diam);
+  m_draw.translate(m_x, m_y, m_z);
 
   // OpenGL expects a val for every point (3x's)
   const int numPts = m_draw.x.size()/Dimensions;
@@ -497,20 +495,19 @@ UniformBlock::to_json() const {
 }
 
 void UniformBlock::generate_draw_geom() {
-  SolidRect tmp = SolidRect(nullptr, true,
-                            m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize,
-                            m_xsize, m_ysize, m_zsize);
 
   // generate draw geometry, OK to use more than 12 triangles
-  m_draw = tmp.init_elements(0.1*(m_xsize+m_ysize+m_zsize));
-  
+  m_draw = generate_cuboid(m_xsize, m_ysize, m_zsize, 0.1*(m_xsize+m_ysize+m_zsize));
+  m_draw.translate(m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize);
+
   // OpenGL expects a val for every point (3x's)
   const size_t numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
   const float maxval = std::sqrt(m_sx*m_sx + m_sy*m_sy + m_sz*m_sz);
-  for (size_t i = 0; i < numPts; i++) {
-    m_draw.val[i] = maxval;
-  }
+  std::fill(m_draw.val.begin(), m_draw.val.end(), maxval);
+  //for (size_t i = 0; i < numPts; i++) {
+  //  m_draw.val[i] = maxval;
+  //}
 }
 
 #ifdef USE_IMGUI
@@ -635,13 +632,11 @@ BlockOfRandom::to_json() const {
 }
 
 void BlockOfRandom::generate_draw_geom() {
-  SolidRect tmp = SolidRect(nullptr, true,
-                            m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize,
-                            m_xsize, m_ysize, m_zsize);
 
   // generate draw geometry, OK to use more than 12 triangles
-  m_draw = tmp.init_elements(0.05*(m_xsize+m_ysize+m_zsize));
-  
+  m_draw = generate_cuboid(m_xsize, m_ysize, m_zsize, 0.04*(m_xsize+m_ysize+m_zsize));
+  m_draw.translate(m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize);
+
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
@@ -740,10 +735,10 @@ ParticleEmitter::to_json() const {
 
 void ParticleEmitter::generate_draw_geom() {
   const float diam = 0.01;
-  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
+  m_draw = generate_ovoid(diam, diam, diam, 0.05*diam);
+  m_draw.translate(m_x, m_y, m_z);
 
-  m_draw = tmp.init_elements(0.05*diam);
-  
+  // OpenGL expects a val for every point (3x's)
   const int numPts = m_draw.val.size()/Dimensions;
   m_draw.val.resize(numPts);
   const float sign = std::copysign(1.0, m_sx+m_sy+m_sz);
@@ -868,22 +863,10 @@ SingularRing::to_json() const {
 }
 
 void SingularRing::generate_draw_geom() {
-
-  std::cout << "generate_draw_geom() called" << std::endl;
   // For sake of visualization, imagine the torus sitting on your table like a doughnut
-  // Number of steps around the torus
-  const int ts = 77;
-  // Number of steps around the circle perpendicular to the table
-  const int cs = 7;
-  const float m_minrad = m_majrad * 0.02;
 
-  // We first make a circle we will then drag in a circular motion to create the torus
-  std::vector<float> circle;
-  for (int i=0; i<cs; i++) {
-    const float alpha = 2.0*M_PI*i/(float)cs;
-    circle.emplace_back(m_minrad*std::sin(alpha));
-    circle.emplace_back(m_minrad*std::cos(alpha));
-  }
+  // generate the ElementPacket here - scaled and along +z
+  m_draw = generate_torus(m_majrad, 0.02*m_majrad, 0.013*m_majrad);
 
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
@@ -891,56 +874,24 @@ void SingularRing::generate_draw_geom() {
   std::array<float,3> b1, b2;
   branchlessONB<float>(norm, b1, b2);
   
-  std::vector<float> x;
-  // loop over integer indices
-  for (int i=0; i<ts; ++i) {
-    const float theta = 2.0 * M_PI * (float)i / (float)ts;
-    const float st = std::sin(theta);
-    const float ct = std::cos(theta);
+  // rotate the points to the new basis
+  for (size_t i=0; i<m_draw.x.size()/Dimensions; ++i) {
+    const float px = m_draw.x[i*Dimensions+0];
+    const float py = m_draw.x[i*Dimensions+1];
+    const float pz = m_draw.x[i*Dimensions+2];
 
-    for (int j=0; j<cs; ++j) {
-      // helper indices for the disk particles
-      const size_t ix = 2*j;
-      const size_t iy = 2*j+1;
-
-      // create a particle here
-      x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
-      x.emplace_back(m_y + (m_majrad + circle[ix]) * (b1[1]*ct + b2[1]*st) + circle[iy]*norm[1]);
-      x.emplace_back(m_z + (m_majrad + circle[ix]) * (b1[2]*ct + b2[2]*st) + circle[iy]*norm[2]);
-    }
+    m_draw.x[i*Dimensions+0] = b1[0]*px + b2[0]*py + norm[0]*pz;
+    m_draw.x[i*Dimensions+1] = b1[1]*px + b2[1]*py + norm[1]*pz;
+    m_draw.x[i*Dimensions+2] = b1[2]*px + b2[2]*py + norm[2]*pz;
   }
+
+  // finally, translate to the desired center
+  m_draw.translate(m_x, m_y, m_z);
       
-  // Create triangles from points
-  std::vector<Int> idx;
-  for (int i=0; i<ts; i++) {
-    const Int ir1 = cs*i;
-    const Int ir2 = (i==ts-1 ? 0 : cs*(i+1));
-    for (int j=0; j<cs-1; j++) {
-      // set 1
-      idx.emplace_back(ir1+j);
-      idx.emplace_back(ir2+j);
-      idx.emplace_back(ir1+j+1);
-      // set 2
-      idx.emplace_back(ir2+j);
-      idx.emplace_back(ir2+j+1);
-      idx.emplace_back(ir1+j+1);
-    }
-    // set 1
-    idx.emplace_back(ir1+cs-1);
-    idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir1);
-    // set 2
-    idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir2);
-    idx.emplace_back(ir1);
-  }
-
   // OpenGL expects a val for every point (3x's)
-  const int numPts = x.size()/Dimensions;
-  std::vector<float> val;
-  val.resize(numPts);
-  std::fill(val.begin(), val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
-  m_draw = ElementPacket<float>{x, idx, val, idx.size()/Dimensions, 2};
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
 }
 
 #ifdef USE_IMGUI
@@ -948,7 +899,7 @@ bool SingularRing::draw_info_gui(const std::string _action, const float _ips) {
 
   float xc[3] = {m_x, m_y, m_z};
   float vstr[3] = {m_nx, m_ny, m_nz};
-  float guess_n = 1 + (2.0f * 3.1416f * m_majrad / _ips);
+  float guess_n = 1 + (2.0f * M_PI * m_majrad / _ips);
   std::string buttonText = _action+" singular ring";
   bool add = false;
 
@@ -1104,75 +1055,33 @@ ThickRing::to_json() const {
 void ThickRing::generate_draw_geom() {
   // For sake of visualization, imagine the torus sitting on your table like a doughnut
 
-  // Number of steps around the torus
-  const int ts = 77;
-  // Number of steps around the circle perpendicular to the table
-  const int cs = std::max(15, (int)std::floor(230*m_minrad));
-
-  // We first make a circle we will then drag in a circular motion to create the torus
-  std::vector<float> circle;
-  for (int i=0; i<cs; i++) {
-    const float alpha = 2.0*M_PI*i/(float)cs;
-    circle.emplace_back(m_minrad*std::sin(alpha));
-    circle.emplace_back(m_minrad*std::cos(alpha));
-  }
+  // generate the ElementPacket here - scaled and along +z
+  m_draw = generate_torus(m_majrad, m_minrad, 0.013*m_majrad);
 
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
   normalizeVec(norm);
   std::array<float,3> b1, b2;
   branchlessONB<float>(norm, b1, b2);
-  
-  std::vector<float> x;
-  // loop over integer indices
-  for (int i=0; i<ts; ++i) {
-    const float theta = 2.0 * M_PI * (float)i / (float)ts;
-    const float st = std::sin(theta);
-    const float ct = std::cos(theta);
 
-    for (int j=0; j<cs; ++j) {
-      // helper indices for the disk particles
-      const size_t ix = 2*j;
-      const size_t iy = 2*j+1;
+  // rotate the points to the new basis
+  for (size_t i=0; i<m_draw.x.size()/Dimensions; ++i) {
+    const float px = m_draw.x[i*Dimensions+0];
+    const float py = m_draw.x[i*Dimensions+1];
+    const float pz = m_draw.x[i*Dimensions+2];
 
-      // create a particle here
-      x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
-      x.emplace_back(m_y + (m_majrad + circle[ix]) * (b1[1]*ct + b2[1]*st) + circle[iy]*norm[1]);
-      x.emplace_back(m_z + (m_majrad + circle[ix]) * (b1[2]*ct + b2[2]*st) + circle[iy]*norm[2]);
-    }
+    m_draw.x[i*Dimensions+0] = b1[0]*px + b2[0]*py + norm[0]*pz;
+    m_draw.x[i*Dimensions+1] = b1[1]*px + b2[1]*py + norm[1]*pz;
+    m_draw.x[i*Dimensions+2] = b1[2]*px + b2[2]*py + norm[2]*pz;
   }
+
+  // finally, translate to the desired center
+  m_draw.translate(m_x, m_y, m_z);
       
-  // Create triangles from points
-  std::vector<Int> idx;
-  for (int i=0; i<ts; i++) {
-    const Int ir1 = cs*i;
-    const Int ir2 = (i==ts-1 ? 0 : cs*(i+1));
-    for (int j=0; j<cs-1; j++) {
-      // set 1
-      idx.emplace_back(ir1+j);
-      idx.emplace_back(ir2+j);
-      idx.emplace_back(ir1+j+1);
-      // set 2
-      idx.emplace_back(ir2+j);
-      idx.emplace_back(ir2+j+1);
-      idx.emplace_back(ir1+j+1);
-    }
-    // set 1
-    idx.emplace_back(ir1+cs-1);
-    idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir1);
-    // set 2
-    idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir2);
-    idx.emplace_back(ir1);
-  }
-
   // OpenGL expects a val for every point (3x's)
-  const int numPts = x.size()/Dimensions;
-  std::vector<float> val;
-  val.resize(numPts);
-  std::fill(val.begin(), val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
-  m_draw = ElementPacket<float>{x, idx, val, idx.size()/Dimensions, 2};
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
 }
 
 #ifdef USE_IMGUI

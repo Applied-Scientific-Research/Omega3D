@@ -114,6 +114,16 @@ public:
     nelem += _in.nelem;
   }
 
+  // move the geometry the given amount - affects only the x vector
+  void translate(const S _x, const S _y, const S _z) {
+    for (size_t i=0; i<x.size()/Dimensions; ++i) {
+      x[i*Dimensions+0] += _x;
+      x[i*Dimensions+1] += _y;
+      x[i*Dimensions+2] += _z;
+    }
+  }
+
+  // output the nodes (for debugging only)
   void print() {
     for(size_t i=0; i<x.size()/Dimensions; i++) {
       std::cout << "idx: " << idx[i] << " x: " << x[Dimensions*i] << " " << x[Dimensions*i+1] << " " << x[Dimensions*i+2] << std::endl;

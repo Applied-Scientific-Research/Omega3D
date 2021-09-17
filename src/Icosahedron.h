@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 // zero level: 12 points

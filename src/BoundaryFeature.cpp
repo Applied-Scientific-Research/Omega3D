@@ -8,10 +8,8 @@
 
 #include "BoundaryFeature.h"
 #include "GuiHelper.h"
+#include "GeomHelper.h"
 #include "IglReadGeom.h"
-#include "IglRefine.h"
-#include "Icosahedron.h"
-#include "Cube.h"
 
 #include <cmath>
 #include <iostream>
@@ -218,55 +216,15 @@ Ovoid::init_elements(const float _ips) const {
 
   std::cout << "Creating ovoid..." << std::endl;
 
-  // first, make an icosahedron
-  std::vector<float>   x = ico0;
-  std::vector<Int>   idx = ico0idx;
-  std::vector<float> val;
-  ElementPacket<float> epack {x, idx, val, val.size()/Dimensions, 2};
-
-  // estimate the triangle spacing for the scaled ovoid
-  float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
-  float meansize = 0.35 * maxscale;
-
-  // then, iteratively refine it
-  std::cout << "  sphere is icosahedron with 20";
-  while (meansize > 1.2*_ips) {
-
-    // refine once
-    refine_geometry(epack);
-
-    // re-sphericalize (r=0.5)
-    for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
-      const float rad = std::sqrt( std::pow(epack.x[Dimensions*i], 2) +
-                                   std::pow(epack.x[Dimensions*i+1], 2) +
-                                   std::pow(epack.x[Dimensions*i+2], 2));
-      const float scale = 0.5 / rad;
-      epack.x[Dimensions*i]   *= scale;
-      epack.x[Dimensions*i+1] *= scale;
-      epack.x[Dimensions*i+2] *= scale;
-    }
-
-    meansize *= 0.5;
-  }
-  std::cout << " panels" << std::endl;
-
-  // scale and translate here
-  for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
-    const float in_x = epack.x[Dimensions*i];
-    const float in_y = epack.x[Dimensions*i+1];
-    const float in_z = epack.x[Dimensions*i+2];
-
-    // first scale, then translate
-    epack.x[Dimensions*i]   = in_x * m_sx + m_x;
-    epack.x[Dimensions*i+1] = in_y * m_sy + m_y;
-    epack.x[Dimensions*i+2] = in_z * m_sz + m_z;
-  }
+  ElementPacket<float> epack = generate_ovoid(m_sx, m_sy, m_sz, _ips);
+  epack.translate(m_x, m_y, m_z);
 
   // finally, assume standard behavior: reactive, zero-flow panels
   const size_t nsurfs = epack.idx.size() / Dimensions;
   epack.val.resize(Dimensions*nsurfs);
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
   epack.nelem = epack.val.size()/Dimensions;
+
   return epack;
 }
 
@@ -354,35 +312,8 @@ SolidRect::init_elements(const float _ips) const {
 
   std::cout << "Creating solid rectangle..." << std::endl;
 
-  // first, make 12-triangle rectangle
-  std::vector<float>   x = cube0;
-  std::vector<Int>   idx = cube0idx;
-  std::vector<float> val;
-  ElementPacket<float> epack {x, idx, val, val.size()/Dimensions, 2};
-
-  // estimate the triangle spacing for the scaled rectangle
-  float maxscale = std::max(m_sx, std::max(m_sy, m_sz));
-  float meansize = 0.7 * maxscale;
-
-  // then, iteratively refine it
-  std::cout << "  rectangle is cube with 12";
-  while (meansize > 1.2*_ips) {
-    refine_geometry(epack);
-    meansize *= 0.5;
-  }
-  std::cout << " panels" << std::endl;
-
-  // scale and translate here
-  for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
-    const float in_x = epack.x[Dimensions*i];
-    const float in_y = epack.x[Dimensions*i+1];
-    const float in_z = epack.x[Dimensions*i+2];
-
-    // first scale, then translate
-    epack.x[Dimensions*i]   = in_x * m_sx + m_x;
-    epack.x[Dimensions*i+1] = in_y * m_sy + m_y;
-    epack.x[Dimensions*i+2] = in_z * m_sz + m_z;
-  }
+  ElementPacket<float> epack = generate_cuboid(m_sx, m_sy, m_sz, _ips);
+  epack.translate(m_x, m_y, m_z);
 
   // finally, assume standard behavior: reactive, zero-flow panels
   const size_t nsurfs = epack.idx.size() / Dimensions;
