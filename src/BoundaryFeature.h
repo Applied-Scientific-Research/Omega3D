@@ -149,6 +149,47 @@ protected:
 
 
 //
+// Concrete class for a flat discoid
+//
+class SolidDisk : public BoundaryFeature {
+public:
+  SolidDisk(std::shared_ptr<Body> _bp = nullptr,
+                   bool _ext = true,
+                   float _x = 0.0,
+                   float _y = 0.0,
+                   float _z = 0.0,
+                   float _xf = 0.0,
+                   float _yf = 0.0,
+                   float _zf = 1.0,
+                   float _r = 0.5)
+    : BoundaryFeature(_bp, _ext, _x, _y, _z),
+      m_xf(_xf),
+      m_yf(_yf),
+      m_zf(_zf),
+      m_rad(_r)
+    {}
+  SolidDisk* copy() const override { return new SolidDisk(*this); }
+
+  void debug(std::ostream& os) const override;
+  std::string to_string() const override;
+  std::string to_short_string() const override { return "disk"; }
+  void from_json(const nlohmann::json) override;
+  nlohmann::json to_json() const override;
+  void create() override { }
+  ElementPacket<float> init_elements(const float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string) override;
+#endif
+  void generate_draw_geom() override;
+protected:
+  float m_xf;
+  float m_yf;
+  float m_zf;
+  float m_rad;
+};
+
+
+//
 // Concrete class for a flat boundary rectangle/quad
 //
 class BoundaryQuad : public BoundaryFeature {

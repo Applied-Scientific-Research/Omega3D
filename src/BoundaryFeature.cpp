@@ -37,6 +37,7 @@ void parse_boundary_json(std::vector<std::unique_ptr<BoundaryFeature>>& _flist,
   // if it's a recognized keyword, generate the geometry
   if      (ftype == "sphere") { _flist.emplace_back(std::make_unique<Ovoid>(_bp)); }
   else if (ftype == "rect")   { _flist.emplace_back(std::make_unique<SolidRect>(_bp)); }
+  else if (ftype == "disk")   { _flist.emplace_back(std::make_unique<SolidDisk>(_bp)); }
   else if (ftype == "quad")   { _flist.emplace_back(std::make_unique<BoundaryQuad>(_bp)); }
   // otherwise it's a file to read
   else                        { _flist.emplace_back(std::make_unique<ExteriorFromFile>(_bp)); }
@@ -123,9 +124,9 @@ int BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeatu
   // define geometry second
   static int item = 0;
   static int oldItem = -1;
-  const char* items[] = { "sphere", "rectangle", "boundary quad", "from file" };
+  const char* items[] = { "sphere", "rectangle", "disk", "boundary quad", "from file" };
   ImGui::Spacing();
-  ImGui::Combo("geometry type", &item, items, 4);
+  ImGui::Combo("geometry type", &item, items, 5);
 
 
   // show different inputs based on what is selected
@@ -139,9 +140,12 @@ int BoundaryFeature::draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeatu
         bf = std::make_unique<SolidRect>(bp);
       } break;
       case 2: {
-        bf = std::make_unique<BoundaryQuad>(bp);
+        bf = std::make_unique<SolidDisk>(bp);
       } break;
       case 3: {
+        bf = std::make_unique<BoundaryQuad>(bp);
+      } break;
+      case 4: {
         bf = std::make_unique<ExteriorFromFile>(bp);
       } break;
     } // end switch for geometry
@@ -402,6 +406,123 @@ bool SolidRect::draw_info_gui(const std::string _action) {
   m_sx = xs[0];
   m_sy = xs[1];
   m_sz = xs[2];
+  return add;
+}
+#endif
+
+//
+// Create a closed discoid object
+//
+ElementPacket<float>
+SolidDisk::init_elements(const float _ips) const {
+
+  std::cout << "Creating solid disk..." << std::endl;
+
+  const float cyllen = std::sqrt(std::pow(m_xf-m_x,2) + std::pow(m_yf-m_y,2) + std::pow(m_zf-m_z,2));
+  ElementPacket<float> epack = generate_discoid(m_rad, cyllen, _ips);
+
+  // generate a set of orthogonal basis vectors for the given normal
+  std::array<float,3> norm = {m_xf-m_x, m_yf-m_y, m_zf-m_z};
+  normalizeVec(norm);
+  std::array<float,3> b1, b2;
+  branchlessONB<float>(norm, b1, b2);
+
+  // rotate the points to the new basis
+  for (size_t i=0; i<epack.x.size()/Dimensions; ++i) {
+    const float px = epack.x[i*Dimensions+0];
+    const float py = epack.x[i*Dimensions+1];
+    const float pz = epack.x[i*Dimensions+2];
+
+    epack.x[i*Dimensions+0] = b1[0]*px + b2[0]*py + norm[0]*pz;
+    epack.x[i*Dimensions+1] = b1[1]*px + b2[1]*py + norm[1]*pz;
+    epack.x[i*Dimensions+2] = b1[2]*px + b2[2]*py + norm[2]*pz;
+  }
+
+  // finally, translate to the desired center
+  epack.translate(m_x, m_y, m_z);
+
+  // finally, assume standard behavior: reactive, zero-flow panels
+  const size_t nsurfs = epack.idx.size() / Dimensions;
+  epack.val.resize(Dimensions*nsurfs);
+  std::fill(epack.val.begin(), epack.val.end(), 0.0);
+  epack.nelem = epack.val.size()/Dimensions;
+
+  return epack;
+}
+
+void
+SolidDisk::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+SolidDisk::to_string() const {
+  std::stringstream ss;
+
+  //if (m_sx == m_sy and m_sy == m_sz) {
+    ss << "circular disk from " << m_x << " " << m_y << " " << m_z << " to " << m_xf << " " << m_yf << " " << m_zf << " with rad " << m_rad;
+  //} else {
+  //  ss << "oval disk at " << m_x << " " << m_y << " " << m_z << " scaled by " << m_sx << " " << m_sy << " " << m_sz;
+  //}
+
+  return ss.str();
+}
+
+void
+SolidDisk::from_json(const nlohmann::json j) {
+  const std::vector<float> tr = j["start"];
+  m_x = tr[0];
+  m_y = tr[1];
+  m_z = tr[2];
+  const std::vector<float> tf = j["end"];
+  m_xf = tf[0];
+  m_yf = tf[1];
+  m_zf = tf[2];
+  m_rad = j["radius"];
+  m_external = j.value("external", true);
+}
+
+nlohmann::json
+SolidDisk::to_json() const {
+  // make an object for the mesh
+  nlohmann::json mesh = nlohmann::json::object();
+  mesh["geometry"] = "disk";
+  mesh["start"] = {m_x, m_y, m_z};
+  mesh["end"] = {m_xf, m_yf, m_zf};
+  mesh["radius"] = m_rad;
+  mesh["external"] = m_external;
+  return mesh;
+}
+
+void SolidDisk::generate_draw_geom() {
+  m_draw = init_elements(0.1*m_rad);
+  m_draw.val.resize(m_draw.val.size()/Dimensions);
+}
+
+#ifdef USE_IMGUI
+bool SolidDisk::draw_info_gui(const std::string _action) {
+  //static bool external_flow = true;
+  static float xc[3] = {m_x, m_y, m_z};
+  static float xf[3] = {m_xf, m_yf, m_zf};
+  static float rad = m_rad;
+  std::string buttonText = _action+" solid disk";
+  bool add = false;
+  
+  // create a solid rectangle
+  ImGui::InputFloat3("origin", xc);
+  ImGui::InputFloat3("end point", xf);
+  ImGui::InputFloat("radius", &rad);
+  ImGui::Spacing();
+  ImGui::TextWrapped("This feature will add a solid disk centered at the given coordinates");
+  ImGui::Spacing();
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_xf = xf[0];
+  m_yf = xf[1];
+  m_zf = xf[2];
+  m_rad = rad;
   return add;
 }
 #endif

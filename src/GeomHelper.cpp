@@ -198,10 +198,156 @@ ElementPacket<float> generate_discoid(const float _r, const float _h, const floa
   std::vector<Int>   idx;
   std::vector<float> val;
 
+  // the strategy here is to create a simple discoid, oriented in the xy plane,
+  //   with many polygons sharing the center node; then use igl::decimate to 
+  //   make better triangles in the middles of the two disc sides
+
+  // num radial nodes and num radial elements
+  const size_t nre = 1 + size_t(_r/_ips);
+  const size_t nrn = 1 + nre;
+
+  // num circumferential nodes and elements (min is 6)
+  const size_t nce = size_t(std::max(6,int(0.5 + M_PI*_r/_ips)));
+  const size_t ncn = nce;
+
+  // same for the length of the cylinder (min is 3)
+  const size_t nle = size_t(std::max(3,int(0.5 + _h/_ips)));
+  const size_t nln = 1 + nle;
+
+  // we do not care that the nodes on the lip (sharp edge) are repeated twice
+  //   that is a requirement for watertightness in some software, but not here
+
+  // create nodes for top surface
+  x.emplace_back(0.0);
+  x.emplace_back(0.0);
+  x.emplace_back(_h);
+  for (size_t i=1; i<nrn; ++i) {
+    const float thisr = _r * (float)i / (float)nre;
+    for (size_t j=0; j<ncn; ++j) {
+      const float thisa = 2.0*M_PI * (float)j / (float)ncn;
+      x.emplace_back(thisr * std::cos(thisa));
+      x.emplace_back(thisr * std::sin(thisa));
+      x.emplace_back(_h);
+    }
+  }
+
+  // create elements for top surface
+  // inner loop
+    for (size_t j=0; j<nce-1; ++j) {
+      idx.emplace_back(0);
+      idx.emplace_back(j+1);
+      idx.emplace_back(j+2);
+    }
+      // last element
+      idx.emplace_back(0);
+      idx.emplace_back(nce);
+      idx.emplace_back(1);
+  // the second to final loops
+  for (size_t i=1; i<nre; ++i) {
+    const Int iin = 1 + (i-1)*nce;
+    const Int iout = 1 + i*nce;
+    for (size_t j=0; j<nce-1; ++j) {
+      idx.emplace_back(iin+j);
+      idx.emplace_back(iout+j);
+      idx.emplace_back(iout+1+j);
+      idx.emplace_back(iin+j);
+      idx.emplace_back(iout+1+j);
+      idx.emplace_back(iin+1+j);
+    }
+      // last elements
+      idx.emplace_back(iout-1);
+      idx.emplace_back(iout-1+nce);
+      idx.emplace_back(iout);
+      idx.emplace_back(iout-1);
+      idx.emplace_back(iout);
+      idx.emplace_back(iin);
+  }
+
+  // create nodes for side surface
+  Int ifirst = x.size()/Dimensions;
+  for (size_t i=0; i<nln; ++i) {
+    const float thish = _h * (float)i / (float)nle;
+    for (size_t j=0; j<ncn; ++j) {
+      const float thisa = 2.0*M_PI * (float)j / (float)ncn;
+      x.emplace_back(_r * std::cos(thisa));
+      x.emplace_back(_r * std::sin(thisa));
+      x.emplace_back(thish);
+    }
+  }
+  // create elements for side surface
+  for (size_t i=0; i<nle; ++i) {
+    const Int ilo = ifirst + i*nce;
+    const Int ihi = ilo + nce;
+    for (size_t j=0; j<nce-1; ++j) {
+      idx.emplace_back(ilo+j);
+      idx.emplace_back(ilo+1+j);
+      idx.emplace_back(ihi+1+j);
+      idx.emplace_back(ilo+j);
+      idx.emplace_back(ihi+1+j);
+      idx.emplace_back(ihi+j);
+    }
+      // last elements
+      idx.emplace_back(ihi-1);
+      idx.emplace_back(ilo);
+      idx.emplace_back(ihi);
+      idx.emplace_back(ihi-1);
+      idx.emplace_back(ihi);
+      idx.emplace_back(ihi+nce-1);
+  }
+
+  // create nodes for bottom surface
+  ifirst = x.size()/Dimensions;
+  x.emplace_back(0.0);
+  x.emplace_back(0.0);
+  x.emplace_back(0.0);
+  for (size_t i=1; i<nrn; ++i) {
+    const float thisr = _r * (float)i / (float)nre;
+    for (size_t j=0; j<ncn; ++j) {
+      // NOTE this is negative, so that they go the other way
+      const float thisa = -2.0*M_PI * (float)j / (float)ncn;
+      x.emplace_back(thisr * std::cos(thisa));
+      x.emplace_back(thisr * std::sin(thisa));
+      x.emplace_back(0.0);
+    }
+  }
+
+  // create elements for bottom surface
+  // inner loop
+    for (size_t j=0; j<nce-1; ++j) {
+      idx.emplace_back(ifirst+0);
+      idx.emplace_back(ifirst+j+1);
+      idx.emplace_back(ifirst+j+2);
+    }
+      // last element
+      idx.emplace_back(ifirst+0);
+      idx.emplace_back(ifirst+nce);
+      idx.emplace_back(ifirst+1);
+  // the second to final loops
+  for (size_t i=1; i<nre; ++i) {
+    const Int iin = ifirst + 1 + (i-1)*nce;
+    const Int iout = ifirst + 1 + i*nce;
+    for (size_t j=0; j<nce-1; ++j) {
+      idx.emplace_back(iin+j);
+      idx.emplace_back(iout+j);
+      idx.emplace_back(iout+1+j);
+      idx.emplace_back(iin+j);
+      idx.emplace_back(iout+1+j);
+      idx.emplace_back(iin+1+j);
+    }
+      // last elements
+      idx.emplace_back(iout-1);
+      idx.emplace_back(iout-1+nce);
+      idx.emplace_back(iout);
+      idx.emplace_back(iout-1);
+      idx.emplace_back(iout);
+      idx.emplace_back(iin);
+  }
 
 
   // keep val empty
   ElementPacket<float> epack {x, idx, val, x.size()/Dimensions, 2};
+
+  // now - very important - use decimation to limit the element count!
 
   return epack;
 }
