@@ -279,6 +279,8 @@ SET(SOURCES "src/Simulation.cpp"
             "src/GeomHelper.cpp"
             "src/IglReadGeom.cpp"
             "src/IglRefine.cpp"
+            "src/IglDecimate.cpp"
+            "src/IglMergeDups.cpp"
             "src/StatusFile.cpp"
             "lib/tinyxml2/tinyxml2.cpp"
             "lib/tinyexpr/tinyexpr.c" )

@@ -10,6 +10,8 @@
 #include "Cube.h"
 #include "ElementPacket.h"
 #include "IglRefine.h"
+#include "IglMergeDups.h"
+#include "IglDecimate.h"
 
 #include <cmath>
 #include <iostream>
@@ -348,6 +350,10 @@ ElementPacket<float> generate_discoid(const float _r, const float _h, const floa
   ElementPacket<float> epack {x, idx, val, x.size()/Dimensions, 2};
 
   // now - very important - use decimation to limit the element count!
+  mergeduplicates_geometry(epack,1.e-6);
+  const float area = 2.0*M_PI*_r * (_r+_h);
+  const size_t maxelems = std::max(size_t(1500), size_t(1.4*area/(_ips*_ips)));
+  decimate_geometry(epack, maxelems);
 
   return epack;
 }
