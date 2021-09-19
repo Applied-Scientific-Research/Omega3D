@@ -36,7 +36,7 @@ IGL_INLINE void igl::unique_rows(
   }
 
   auto index_equal = [&sortA, &num_cols](const size_t i, const size_t j) {
-    for (size_t c=0; c<num_cols; c++) {
+    for (size_t c=0; c<size_t(num_cols); c++) {
       if (sortA(i,c) != sortA(j,c))
         return false;
     }

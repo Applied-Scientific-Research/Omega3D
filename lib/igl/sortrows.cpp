@@ -66,7 +66,7 @@ IGL_INLINE void igl::sortrows(
   const size_t num_cols = X.cols();
   Y.resize(num_rows,num_cols);
   IX.resize(num_rows,1);
-  for(int i = 0;i<num_rows;i++)
+  for(size_t i = 0;i<num_rows;i++)
   {
     IX(i) = i;
   }
@@ -98,7 +98,7 @@ IGL_INLINE void igl::sortrows(
         );
   }
   for (size_t j=0; j<num_cols; j++) {
-      for(int i = 0;i<num_rows;i++)
+      for(size_t i = 0;i<num_rows;i++)
       {
           Y(i,j) = X(IX(i), j);
       }
