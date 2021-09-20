@@ -10,11 +10,12 @@
 #include "Core.h"
 #include "Icosahedron.h"
 #include "VectorHelper.h"
-#include "nanoflann/nanoflann.hpp"
 #ifdef PLUGIN_SIMPLEX
 #include "simplex.h"
 #endif
+
 #include "eigen-nnls/nnls.h"
+#include "nanoflann/nanoflann.hpp"
 
 #include <Eigen/Dense>
 
