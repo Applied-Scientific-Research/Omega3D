@@ -10,6 +10,7 @@
 #include "BEMHelper.h"
 #include "Split.h"
 #include "GuiHelper.h"
+#include "FutureHelper.h"
 
 #include <cassert>
 #include <cmath>
