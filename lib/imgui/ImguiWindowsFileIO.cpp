@@ -449,7 +449,7 @@ bool fileIOWindow(
     if( current_folder == "x" )
         current_folder = MiniPath::getCurrentDir();
 
-    static char current_file[ 256 ] = "select_a_file.json";
+    static char current_file[ 256 ] = "none selected";
     static int  file_type_selected = 0;
     static int  file_selected = 0;
     static int  directory_selected = 0;
@@ -611,7 +611,7 @@ bool fileIOWindow(
     Text("File Name: "); SameLine();
     InputText( "  ", current_file, IM_ARRAYSIZE( current_file ) );
 
-    Text( "File Type: " ); SameLine(); Text( extension_cstrings[file_type_selected] ); SameLine();
+    Text( "File Type: " ); SameLine(); Text( "%s", extension_cstrings[file_type_selected] ); SameLine();
     if (Button( CARET_DOWN ) )
         ImGui::OpenPopup("FileType");
 
@@ -634,7 +634,7 @@ bool fileIOWindow(
     {
         vector<string> ext_filter_v = stringSplit( extension_cstrings[file_type_selected], '.');
         if (current_mini_path.extension() != ext_filter_v[1]) { current_mini_path.addExtension(ext_filter_v[1]); }
-                file_path = current_mini_path.filePath();
+        file_path = current_mini_path.filePath();
         std::cout << file_path << std::endl;
         if( ensure_file_exists )
         {
