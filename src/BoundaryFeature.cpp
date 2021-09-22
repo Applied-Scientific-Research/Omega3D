@@ -703,7 +703,7 @@ bool BoundaryQuad::draw_info_gui(const std::string _action) {
 ElementPacket<float>
 ExteriorFromFile::init_elements(const float _ips) const {
 
-  std::cout << "Creating object from file..." << std::endl;
+  std::cout << "Creating object from file (" << m_infile << ")" << std::endl;
 
   ElementPacket<float> epack = read_geometry_file(m_infile);
 
@@ -783,56 +783,70 @@ ExteriorFromFile::to_json() const {
   return mesh;
 }
 
+#ifdef USE_IMGUI
+bool ExteriorFromFile::draw_info_gui(const std::string _action) {
+  bool add = false;
+  static bool try_it = false;
+  static bool show_geom_input_window = false;
+  static std::string infile = m_infile;	// full path
+  static std::string infileshort = infile; // just file name
+  std::string buttonText = _action+" geometry from file";
+  static std::vector<std::string> recent_geom_files;
+
+  if (ImGui::Button(infileshort.c_str(), ImVec2(200,0))) show_geom_input_window = true;
+  ImGui::SameLine();
+  ImGui::Text("Triangle mesh file name");
+
+  //static bool external_flow = true;
+  static float xc[3] = {m_x, m_y, m_z};
+  ImGui::InputFloat3("center", xc);
+  ImGui::SameLine();
+  ShowHelpMarker("Translate the coordinates in the mesh file by this vector.");
+
+  //static float rotdeg = 0.0f;
+  static float scale = m_sx;
+  ImGui::SliderFloat("scale", &scale, 0.01f, 10.0f, "%.4f", 2.0);
+  ImGui::SameLine();
+  ShowHelpMarker("Scale the geometry uniformly by this value.");
+
+  if (show_geom_input_window) {
+
+    // FileIO is now a modal, see code in lib/imgui/ImguiWindowsFileIO.cpp
+    ImGui::OpenPopup("FileIO");
+
+    if (fileIOWindow(try_it, infile, recent_geom_files, "Open", {"*.obj", "*.stl", "*.ply", "*.*"}, true, ImVec2(500,250))) {
+      show_geom_input_window = false;
+      // convert full path name to just file name
+      const MiniPath fullpath(infile);
+      infileshort = fullpath.getName();
+    }
+  }
+
+  ImGui::TextWrapped("This feature will read a triangle mesh file and place it as a solid body at the given coordinates");
+
+  if (ImGui::Button(buttonText.c_str())) {
+    if (try_it and !infile.empty()) {
+      std::cout << infile << std::endl;
+      try_it = false;
+      recent_geom_files.push_back( infile );
+    } else {
+      std::cout << "ERROR LOADING FILE " << infile << std::endl;
+    }
+    add = true;
+  }
+
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_sx = m_sy = m_sz = scale;
+  m_infile = infile;
+
+  return add;
+}
+#endif
+
 void ExteriorFromFile::generate_draw_geom() {
   m_draw = init_elements(1);
   m_draw.val.resize(m_draw.val.size()/Dimensions);
 }
 
-#ifdef USE_IMGUI
-bool ExteriorFromFile::draw_info_gui(const std::string _action) {
-  // load a geometry file
-  static std::string infile = m_infile;
-  static std::string shortname = infile;
-  static std::vector<std::string> recent_geom_files;
-  static bool show_geom_input_window = false;
-  if (ImGui::Button("Geometry file", ImVec2(200,0))) show_geom_input_window = true;
-
-  if (show_geom_input_window) {
-    bool try_it = false;
-
-    if (fileIOWindow( try_it, infile, recent_geom_files, "Open", {"*.obj", "*.stl", "*.ply", "*.*"}, true, ImVec2(500,250))) {
-      show_geom_input_window = false;
-
-      if (try_it and !infile.empty()) {
-        // remember
-        recent_geom_files.push_back( infile );
-
-        // now remove the leading directories from the string
-        const size_t lastchar = infile.find_last_of("/\\");
-        shortname = infile.substr(lastchar+1);
-      }
-    }
-  }
-  
-  //static bool external_flow = true;
-  static float xc[3] = {m_x, m_y, m_z};
-  //static float rotdeg = 0.0f;
-  static float scale = m_sx;
-  std::string buttonText = _action+" geometry from file";
-  bool add = false;
-  
-  ImGui::SameLine();
-  ImGui::Text(shortname.c_str());
-  ImGui::InputFloat3("center", xc);
-  ImGui::SliderFloat("scale", &scale, 0.01f, 10.0f, "%.4f", 2.0);
-  ImGui::Spacing();
-  ImGui::TextWrapped("This feature will add a solid body centered at the given coordinates");
-  ImGui::Spacing();
-  if (ImGui::Button(buttonText.c_str())) { add = true; }
-  m_x = xc[0];
-  m_y = xc[1];
-  m_z = xc[2];
-  m_sx = m_sy = m_sz = scale;
-  return add;
-}
-#endif
