@@ -281,7 +281,6 @@ public:
     // and specialize
     if (this->M == lagrangian and ug and this->E != inert) {
       std::cout << "  Stretching" << to_string() << " using 1st order" << std::endl;
-      S thismax = 0.0;
 
       for (size_t i=0; i<this->n; ++i) {
 
@@ -317,10 +316,6 @@ public:
         (*this->s)[1][i] = this_s[1] + _dt * _wt1 * wdu[1];
         (*this->s)[2][i] = this_s[2] + _dt * _wt1 * wdu[2];
 
-        // check for max strength
-        S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
-        if (thisstr > thismax) thismax = thisstr;
-
         if (VERBOSE and false) {
         //if (i == 0) {
         //if (i < 10) {
@@ -336,19 +331,10 @@ public:
           std::cout << std::endl;
         }
       }
-
-      // and update the max strength measure
-      if (max_strength < 0.0) {
-        max_strength = std::sqrt(thismax);
-      } else {
-        max_strength = 0.1*std::sqrt(thismax) + 0.9*max_strength;
-      }
-      //std::cout << "  New max_strength is " << max_strength << std::endl;
-
-    } else {
-      //std::cout << "  Not stretching" << to_string() << std::endl;
-      max_strength = 1.0;
     }
+
+    // and update the max strength measure
+    (void) update_max_str();
   }
 
   //
@@ -366,7 +352,6 @@ public:
     // and specialize
     if (this->M == lagrangian and this->E != inert and _u1.ug and _u2.ug) {
       std::cout << "  Stretching" << to_string() << " using 2nd order" << std::endl;
-      S thismax = 0.0;
 
       for (size_t i=0; i<this->n; ++i) {
 
@@ -417,10 +402,6 @@ public:
         (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
         (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
 
-        // check for max strength
-        S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
-        if (thisstr > thismax) thismax = thisstr;
-
         if (VERBOSE and false) {
         //if (i == 0) {
         //if (i == this->n - 1) {
@@ -438,17 +419,91 @@ public:
           std::cout << std::endl;
         }
       }
-
-      if (max_strength < 0.0) {
-        max_strength = std::sqrt(thismax);
-      } else {
-        max_strength = 0.05*std::sqrt(thismax) + 0.95*max_strength;
-      }
-
-    } else {
-      //std::cout << "  Not stretching" << to_string() << std::endl;
-      max_strength = 1.0;
     }
+
+    // and update the max strength measure
+    (void) update_max_str();
+  }
+
+  //
+  // 3rd order RK advection and stretch
+  //
+  void move(const double _time, const double _dt,
+            const double _wt1, Points<S> const & _u1,
+            const double _wt2, Points<S> const & _u2,
+            const double _wt3, Points<S> const & _u3) {
+
+    // must explicitly call the method in the base class
+    ElementBase<S>::move(_time, _dt, _wt1, _u1, _wt2, _u2, _wt3, _u3);
+
+    // and specialize
+    if (this->M == lagrangian and this->E != inert and _u1.ug and _u2.ug and _u3.ug) {
+      std::cout << "  Stretching" << to_string() << " using 3rd order" << std::endl;
+
+      for (size_t i=0; i<this->n; ++i) {
+
+        // set up some convenient temporaries
+        std::array<S,numStrPerNode> this_s = {0.0};
+        std::array<S,Dimensions*Dimensions> this_ug = {0.0};
+        for (size_t d=0; d<numStrPerNode; ++d) {
+          this_s[d] = (*this->s)[d][i];
+        }
+
+        // compute stretch term
+        // note that multiplying by the transpose may maintain linear impulse better, but
+        //   severely underestimates stretch!
+
+        auto& optug1 = _u1.ug;
+        for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+          this_ug[d] = (*optug1)[d][i];
+        }
+        std::array<S,3> wdu1 = {0.0};
+        wdu1[0] = this_s[0]*this_ug[0] + this_s[1]*this_ug[3] + this_s[2]*this_ug[6];
+        wdu1[1] = this_s[0]*this_ug[1] + this_s[1]*this_ug[4] + this_s[2]*this_ug[7];
+        wdu1[2] = this_s[0]*this_ug[2] + this_s[1]*this_ug[5] + this_s[2]*this_ug[8];
+
+        auto& optug2 = _u2.ug;
+        for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+          this_ug[d] = (*optug2)[d][i];
+        }
+        std::array<S,3> wdu2 = {0.0};
+        wdu2[0] = this_s[0]*this_ug[0] + this_s[1]*this_ug[3] + this_s[2]*this_ug[6];
+        wdu2[1] = this_s[0]*this_ug[1] + this_s[1]*this_ug[4] + this_s[2]*this_ug[7];
+        wdu2[2] = this_s[0]*this_ug[2] + this_s[1]*this_ug[5] + this_s[2]*this_ug[8];
+
+        auto& optug3 = _u3.ug;
+        for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+          this_ug[d] = (*optug3)[d][i];
+        }
+        std::array<S,3> wdu3 = {0.0};
+        wdu3[0] = this_s[0]*this_ug[0] + this_s[1]*this_ug[3] + this_s[2]*this_ug[6];
+        wdu3[1] = this_s[0]*this_ug[1] + this_s[1]*this_ug[4] + this_s[2]*this_ug[7];
+        wdu3[2] = this_s[0]*this_ug[2] + this_s[1]*this_ug[5] + this_s[2]*this_ug[8];
+
+        // put them together
+        std::array<S,3> wdu = {0.0};
+        wdu[0] = _wt1*wdu1[0] + _wt2*wdu2[0] + _wt3*wdu3[0];
+        wdu[1] = _wt1*wdu1[1] + _wt2*wdu2[1] + _wt3*wdu3[1];
+        wdu[2] = _wt1*wdu1[2] + _wt2*wdu2[2] + _wt3*wdu3[2];
+
+        // update elongation
+        const S circmagsqrd = this_s[0]*this_s[0] + this_s[1]*this_s[1] + this_s[2]*this_s[2];
+        if (circmagsqrd > 0.0) {
+          const S elongfactor = (S)_dt * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmagsqrd;
+          elong[i] *= 1.0 + elongfactor;
+        }
+
+        // add Cottet SFS into stretch term (after elongation)
+
+        // update strengths
+        (*this->s)[0][i] = this_s[0] + _dt * wdu[0];
+        (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
+        (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
+      }
+    }
+
+    // and update the max strength measure
+    (void) update_max_str();
   }
 
   // find largest elongation in this collection
@@ -463,15 +518,15 @@ public:
     return *imax;
   }
 
-  // find the new peak strength magnitude
+  // find the new time-averaged peak strength magnitude
   void update_max_str() {
-    S thismax = ElementBase<S>::get_max_str();
+    const S thismax = ElementBase<S>::get_max_str();
 
     // and slowly update the current saved value
     if (max_strength < 0.0) {
       max_strength = thismax;
     } else {
-      max_strength = 0.1*thismax + 0.9*max_strength;
+      max_strength = 0.05*thismax + 0.95*max_strength;
     }
   }
 

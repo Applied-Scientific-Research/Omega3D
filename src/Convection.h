@@ -83,6 +83,14 @@ public:
                   std::vector<Collection>&,
                   std::vector<Collection>&,
                   BEM<S,I>&);
+  void advect_3rd(const double,
+                  const double,
+                  const std::array<double,Dimensions>&,
+                  const S,
+                  std::vector<Collection>&,
+                  std::vector<Collection>&,
+                  std::vector<Collection>&,
+                  BEM<S,I>&);
 
 #ifdef USE_IMGUI
   void draw_advanced();
@@ -119,7 +127,6 @@ void Convection<S,A,I>::find_vels(const std::array<double,Dimensions>& _fs,
   //if (_targets.size() > 0) std::cout << std::endl;
 
   // need this for dispatching velocity influence calls, template param is accumulator type
-  // should the solution_t be an argument to the constructor?
   // member variable is passed-in execution environment
   InfluenceVisitor<S,A> visitor = {ResultsType(_results), conv_env};
 
@@ -195,13 +202,13 @@ void Convection<S,A,I>::advect(const double                         _time,
                                std::vector<Collection>&             _fldpt,
                                BEM<S,I>&                            _bem) {
 
-  assert(convection_order > 0 and convection_order < 3 && "Convection integrator orders over 2 unsupported");
+  assert(convection_order > 0 and convection_order < 4 && "Convection integrator orders over 3 unsupported");
 
   // call the individual methods
   if (convection_order == 1) advect_1st(_time, _dt, _fs, _ips, _vort, _bdry, _fldpt, _bem);
   //else if (convection_order == 2) advect_2nd_heun(_time, _dt, _fs, _ips, _vort, _bdry, _fldpt, _bem);
   else if (convection_order == 2) advect_2nd_ralston(_time, _dt, _fs, _ips, _vort, _bdry, _fldpt, _bem);
-  //else advect_3rd(_time, _dt, _fs, _ips, _vort, _bdry, _fldpt, _bem);
+  else advect_3rd(_time, _dt, _fs, _ips, _vort, _bdry, _fldpt, _bem);
 
   // do the smarter, general way - ugh, maybe later
 }
@@ -293,9 +300,9 @@ void Convection<S,A,I>::advect_2nd_heun(const double                         _ti
     Collection& c1 = *v1p;
     Collection& c2 = *v2p;
     // switch based on what type is actually held in the std::variant
-    if (std::holds_alternative<Points<float>>(c1) and std::holds_alternative<Points<float>>(c2)) {
-      Points<float>& p1 = std::get<Points<float>>(c1);
-      Points<float>& p2 = std::get<Points<float>>(c2);
+    if (std::holds_alternative<Points<S>>(c1) and std::holds_alternative<Points<S>>(c2)) {
+      Points<S>& p1 = std::get<Points<S>>(c1);
+      Points<S>& p2 = std::get<Points<S>>(c2);
       p1.move(_time, _dt, 0.5, p1, 0.5, p2);
     }
     ++v1p;
@@ -308,9 +315,9 @@ void Convection<S,A,I>::advect_2nd_heun(const double                         _ti
     Collection& c1 = *v1p;
     Collection& c2 = *v2p;
     // switch based on what type is actually held in the std::variant
-    if (std::holds_alternative<Points<float>>(c1) and std::holds_alternative<Points<float>>(c2)) {
-      Points<float>& p1 = std::get<Points<float>>(c1);
-      Points<float>& p2 = std::get<Points<float>>(c2);
+    if (std::holds_alternative<Points<S>>(c1) and std::holds_alternative<Points<S>>(c2)) {
+      Points<S>& p1 = std::get<Points<S>>(c1);
+      Points<S>& p2 = std::get<Points<S>>(c2);
       p1.move(_time, _dt, 0.5, p1, 0.5, p2);
     }
     ++v1p;
@@ -375,9 +382,9 @@ void Convection<S,A,I>::advect_2nd_ralston(const double                         
     Collection& c1 = *v1p;
     Collection& c2 = *v2p;
     // switch based on what type is actually held in the std::variant
-    if (std::holds_alternative<Points<float>>(c1) and std::holds_alternative<Points<float>>(c2)) {
-      Points<float>& p1 = std::get<Points<float>>(c1);
-      Points<float>& p2 = std::get<Points<float>>(c2);
+    if (std::holds_alternative<Points<S>>(c1) and std::holds_alternative<Points<S>>(c2)) {
+      Points<S>& p1 = std::get<Points<S>>(c1);
+      Points<S>& p2 = std::get<Points<S>>(c2);
       p1.move(_time, _dt, 0.25, p1, 0.75, p2);
     }
     ++v1p;
@@ -390,9 +397,9 @@ void Convection<S,A,I>::advect_2nd_ralston(const double                         
     Collection& c1 = *v1p;
     Collection& c2 = *v2p;
     // switch based on what type is actually held in the std::variant
-    if (std::holds_alternative<Points<float>>(c1) and std::holds_alternative<Points<float>>(c2)) {
-      Points<float>& p1 = std::get<Points<float>>(c1);
-      Points<float>& p2 = std::get<Points<float>>(c2);
+    if (std::holds_alternative<Points<S>>(c1) and std::holds_alternative<Points<S>>(c2)) {
+      Points<S>& p1 = std::get<Points<S>>(c1);
+      Points<S>& p2 = std::get<Points<S>>(c2);
       p1.move(_time, _dt, 0.25, p1, 0.75, p2);
     }
     ++v1p;
@@ -405,6 +412,136 @@ void Convection<S,A,I>::advect_2nd_ralston(const double                         
 }
 
 
+//
+// third-order RK3 forward integration (Ralston's)
+//
+template <class S, class A, class I>
+void Convection<S,A,I>::advect_3rd(const double                         _time,
+                                   const double                         _dt,
+                                   const std::array<double,Dimensions>& _fs,
+                                   const S                              _ips,
+                                   std::vector<Collection>&             _vort,
+                                   std::vector<Collection>&             _bdry,
+                                   std::vector<Collection>&             _fldpt,
+                                   BEM<S,I>&                            _bem) {
+
+  std::cout << "Inside Convection::advect_3rd with dt=" << _dt << std::endl;
+
+  // take the first Euler step ------------------------------------
+
+  // compute derivatives
+  find_derivs(_time, _fs, _bem, _bdry, _vort, _fldpt);
+
+  // advect into an intermediate system
+  std::vector<Collection> vort1 = _vort;
+  for (auto &coll : vort1) {
+    std::visit([=](auto& elem) { elem.move(_time, 0.5*_dt, 1.0, elem); }, coll);
+  }
+  clear_inner_layer<S>(1, _bdry, vort1, 0.5/std::sqrt(2.0*M_PI), _ips);
+
+  // do the same for fldpt
+  std::vector<Collection> fldpt1 = _fldpt;
+  for (auto &coll : fldpt1) {
+    std::visit([=](auto& elem) { elem.move(_time, 0.5*_dt, 1.0, elem); }, coll);
+  }
+  clear_inner_layer<S>(1, _bdry, fldpt1, 0.5/std::sqrt(2.0*M_PI), _ips);
+
+  // now _vort has its original positions and the velocities evaluated there
+  // and vort1 has the positions at t+0.5*dt
+
+  // begin the 2nd step -------------------------------------------
+
+  // compute derivatives
+  find_derivs(_time+0.5*_dt, _fs, _bem, _bdry, vort1, fldpt1);
+
+  // _vort still has its original positions and the velocities evaluated there
+  // but vort1 now has positions and velocities at t+0.5*dt
+
+  // advect the original positions into a second intermediate system using the vels from the first intermediate
+  std::vector<Collection> vort2 = _vort;
+  auto v1p = vort1.begin();
+  auto v2p = vort2.begin();
+  for (size_t i = 0; i < vort1.size(); ++i) {
+    Collection& c1 = *v1p;
+    Collection& c2 = *v2p;
+    if (std::holds_alternative<Points<S>>(c1) and std::holds_alternative<Points<S>>(c2)) {
+      Points<S>& p1 = std::get<Points<S>>(c1);
+      Points<S>& p2 = std::get<Points<S>>(c2);
+      p2.move(_time, 0.75*_dt, 1.0, p1);
+    }
+    ++v1p;
+    ++v2p;
+  }
+  clear_inner_layer<S>(1, _bdry, vort2, 0.5/std::sqrt(2.0*M_PI), _ips);
+
+  // do the same for fldpt
+  std::vector<Collection> fldpt2 = _fldpt;
+  v1p = fldpt1.begin();
+  v2p = fldpt2.begin();
+  for (size_t i = 0; i < fldpt1.size(); ++i) {
+    Collection& c1 = *v1p;
+    Collection& c2 = *v2p;
+    // switch based on what type is actually held in the std::variant
+    if (std::holds_alternative<Points<S>>(c1) and std::holds_alternative<Points<S>>(c2)) {
+      Points<S>& p1 = std::get<Points<S>>(c1);
+      Points<S>& p2 = std::get<Points<S>>(c2);
+      p2.move(_time, 0.75*_dt, 1.0, p1);
+    }
+    ++v1p;
+    ++v2p;
+  }
+  clear_inner_layer<S>(1, _bdry, fldpt2, 0.5/std::sqrt(2.0*M_PI), _ips);
+  // now vort2 has positions at t+0.75*dt
+
+  // begin the 3rd step -------------------------------------------
+
+  // compute derivatives
+  find_derivs(_time+0.75*_dt, _fs, _bem, _bdry, vort2, fldpt2);
+  // now vort2 has positions and vels at t+0.75*dt
+
+  // advect using the combination of all three velocities
+  auto v0p = _vort.begin();
+  v1p = vort1.begin();
+  v2p = vort2.begin();
+  for (size_t i = 0; i < _vort.size(); ++i) {
+    Collection& c0 = *v0p;
+    Collection& c1 = *v1p;
+    Collection& c2 = *v2p;
+    // switch based on what type is actually held in the std::variant
+    if (std::holds_alternative<Points<S>>(c0)) {
+      Points<S>& p0 = std::get<Points<S>>(c0);
+      Points<S>& p1 = std::get<Points<S>>(c1);
+      Points<S>& p2 = std::get<Points<S>>(c2);
+      p0.move(_time, _dt, 2.0/9.0, p0, 3.0/9.0, p1, 4.0/9.0, p2);
+    }
+    ++v0p;
+    ++v1p;
+    ++v2p;
+  }
+
+  v0p = _fldpt.begin();
+  v1p = fldpt1.begin();
+  v2p = fldpt2.begin();
+  for (size_t i = 0; i < _fldpt.size(); ++i) {
+    Collection& c0 = *v0p;
+    Collection& c1 = *v1p;
+    Collection& c2 = *v2p;
+    // switch based on what type is actually held in the std::variant
+    if (std::holds_alternative<Points<S>>(c0)) {
+      Points<S>& p0 = std::get<Points<S>>(c0);
+      Points<S>& p1 = std::get<Points<S>>(c1);
+      Points<S>& p2 = std::get<Points<S>>(c2);
+      p0.move(_time, _dt, 2.0/9.0, p0, 3.0/9.0, p1, 4.0/9.0, p2);
+    }
+    ++v0p;
+    ++v1p;
+    ++v2p;
+  }
+
+  // wrap up movement by pushing away *active* particles inside or too close to the body
+  clear_inner_layer<S>(1, _bdry, _vort, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, _fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
+}
 
 
 #ifdef USE_IMGUI
@@ -417,6 +554,10 @@ void Convection<S,A,I>::draw_advanced() {
   //ImGui::Separator();
   ImGui::Spacing();
   ImGui::Text("Convection settings");
+
+  ImGui::SliderInt("Time Order", &convection_order, 1, 3);
+  ImGui::SameLine();
+  ShowHelpMarker("Select Euler's 1st order, Ralston's 2nd, or Ralston's 3rd order methods.");
 
   static bool use_internal_solver = conv_env.is_internal();
 #ifdef EXTERNAL_VEL_SOLVE

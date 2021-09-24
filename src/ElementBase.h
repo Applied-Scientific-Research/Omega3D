@@ -292,9 +292,9 @@ public:
 
   // time is the starting time, time+dt is the ending time
   void move(const double _time, const double _dt,
-            const double _wt0, ElementBase<S> const & _u0,
             const double _wt1, ElementBase<S> const & _u1,
-            const double _wt2, ElementBase<S> const & _u2) {
+            const double _wt2, ElementBase<S> const & _u2,
+            const double _wt3, ElementBase<S> const & _u3) {
 
     // must confirm that incoming time derivates include velocity
     // if this has vels, then lets advect it
@@ -304,7 +304,7 @@ public:
       // update vels, note that _u1 is the same as this
       for (size_t d=0; d<Dimensions; ++d) {
         for (size_t i=0; i<n; ++i) {
-          u[d][i] = _wt0*_u0.u[d][i] + _wt1*_u1.u[d][i] + _wt2*_u2.u[d][i];
+          u[d][i] = _wt1*_u1.u[d][i] + _wt2*_u2.u[d][i] + _wt3*_u3.u[d][i];
         }
       }
 
@@ -328,7 +328,7 @@ public:
       // we have strengths, go through and check them
       S thismax = 0.0;
       for (size_t i=0; i<(*s)[0].size(); ++i) {
-        S thisstr = (*s)[0][i]*(*s)[0][i] + (*s)[1][i]*(*s)[1][i] + (*s)[2][i]*(*s)[2][i];
+        const S thisstr = (*s)[0][i]*(*s)[0][i] + (*s)[1][i]*(*s)[1][i] + (*s)[2][i]*(*s)[2][i];
         if (thisstr > thismax) thismax = thisstr;
       }
       return std::sqrt(thismax);
