@@ -1,21 +1,27 @@
 /*
  * Simulation.cpp - a class to control a 3D vortex particle sim
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  */
 
 #include "Simulation.h"
 #include "Reflect.h"
 #include "BEMHelper.h"
-#include "VtkXmlHelper.h"
 #include "Split.h"
 #include "GuiHelper.h"
+#include "FutureHelper.h"
 
 #include <cassert>
 #include <cmath>
+#include <cfenv> // Catch fp exceptions
 #include <limits>
 #include <variant>
+
+#ifdef _WIN32
+#pragma STDC FENV_ACCESS ON // For fp exceptions
+#endif
+
 
 // constructor
 Simulation::Simulation()
@@ -35,6 +41,8 @@ Simulation::Simulation()
     output_dt(0.0),
     end_time(100.0),
     use_end_time(false),
+    overlap_ratio(1.5),
+    core_size_ratio(std::sqrt(8.0)),
     nstep(0),
     use_max_steps(false),
     max_steps(100),
@@ -54,8 +62,8 @@ float* Simulation::addr_fs() { return fs; }
 float Simulation::get_re() const { return re; }
 float Simulation::get_dt() const { return dt; }
 float Simulation::get_hnu() const { return std::sqrt(dt/re); }
-float Simulation::get_ips() const { return diff.get_nom_sep_scaled() * get_hnu(); }
-float Simulation::get_vdelta() const { return diff.get_particle_overlap() * get_ips(); }
+float Simulation::get_ips() const { return core_size_ratio * get_hnu(); }
+float Simulation::get_vdelta() const { return overlap_ratio * get_ips(); }
 float Simulation::get_time() const { return (float)time; }
 float Simulation::get_end_time() const { return (float)end_time; }
 bool Simulation::using_end_time() const { return use_end_time; }
@@ -113,7 +121,7 @@ size_t Simulation::get_nfldpts() {
 
 // like a setter
 void Simulation::set_re_for_ips(const float _ips) {
-  re = std::pow(diff.get_nom_sep_scaled(), 2) * dt / pow(_ips, 2);
+  re = std::pow(core_size_ratio, 2) * dt / pow(_ips, 2);
   diff.set_diffuse(false);
 }
 
@@ -129,6 +137,79 @@ void Simulation::set_amr(const bool _do_amr) {
 //
 // json read/write
 //
+
+// read "simparams" json object
+void
+Simulation::from_json(const nlohmann::json j) {
+
+  if (j.find("nominalDt") != j.end()) {
+    dt = j["nominalDt"];
+    std::cout << "  setting dt= " << dt << std::endl;
+  }
+
+  if (j.find("outputDt") != j.end()) {
+    output_dt = j["outputDt"];
+    std::cout << "  setting output dt= " << output_dt << std::endl;
+  }
+
+  //if (j.find("nominalDx") != j.end()) {
+  //  dx = j["nominalDx"];
+  //  std::cout << "  setting dx= " << dx << std::endl;
+  //}
+
+  if (j.find("maxSteps") != j.end()) {
+    use_max_steps = true;
+    max_steps = j["maxSteps"];
+    std::cout << "  setting max_steps= " << max_steps << std::endl;
+  } else {
+    use_max_steps = false;
+  }
+
+  if (j.find("endTime") != j.end()) {
+    use_end_time = true;
+    end_time = j["endTime"];
+    std::cout << "  setting end_time= " << end_time << std::endl;
+  } else {
+    use_end_time = false;
+  }
+
+  if (j.find("overlapRatio") != j.end()) {
+    overlap_ratio = j["overlapRatio"];
+    std::cout << "  setting overlap ratio= " << overlap_ratio << std::endl;
+  }
+
+  if (j.find("coreSizeRatioSqrd") != j.end()) {
+    core_size_ratio = std::sqrt((float)j["coreSizeRatioSqrd"]);
+    std::cout << "  setting core size ratio (nominal separation over h_nu) = " << core_size_ratio << std::endl;
+  }
+
+  // Convection will find and set "timeOrder"
+  conv.from_json(j);
+
+  // Diffusion will find and set "viscous", "VRM" and "AMR" parameters
+  diff.from_json(j);
+}
+
+// create and write a json object for "simparams"
+nlohmann::json
+Simulation::to_json() const {
+  nlohmann::json j;
+
+  j["nominalDt"] = dt;
+  j["outputDt"] = output_dt;
+  if (using_max_steps()) j["maxSteps"] = get_max_steps();
+  if (using_end_time()) j["endTime"] = get_end_time();
+  j["overlapRatio"] = overlap_ratio;
+  j["coreSizeRatioSqrd"] = std::pow(core_size_ratio,2);
+
+  // Convection will write "timeOrder"
+  conv.add_to_json(j);
+
+  // Diffusion will write "viscous", "VRM" and "AMR" parameters
+  diff.add_to_json(j);
+
+  return j;
+}
 
 // set "flowparams" json object
 void
@@ -163,53 +244,33 @@ Simulation::flow_to_json() const {
   return j;
 }
 
-// read "simparams" json object
+// set "runtime" json object
 void
-Simulation::from_json(const nlohmann::json j) {
+Simulation::runtime_from_json(const nlohmann::json j) {
 
-  if (j.find("nominalDt") != j.end()) {
-    dt = j["nominalDt"];
-    std::cout << "  setting dt= " << dt << std::endl;
+  sf.from_json(j);
+
+  if (j.find("autoStart") != j.end()) {
+    bool autostart = j["autoStart"];
+    set_auto_start(autostart);
+    std::cout << "  autostart? " << autostart << std::endl;
   }
-
-  if (j.find("outputDt") != j.end()) {
-    output_dt = j["outputDt"];
-    std::cout << "  setting output dt= " << output_dt << std::endl;
+  if (j.find("quitOnStop") != j.end()) {
+    bool qos = j["quitOnStop"];
+    set_quit_on_stop(qos);
+    std::cout << "  quit on stop? " << qos << std::endl;
   }
-
-  if (j.find("maxSteps") != j.end()) {
-    use_max_steps = true;
-    max_steps = j["maxSteps"];
-    std::cout << "  setting max_steps= " << max_steps << std::endl;
-  } else {
-    use_max_steps = false;
-  }
-
-  if (j.find("endTime") != j.end()) {
-    use_end_time = true;
-    end_time = j["endTime"];
-    std::cout << "  setting end_time= " << end_time << std::endl;
-  } else {
-    use_end_time = false;
-  }
-
-  // set diffusion-specific parameters
-  // Diffusion will find and set "viscous", "VRM" and "AMR" parameters
-  diff.from_json(j);
 }
 
-// create and write a json object for "simparams"
+// create and write a json object for "runtime"
 nlohmann::json
-Simulation::to_json() const {
+Simulation::runtime_to_json() const {
   nlohmann::json j;
 
-  j["nominalDt"] = dt;
-  j["outputDt"] = output_dt;
-  if (using_max_steps()) j["maxSteps"] = get_max_steps();
-  if (using_end_time()) j["endTime"] = get_end_time();
+  sf.add_to_json(j);
 
-  // Diffusion will write "viscous", "VRM" and "AMR" parameters
-  diff.add_to_json(j);
+  j["autoStart"] = auto_start;
+  j["quitOnStop"] = quit_on_stop;
 
   return j;
 }
@@ -523,9 +584,10 @@ std::vector<std::string> Simulation::write_vtk(const int _index,
   //clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
   solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
 
-  if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, true);
-  if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt, true);
-  if (_do_bdry)    conv.find_vels(thisfs, vort, bdry, bdry, true);
+  // why not velandvort ? Oh, because we can't compute that yet
+  if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, velonly, true);
+  if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt, velonly, true);
+  if (_do_bdry)    conv.find_vels(thisfs, vort, bdry, bdry, velonly, true);
 #endif
 
   // may eventually want to avoid clobbering by maintaining an internal count of the
@@ -541,9 +603,24 @@ std::vector<std::string> Simulation::write_vtk(const int _index,
   }
 
   // ask Vtk to write files for each collection
-  if (_do_flow)    write_vtk_files<float>(vort, stepnum, time, files);
-  if (_do_measure) write_vtk_files<float>(fldpt, stepnum, time, files);
-  if (_do_bdry)    write_vtk_files<float>(bdry, stepnum, time, files);
+  if (_do_flow) { 
+    size_t idx = 0;
+    for (auto &coll : vort) {
+      std::visit([&](auto &&elem) { files.emplace_back(elem.write_vtk(idx++, stepnum, time)); }, coll);
+    }
+  }
+  if (_do_measure) {
+    size_t idx = 0;
+    for (auto &coll : fldpt) {
+      std::visit([&](auto &&elem) { files.emplace_back(elem.write_vtk(idx++, stepnum, time)); }, coll);
+    }
+  }
+  if (_do_bdry) {
+    size_t idx = 0;
+    for (auto &coll : bdry) {
+      std::visit([&](auto &&elem) { files.emplace_back(elem.write_vtk(idx++, stepnum, time)); }, coll);
+    }
+  }
 
   return files;
 }
@@ -718,57 +795,35 @@ void Simulation::async_step() {
 void Simulation::step() {
   std::cout << std::endl << "Taking step " << nstep << " at t=" << time << " with n=" << get_nparts() << std::endl;
 
+  const bool use_2nd_order_operator_splitting = true;
+
   // we wind up using this a lot
   std::array<double,3> thisfs = {fs[0], fs[1], fs[2]};
 
-  // for simplicity's sake, just run one full diffusion step here
-  diff.step(time, dt, re, get_vdelta(), thisfs, vort, bdry, bem);
-
-  // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
-  //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
+  if (use_2nd_order_operator_splitting) {
+    // operator splitting requires one half-step diffuse (use coefficients from previous step, if available)
+    diff.step(time, 0.5*dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
+  } else {
+    // for simplicity's sake, just run one full diffusion step here
+    diff.step(time, dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
+  }
 
   // advect with no diffusion (must update BEM strengths)
-  //conv.advect_1st(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
-  conv.advect_2nd(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
+  conv.advect(time, dt, thisfs, get_ips(), vort, bdry, fldpt, bem);
 
-  // operator splitting requires another half-step diffuse (must compute new coefficients)
-  //diff.step(time, 0.5*dt, re, get_vdelta(), thisfs, vort, bdry, bem);
+  if (use_2nd_order_operator_splitting) {
+    // operator splitting requires another half-step diffuse (must compute new coefficients)
+    diff.step(time+dt, 0.5*dt, re, overlap_ratio, get_vdelta(), thisfs, vort, bdry, bem);
+  }
+
+  // step complete, now split any elongated particles (move this to Split)
+  split_operation<float>(vort, diff.get_core_func(), overlap_ratio, 1.2);
+
+  // update time
+  time += (double)dt;
 
   // push field points out of objects every few steps
   if (nstep%5 == 0) clear_inner_layer<STORE>(1, bdry, fldpt, (STORE)0.0, (STORE)(0.5*get_ips()));
-
-  // step complete, now split any elongated particles
-  for (auto &coll: vort) {
-  
-    // but only check particles ("Points")
-    if (std::holds_alternative<Points<float>>(coll)) {
-
-      Points<float>& pts = std::get<Points<float>>(coll);
-      //std::cout << "    check split for " << pts.get_n() << " particles" << std::endl;
-      //std::cout << std::endl;
-
-      // none of these are passed as const, because both may be extended with new particles
-      std::array<Vector<float>,Dimensions>&       x = pts.get_pos();
-      Vector<float>&                              r = pts.get_rad();
-      Vector<float>&                              elong = pts.get_elong();
-      std::array<Vector<float>, numStrenPerNode>& s = pts.get_str();
-
-      // last two arguments are: relative distance, allow variable core radii
-      (void)split_elongated<float>(x[0], x[1], x[2], r, elong, s[0], s[1], s[2],
-                                   diff.get_core_func(),
-                                   diff.get_particle_overlap(),
-                                   1.2);
-
-      // we probably have a different number of particles now, resize the u, ug, elong arrays
-      pts.resize(r.size());
-    }
-  }
-
-  // update strengths for coloring purposes (eventually should be taken care of automatically)
-  //vort.update_max_str();
-
-  // update dt and return
-  time += (double)dt;
 
   // only increment step here!
   nstep++;
@@ -783,8 +838,8 @@ void Simulation::step() {
 void Simulation::dump_stats_to_status() {
   if (sf.is_active()) {
     // the basics
-    sf.append_value((float)time);
-    sf.append_value((int)get_nparts());
+    sf.append_value("time",(float)time);
+    sf.append_value("Nv",(int)get_nparts());
 
     // more advanced info
 
@@ -813,11 +868,15 @@ void Simulation::dump_stats_to_status() {
       this_circ = std::visit([=](auto& elem) { return elem.get_body_circ(time); }, src);
       for (size_t i=0; i<3; ++i) tot_circ[i] += this_circ[i];
     }
-    for (size_t i=0; i<3; ++i) sf.append_value(tot_circ[i]);
+    sf.append_value("gx",tot_circ[0]);
+    sf.append_value("gy",tot_circ[1]);
+    sf.append_value("gz",tot_circ[2]);
 
     // now forces
-    std::array<float,Dimensions> this_force = calculate_simple_forces();
-    for (size_t i=0; i<Dimensions; ++i) sf.append_value(this_force[i]);
+    std::array<float,Dimensions> impulse = calculate_simple_forces();
+    sf.append_value("fx",impulse[0]);
+    sf.append_value("fy",impulse[1]);
+    if (Dimensions > 2) sf.append_value("fz",impulse[3]);
 
     // write here
     sf.write_line();

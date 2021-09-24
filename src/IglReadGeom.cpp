@@ -2,7 +2,7 @@
  * IglReadGeom.cpp - Call into igl to read a triangle mesh
  *
  * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ *         Mark J Stock <markjstock@gmail.com>
  */
 
 #include "IglReadGeom.h"
@@ -23,6 +23,7 @@ ElementPacket<float> read_geometry_file(const std::string _infile) {
   std::cout << std::endl << "Reading " << _infile << std::endl;
   if (!igl::read_triangle_mesh<float,Int>(_infile, v, f)) {
     // failed
+    std::cout << "  Geometry file is unreadable, abandoning!" << std::endl;
     throw std::runtime_error("  Geometry file is unreadable, abandoning");
     return ElementPacket<float>({std::vector<float>(), std::vector<Int>(), std::vector<float>()});
   }
@@ -39,6 +40,8 @@ ElementPacket<float> read_geometry_file(const std::string _infile) {
   // create the flattened arrays
   const size_t num_nodes = v.size();
   const size_t num_panels = f.size();
+  std::cout << "  Igl read " << num_nodes << " nodes and " << num_panels << " triangles" << std::endl;
+
   std::vector<float> x(num_nodes*3);
   std::vector<Int>   idx(num_panels*3);
   std::vector<float> val;
@@ -60,5 +63,5 @@ ElementPacket<float> read_geometry_file(const std::string _infile) {
   // do not set val! let caller specialize
   //std::fill(val.begin(), val.end(), 0.0);
 
-  return ElementPacket<float>({x, idx, val});
+  return ElementPacket<float>({x, idx, val, (size_t)(num_panels), (uint8_t)2});
 }

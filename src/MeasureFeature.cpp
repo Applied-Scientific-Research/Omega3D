@@ -1,18 +1,22 @@
 /*
  * MeasureFeature.cpp - GUI-side descriptions of flow features
  *
- * (c)2018-20 Applied Scientific Research, Inc.
+ * (c)2018-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
-#include "BoundaryFeature.h"
 #include "MeasureFeature.h"
+#include "GeomHelper.h"
+#include "MathHelper.h"
+
 #include "imgui/imgui.h"
 
 #include <cmath>
 #include <iostream>
 #include <sstream>
 #include <random>
+#include <string>
 
 // write out any object of parent type MeasureFeature by dispatching to appropriate "debug" method
 std::ostream& operator<<(std::ostream& os, MeasureFeature const& ff) {
@@ -38,7 +42,7 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
   else if (ftype == "tracer blob") {      _flist.emplace_back(std::make_unique<MeasurementBlob>()); }
   else if (ftype == "tracer line") {      _flist.emplace_back(std::make_unique<MeasurementLine>(0.0, 0.0, false, true)); }
   else if (ftype == "measurement line") { _flist.emplace_back(std::make_unique<MeasurementLine>()); }
-  else if (ftype == "measurement grid") { _flist.emplace_back(std::make_unique<Grid2dPoints>()); }
+  else if (ftype == "measurement quad") { _flist.emplace_back(std::make_unique<Grid2dPoints>()); }
   else {
     std::cout << "  type " << ftype << " does not name an available measurement feature, ignoring" << std::endl;
     return;
@@ -51,7 +55,8 @@ void parse_measure_json(std::vector<std::unique_ptr<MeasureFeature>>& _flist,
 }
 
 #ifdef USE_IMGUI
-bool MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &mfs, const float _ips, const float &_tracerScale) {
+// 0 means keep open, 1 means create, 2 means cancel
+int MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &mfs, const float _ips, const float &_tracerScale) {
   static int item = 0;
   static int oldItem = -1;
   const char* items[] = { "single point", "measurement circle", "measurement line", "2d grid" };
@@ -77,25 +82,56 @@ bool MeasureFeature::draw_creation_gui(std::vector<std::unique_ptr<MeasureFeatur
     oldItem = item;
   }
 
-  bool created = false;  
+  int created = 0;  
   if (mf->draw_info_gui("Add", _tracerScale, _ips)) {
     mf->generate_draw_geom();
     mfs.emplace_back(std::move(mf));
     mf = nullptr;
     oldItem = -1;
-    created = true;
-    ImGui::CloseCurrentPopup();
+    created = 1;
   }
 
   ImGui::SameLine();
   if (ImGui::Button("Cancel", ImVec2(120,0))) {
     oldItem = -1;
     mf = nullptr;
-    ImGui::CloseCurrentPopup();
+    created = 2;
   }
 
-  ImGui::EndPopup();
   return created;
+}
+
+void MeasureFeature::draw_feature_list(std::vector<std::unique_ptr<MeasureFeature>> &feat,
+                                       std::unique_ptr<MeasureFeature> &editingFeat, int &edit_feat_index,
+                                       int &del_feat_index, bool &redraw, int &buttonIDs) {
+  for (int i=0; i<(int)feat.size(); ++i) {
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::Checkbox("", feat[i]->addr_enabled())) { redraw = true; }
+    ImGui::PopID();
+
+    // add an "edit" button after the checkbox (so it's not easy to accidentally hit remove)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("edit")) {
+      editingFeat = std::unique_ptr<MeasureFeature>(feat[i]->copy());
+      edit_feat_index = i;
+    }
+    ImGui::PopID();
+
+    if (feat[i]->is_enabled()) {
+      ImGui::SameLine();
+      ImGui::Text("%s", feat[i]->to_string().c_str());
+    } else {
+      ImGui::SameLine();
+      ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", feat[i]->to_string().c_str());
+    }
+
+    // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("remove")) { del_feat_index = i; }
+    ImGui::PopID();
+  }
 }
 #endif
 
@@ -186,11 +222,12 @@ SinglePoint::to_json() const {
 
 void SinglePoint::generate_draw_geom() {
   const float diam = 0.005;
-  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
-  m_draw = tmp->init_elements(diam/25.0);
+  m_draw = generate_ovoid(diam, diam, diam, 0.04*diam);
+  m_draw.translate(m_x, m_y, m_z);
 
   const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), 0.0);
 }
 
 #ifdef USE_IMGUI
@@ -254,7 +291,7 @@ MeasurementBlob::init_elements(float _ips) const {
   }
   }
   }
-  
+
   ElementPacket<float> packet({x, idx, vals, (size_t)(x.size()/2), (uint8_t)0});
   if (packet.verify(packet.x.size(), Dimensions)) {
     return packet;
@@ -324,18 +361,20 @@ MeasurementBlob::to_json() const {
 }
 
 void MeasurementBlob::generate_draw_geom() {
-  std::unique_ptr<Ovoid> tmp = std::make_unique<Ovoid>(nullptr, true, m_x, m_y, m_z, m_rad*2.0, m_rad*2.0, m_rad*2.0);
-  m_draw = tmp->init_elements(m_rad/12.5);
+  const float diam = 2.0*m_rad;
+  m_draw = generate_ovoid(diam, diam, diam, 0.08*diam);
+  m_draw.translate(m_x, m_y, m_z);
 
   const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), 0.0);
 }
 
 #ifdef USE_IMGUI
 bool MeasurementBlob::draw_info_gui(const std::string _action, const float &_tracerScale, float _ips) {
   float xc[3] = {m_x, m_y, m_z};
-  const std::string buttonText = _action+" circle of tracers";
   bool add = false;
+  const std::string buttonText = _action+" circle of tracers";
 
   ImGui::InputFloat3("center", xc);
   ImGui::SliderFloat("radius", &m_rad, 0.5f*_ips, 0.5f, "%.4f");
@@ -459,13 +498,15 @@ MeasurementLine::to_json() const {
 
 void MeasurementLine::generate_draw_geom() {
   const float minS = 0.01;
-  std::unique_ptr<SolidRect> tmp = std::make_unique<SolidRect>(nullptr, true, m_x, m_y, m_z,
-                                                               std::max(minS, m_xf-m_x), std::max(minS, m_yf-m_y),
-                                                               std::max(minS, m_zf-m_z));
-  m_draw = tmp->init_elements(1.0);
+  m_draw = generate_cuboid(std::max(minS, m_xf-m_x),
+                           std::max(minS, m_yf-m_y),
+                           std::max(minS, m_zf-m_z),
+                           1.0);
+  m_draw.translate(m_x, m_y, m_z);
 
   const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), 0.0);
 }
 
 #ifdef USE_IMGUI
@@ -571,7 +612,7 @@ Grid2dPoints::from_json(const nlohmann::json j) {
 nlohmann::json
 Grid2dPoints::to_json() const {
   nlohmann::json j;
-  j["type"] = "measurement plane";
+  j["type"] = "measurement quad";
   j["start"] = {m_x, m_y, m_z};
   j["axis1"] = {m_xs, m_ys, m_zs};
   j["axis2"] = {m_xf, m_yf, m_zf};
@@ -583,28 +624,36 @@ Grid2dPoints::to_json() const {
 }
 
 void Grid2dPoints::generate_draw_geom() {
-  const float normS = std::sqrt( std::pow(m_xs, 2) + std::pow(m_ys, 2) + std::pow(m_zs, 2));
-  const float normF = std::sqrt( std::pow(m_xf, 2) + std::pow(m_yf, 2) + std::pow(m_zf, 2));
-  const float p0[3] = { m_x, m_y, m_z };
-  const float p1[3] = { m_x+(m_xs*0.5f*m_ds/normS)+(m_xf),
-                        m_y+(m_ys*0.5f*m_ds/normS)+(m_yf),
-                        m_z+(m_zs*0.5f*m_ds/normS)+(m_zf) };
-  const float p2[3] = { m_x+(m_xf*0.5f*m_df/normF)+(m_xs),
-                        m_y+(m_yf*0.5f*m_df/normF)+(m_ys),
-                        m_z+(m_zf*0.5f*m_df/normF)+(m_zs) };
-  const float p3[3] = { m_x+(m_xs)+(m_xf),
-                        m_y+(m_ys)+(m_yf),
-                        m_z+(m_zs)+(m_zf) };
 
-  std::unique_ptr<BoundaryQuad> tmp = std::make_unique<BoundaryQuad>(nullptr, p0[0], p0[1], p0[2],
-                                                                              p2[0], p2[1], p2[2], 
-                                                                              p3[0], p3[1], p3[2], 
-                                                                              p1[0], p1[1], p1[2],
-                                                                              0.0, 0.0, 0.0);
-  m_draw = tmp->init_elements(1.0);
-  
+  //const float normS = std::sqrt( std::pow(m_xs, 2) + std::pow(m_ys, 2) + std::pow(m_zs, 2));
+  //const float normF = std::sqrt( std::pow(m_xf, 2) + std::pow(m_yf, 2) + std::pow(m_zf, 2));
+  const float minS = 0.01;
+
+  m_draw = generate_cuboid(1.0, 1.0, minS, 1.0);
+
+  // find the orthogonal normal to this plane
+  std::array<float,3> norm = {m_ys*m_zf-m_zs*m_yf,
+                              m_zs*m_xf-m_xs*m_zf,
+                              m_xs*m_yf-m_ys*m_xf};
+  normalizeVec(norm);
+
+  // reorient (and warp) to new basis
+  for (size_t i=0; i<m_draw.x.size()/Dimensions; ++i) {
+    const float px = m_draw.x[i*Dimensions+0];
+    const float py = m_draw.x[i*Dimensions+1];
+    const float pz = m_draw.x[i*Dimensions+2];
+
+    m_draw.x[i*Dimensions+0] = m_xs*px + m_xf*py + norm[0]*pz;
+    m_draw.x[i*Dimensions+1] = m_ys*px + m_yf*py + norm[1]*pz;
+    m_draw.x[i*Dimensions+2] = m_zs*px + m_zf*py + norm[2]*pz;
+  }
+
+  // finally translate to origin
+  m_draw.translate(m_x, m_y, m_z);
+
   const int numPts = m_draw.x.size()/Dimensions;
   m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), 0.0);
 }
 
 #ifdef USE_IMGUI

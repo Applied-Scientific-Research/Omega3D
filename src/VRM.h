@@ -2,7 +2,7 @@
  * VRM.h - the Vorticity Redistribution Method for 3D vortex particles
  *
  * (c)2017-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -10,11 +10,12 @@
 #include "Core.h"
 #include "Icosahedron.h"
 #include "VectorHelper.h"
-#include "nanoflann/nanoflann.hpp"
 #ifdef PLUGIN_SIMPLEX
 #include "simplex.h"
 #endif
-#include "nnls.h"
+
+#include "eigen-nnls/nnls.h"
+#include "nanoflann/nanoflann.hpp"
 
 #include <Eigen/Dense>
 
@@ -99,14 +100,17 @@ private:
   std::vector<ST> xsite,ysite,zsite;
   void initialize_sites();
 
-  // for adaptive particle size VRM
-  bool adapt_radii = false;
+  // for standard VRM
 
   // do not perform VRM if source particle strength is less than
   //   this fraction of max particle strength
   ST ignore_thresh = 1.e-4;
   // are thresholds absolute or relative to strongest particle?
   bool thresholds_are_relative = true;
+
+  // for any adaptive particle size VRM
+  bool adapt_radii = false;
+  // would have more here
 
   // use nanoflann for nearest-neighbor searching? false uses direct search
   const bool use_tree = true;
@@ -750,7 +754,7 @@ bool VRM<ST,CT,MAXMOM>::attempt_solution(const int32_t idiff,
 // read/write parameters to json
 //
 
-// create and write a json object for all diffusion parameters
+// read a json object and retrieve all diffusion parameters
 template <class ST, class CT, uint8_t MAXMOM>
 void VRM<ST,CT,MAXMOM>::from_json(const nlohmann::json simj) {
 
@@ -766,6 +770,29 @@ void VRM<ST,CT,MAXMOM>::from_json(const nlohmann::json simj) {
       thresholds_are_relative = j["relativeThresholds"];
       std::cout << "  setting thresholds_are_relative= " << thresholds_are_relative << std::endl;
     }
+
+    if (j.find("solver") != j.end()) {
+      std::string solverstr = j["solver"];
+      if (solverstr == "simplex") {
+        use_solver = simplex;
+      } else {
+        // default is nnls
+        use_solver = nnls;
+      }
+    } else {
+      // default is nnls
+      use_solver = nnls;
+    }
+#ifdef PLUGIN_SIMPLEX
+    std::cout << "  setting VRM solver= " << (use_solver ? "simplex" : "nnls") << std::endl;
+#else
+    if (use_solver == simplex) {
+      std::cout << "  setting VRM solver= nnls because PLUGIN_SIMPLEX is not set" << std::endl;
+      use_solver = nnls;
+    } else {
+      std::cout << "  setting VRM solver= nnls" << std::endl;
+    }
+#endif
   }
 }
 
@@ -777,6 +804,7 @@ void VRM<ST,CT,MAXMOM>::add_to_json(nlohmann::json& simj) const {
   nlohmann::json j;
   j["ignoreBelow"] = ignore_thresh;
   j["relativeThresholds"] = thresholds_are_relative;
+  j["solver"] = use_solver ? "simplex" : "nnls";
   simj["VRM"] = j;
 }
 

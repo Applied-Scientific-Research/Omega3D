@@ -1,8 +1,8 @@
 /*
  * Points.h - Specialized class for 3D stretchable points with optional vel gradients
  *
- * (c)2018-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2018-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -11,16 +11,18 @@
 #include "VectorHelper.h"
 #include "MathHelper.h"
 #include "ElementBase.h"
+#include "VtkXmlWriter.h"
 
 #ifdef USE_GL
 #include "GlState.h"
 #include "RenderParams.h"
 #include "OglHelper.h"
 #include "ShaderHelper.h"
-#include "glad.h"
+#include "glad/glad.h"
 #endif
 
 #include <iostream>
+#include <iomanip> // for setfill and setw
 #include <vector>
 #include <array>
 #include <memory>
@@ -35,84 +37,7 @@
 template <class S>
 class Points: public ElementBase<S> {
 public:
-  // flexible constructor - use input 7*n vector (x, y, z, sx, sy, sz, r)
-  //                         or input 3*n vector (x, y, z)
-  Points(const std::vector<S>& _in,
-         const elem_t _e,
-         const move_t _m,
-         std::shared_ptr<Body> _bp)
-    : ElementBase<S>(0, _e, _m, _bp),
-      max_strength(-1.0) {
-
-    const size_t nper = (_e == inert) ? 3 : 7;
-    std::cout << "  new collection with " << (_in.size()/nper);
-    std::cout << ((_e == inert) ? " tracers" : " vortons") << std::endl;
-
-    // need to reset the base class n
-    this->n = _in.size()/nper;
-
-    // make sure we have a complete input vector
-    assert(_in.size() % nper == 0 && "Input array size is not a multiple of 3 or 7");
-
-    // this initialization specific to Points
-    for (size_t d=0; d<Dimensions; ++d) {
-      this->x[d].resize(this->n);
-      for (size_t i=0; i<this->n; ++i) {
-        this->x[d][i] = _in[nper*i+d];
-      }
-    }
-
-    // save untransformed positions if we are given a Body pointer
-    if (_bp) {
-      this->ux = this->x;
-    }
-
-    if (_e == inert) {
-      // field points need neither radius, elong, nor strength
-
-    } else {
-      // active vortons need a radius
-      r.resize(this->n);
-      for (size_t i=0; i<this->n; ++i) {
-        r[i] = _in[7*i+6];
-      }
-
-      // and elongation
-      this->elong.resize(this->n);
-      for (size_t i=0; i<this->n; ++i) {
-        this->elong[i] = 1.0;
-      }
-
-      // optional strength in base class
-      // need to assign it a vector first!
-      std::array<Vector<S>,numStrenPerNode> new_s;
-      for (size_t d=0; d<3; ++d) {
-        new_s[d].resize(this->n);
-        for (size_t i=0; i<this->n; ++i) {
-          new_s[d][i] = _in[7*i+d+3];
-        }
-      }
-      this->s = std::move(new_s);
-    }
-
-    // velocity in base class
-    for (size_t d=0; d<Dimensions; ++d) {
-      this->u[d].resize(this->n);
-    }
-
-    // optional velgrads here
-    if (_e != inert or _m != lagrangian) {
-      // i.e. all active particles get grads, as do all fixed field points
-      //      but lagrangian field points do not
-      std::array<Vector<S>,Dimensions*Dimensions> new_ug;
-      for (size_t d=0; d<Dimensions*Dimensions; ++d) {
-        new_ug[d].resize(this->n);
-      }
-      ug = std::move(new_ug);
-    }
-  }
-
-  // alternate constructor - accepting ElementPacket
+  // only constructor now - using ElementPacket
   Points(const ElementPacket<S>& _in,
          const elem_t _e,
          const move_t _m,
@@ -125,11 +50,12 @@ public:
     assert(_in.idx.size() == 0 && "Input ElementPacket is not Points");
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
+    std::cerr << "Packet sizes are " << _in.x.size() << " " << _in.idx.size() << " " << _in.val.size() << std::endl;
+
     // and that it has the right number of values per particle
-    //std::cout << _in.val.size()/(numStrenPerNode+1) << " " << _in.nelem << std::endl;
     if (_e == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
     else if (_e == reactive) assert(false && "Input ElementPacket with reactive points is unsupported");
-    else assert(_in.val.size()/(numStrenPerNode+1) == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
+    else assert(_in.val.size()/numStrPerNode == _in.nelem && "Input ElementPacket with vortons has incorrect size val array");
 
     // tell the world that we're legit
     std::cout << "  new collection with " << (_in.nelem);
@@ -171,9 +97,9 @@ public:
       
       // optional strength in base class
       // need to assign it a vector first!
-      std::array<Vector<S>, numStrenPerNode> new_s;
+      std::array<Vector<S>, numStrPerNode> new_s;
       const size_t nper = _in.val.size() / this->n;
-      for (size_t j = 0; j < numStrenPerNode; j++) {
+      for (size_t j=0; j<numStrPerNode; j++) {
         new_s[j].resize(this->n);
         for (size_t i = 0; i < this->n; i++) {
           new_s[j][i] = _in.val[i*nper+j];
@@ -207,6 +133,8 @@ public:
   const Vector<S>& get_rad() const { return r; }
   Vector<S>&       get_rad()       { return r; }
 
+  const S get_averaged_max_str() const { return max_strength; }
+
   // a little logic to see if we should augment the BEM equations for this object (see Surfaces.h)
   const bool is_augmented() const { return false; }
 
@@ -220,48 +148,17 @@ public:
   const float get_max_bc_value() const { return 0.0; }
 
   // append more elements this collection
-  void add_new(const std::vector<S>& _in) {
-    // remember old size and incoming size
-    const size_t nold = this->n;
+  void add_new(const ElementPacket<float>& _in, const float _vd) {
 
-    const size_t nper = (this->E == inert) ? 3 : 7;
-    assert(_in.size() % nper == 0 && "Input array size is not a multiple of 3 or 7");
-
-    const size_t nnew = _in.size()/nper;
-    std::cout << "  adding " << nnew << " particles to collection..." << std::endl;
-
-    // must explicitly call the method in the base class first
-    ElementBase<S>::add_new(_in);
-
-    // then do local stuff
-    if (this->E == inert) {
-      // no radius needed
-
-    } else {
-      // active points need radius and elongation
-      r.resize(nold+nnew);
-      for (size_t i=0; i<nnew; ++i) {
-        r[nold+i] = _in[7*i+6];
-      }
-
-      elong.resize(nold+nnew);
-      for (size_t i=nold; i<nold+nnew; ++i) {
-        elong[i] = 1.0;
-      }
-    }
-  }
-
-  // append more elements this collection
-  void add_new(const ElementPacket<S>& _in, const float _vd) {
     // ensure that this packet really is Points
     assert(_in.idx.size() == 0 && "Input ElementPacket is not Points");
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
     // and that it has the right number of values per particle
     if (VERBOSE) { std::cout << "  val size " << _in.val.size() << std::endl; }
-    if (this->E == inert) { assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array"); }
-    else if (this->E == reactive) { assert("Input ElementPacket with reactive points is unsupported"); }
-    else { assert(_in.val.size()/(numStrenPerNode+1) == _in.nelem && "Input ElementPacket with vortons has bad sized val array"); }
+    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");
+    else if (this->E == reactive) assert("Input ElementPacket with reactive points is unsupported");
+    else assert(_in.val.size()/numStrPerNode == _in.nelem && "Input ElementPacket with vortons has bad sized val array");
 
     // remember old size and incoming size (note that Points nelems = nnodes)
     const size_t nold = this->n;
@@ -278,7 +175,7 @@ public:
     } else {
       r.resize(nold+nnew);
       std::fill(r.begin()+nold, r.end(), _vd);
-      
+
       elong.resize(nold+nnew);
       for (size_t i=nold; i<nold+nnew; ++i) {
         elong[i] = 1.0;
@@ -375,22 +272,25 @@ public:
   //
   // 1st order Euler advection and stretch
   //
-  void move(const double _time, const double _dt) {
+  void move(const double _time, const double _dt,
+            const double _wt1, Points<S> const & _u1) {
+
     // must explicitly call the method in the base class
-    ElementBase<S>::move(_time, _dt);
+    ElementBase<S>::move(_time, _dt, _wt1, _u1);
 
     // and specialize
     if (this->M == lagrangian and ug and this->E != inert) {
       std::cout << "  Stretching" << to_string() << " using 1st order" << std::endl;
-      S thismax = 0.0;
 
       for (size_t i=0; i<this->n; ++i) {
+
+        // set up some convenient temporaries
         std::array<S,Dimensions*Dimensions> this_ug = {0.0};
         for (size_t d=0; d<Dimensions*Dimensions; ++d) {
           this_ug[d] = (*ug)[d][i];
         }
-        std::array<S,numStrenPerNode> this_s = {0.0};
-        for (size_t d=0; d<numStrenPerNode; ++d) {
+        std::array<S,numStrPerNode> this_s = {0.0};
+        for (size_t d=0; d<numStrPerNode; ++d) {
           this_s[d] = (*this->s)[d][i];
         }
 
@@ -405,22 +305,18 @@ public:
         // update elongation
         const S circmagsqrd = this_s[0]*this_s[0] + this_s[1]*this_s[1] + this_s[2]*this_s[2];
         if (circmagsqrd > 0.0) {
-          const S elongfactor = (S)_dt * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmagsqrd;
+          const S elongfactor = (S)_dt * _wt1 * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmagsqrd;
           elong[i] *= 1.0 + elongfactor;
         }
 
         // add Cottet SFS into stretch term (after elongation)
 
         // update strengths
-        (*this->s)[0][i] = this_s[0] + _dt * wdu[0];
-        (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
-        (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
+        (*this->s)[0][i] = this_s[0] + _dt * _wt1 * wdu[0];
+        (*this->s)[1][i] = this_s[1] + _dt * _wt1 * wdu[1];
+        (*this->s)[2][i] = this_s[2] + _dt * _wt1 * wdu[2];
 
-        // check for max strength
-        S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
-        if (thisstr > thismax) thismax = thisstr;
-
-        if (VERBOSE) {
+        if (VERBOSE and false) {
         //if (i == 0) {
         //if (i < 10) {
         //if (i%100 == 0) {
@@ -435,16 +331,10 @@ public:
           std::cout << std::endl;
         }
       }
-      if (max_strength < 0.0) {
-        max_strength = std::sqrt(thismax);
-      } else {
-        max_strength = 0.1*std::sqrt(thismax) + 0.9*max_strength;
-      }
-      //std::cout << "  New max_strength is " << max_strength << std::endl;
-    } else {
-      //std::cout << "  Not stretching" << to_string() << std::endl;
-      max_strength = 1.0;
     }
+
+    // and update the max strength measure
+    (void) update_max_str();
   }
 
   //
@@ -453,22 +343,22 @@ public:
   void move(const double _time, const double _dt,
             const double _wt1, Points<S> const & _u1,
             const double _wt2, Points<S> const & _u2) {
+
     // must explicitly call the method in the base class
     ElementBase<S>::move(_time, _dt, _wt1, _u1, _wt2, _u2);
 
-    // must confirm that incoming time derivates include velocity
+    // must confirm that incoming time derivates include velocity (?)
 
     // and specialize
     if (this->M == lagrangian and this->E != inert and _u1.ug and _u2.ug) {
       std::cout << "  Stretching" << to_string() << " using 2nd order" << std::endl;
-      S thismax = 0.0;
 
       for (size_t i=0; i<this->n; ++i) {
 
         // set up some convenient temporaries
-        std::array<S,numStrenPerNode> this_s = {0.0};
+        std::array<S,numStrPerNode> this_s = {0.0};
         std::array<S,Dimensions*Dimensions> this_ug = {0.0};
-        for (size_t d=0; d<numStrenPerNode; ++d) {
+        for (size_t d=0; d<numStrPerNode; ++d) {
           this_s[d] = (*this->s)[d][i];
         }
         auto& optug1 = _u1.ug;
@@ -512,11 +402,7 @@ public:
         (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
         (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
 
-        // check for max strength
-        S thisstr = std::pow((*this->s)[0][i], 2) + std::pow((*this->s)[1][i], 2) + std::pow((*this->s)[2][i], 2);
-        if (thisstr > thismax) thismax = thisstr;
-
-        if (VERBOSE) {
+        if (VERBOSE and false) {
         //if (i == 0) {
         //if (i == this->n - 1) {
         //if (i%100 == 0) {
@@ -533,17 +419,91 @@ public:
           std::cout << std::endl;
         }
       }
-
-      if (max_strength < 0.0) {
-        max_strength = std::sqrt(thismax);
-      } else {
-        max_strength = 0.05*std::sqrt(thismax) + 0.95*max_strength;
-      }
-
-    } else {
-      //std::cout << "  Not stretching" << to_string() << std::endl;
-      max_strength = 1.0;
     }
+
+    // and update the max strength measure
+    (void) update_max_str();
+  }
+
+  //
+  // 3rd order RK advection and stretch
+  //
+  void move(const double _time, const double _dt,
+            const double _wt1, Points<S> const & _u1,
+            const double _wt2, Points<S> const & _u2,
+            const double _wt3, Points<S> const & _u3) {
+
+    // must explicitly call the method in the base class
+    ElementBase<S>::move(_time, _dt, _wt1, _u1, _wt2, _u2, _wt3, _u3);
+
+    // and specialize
+    if (this->M == lagrangian and this->E != inert and _u1.ug and _u2.ug and _u3.ug) {
+      std::cout << "  Stretching" << to_string() << " using 3rd order" << std::endl;
+
+      for (size_t i=0; i<this->n; ++i) {
+
+        // set up some convenient temporaries
+        std::array<S,numStrPerNode> this_s = {0.0};
+        std::array<S,Dimensions*Dimensions> this_ug = {0.0};
+        for (size_t d=0; d<numStrPerNode; ++d) {
+          this_s[d] = (*this->s)[d][i];
+        }
+
+        // compute stretch term
+        // note that multiplying by the transpose may maintain linear impulse better, but
+        //   severely underestimates stretch!
+
+        auto& optug1 = _u1.ug;
+        for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+          this_ug[d] = (*optug1)[d][i];
+        }
+        std::array<S,3> wdu1 = {0.0};
+        wdu1[0] = this_s[0]*this_ug[0] + this_s[1]*this_ug[3] + this_s[2]*this_ug[6];
+        wdu1[1] = this_s[0]*this_ug[1] + this_s[1]*this_ug[4] + this_s[2]*this_ug[7];
+        wdu1[2] = this_s[0]*this_ug[2] + this_s[1]*this_ug[5] + this_s[2]*this_ug[8];
+
+        auto& optug2 = _u2.ug;
+        for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+          this_ug[d] = (*optug2)[d][i];
+        }
+        std::array<S,3> wdu2 = {0.0};
+        wdu2[0] = this_s[0]*this_ug[0] + this_s[1]*this_ug[3] + this_s[2]*this_ug[6];
+        wdu2[1] = this_s[0]*this_ug[1] + this_s[1]*this_ug[4] + this_s[2]*this_ug[7];
+        wdu2[2] = this_s[0]*this_ug[2] + this_s[1]*this_ug[5] + this_s[2]*this_ug[8];
+
+        auto& optug3 = _u3.ug;
+        for (size_t d=0; d<Dimensions*Dimensions; ++d) {
+          this_ug[d] = (*optug3)[d][i];
+        }
+        std::array<S,3> wdu3 = {0.0};
+        wdu3[0] = this_s[0]*this_ug[0] + this_s[1]*this_ug[3] + this_s[2]*this_ug[6];
+        wdu3[1] = this_s[0]*this_ug[1] + this_s[1]*this_ug[4] + this_s[2]*this_ug[7];
+        wdu3[2] = this_s[0]*this_ug[2] + this_s[1]*this_ug[5] + this_s[2]*this_ug[8];
+
+        // put them together
+        std::array<S,3> wdu = {0.0};
+        wdu[0] = _wt1*wdu1[0] + _wt2*wdu2[0] + _wt3*wdu3[0];
+        wdu[1] = _wt1*wdu1[1] + _wt2*wdu2[1] + _wt3*wdu3[1];
+        wdu[2] = _wt1*wdu1[2] + _wt2*wdu2[2] + _wt3*wdu3[2];
+
+        // update elongation
+        const S circmagsqrd = this_s[0]*this_s[0] + this_s[1]*this_s[1] + this_s[2]*this_s[2];
+        if (circmagsqrd > 0.0) {
+          const S elongfactor = (S)_dt * (this_s[0]*wdu[0] + this_s[1]*wdu[1] + this_s[2]*wdu[2]) / circmagsqrd;
+          elong[i] *= 1.0 + elongfactor;
+        }
+
+        // add Cottet SFS into stretch term (after elongation)
+
+        // update strengths
+        (*this->s)[0][i] = this_s[0] + _dt * wdu[0];
+        (*this->s)[1][i] = this_s[1] + _dt * wdu[1];
+        (*this->s)[2][i] = this_s[2] + _dt * wdu[2];
+      }
+    }
+
+    // and update the max strength measure
+    (void) update_max_str();
   }
 
   // find largest elongation in this collection
@@ -558,15 +518,15 @@ public:
     return *imax;
   }
 
-  // find the new peak strength magnitude
+  // find the new time-averaged peak strength magnitude
   void update_max_str() {
-    S thismax = ElementBase<S>::get_max_str();
+    const S thismax = ElementBase<S>::get_max_str();
 
     // and slowly update the current saved value
     if (max_strength < 0.0) {
       max_strength = thismax;
     } else {
-      max_strength = 0.1*thismax + 0.9*max_strength;
+      max_strength = 0.05*thismax + 0.95*max_strength;
     }
   }
 
@@ -873,6 +833,196 @@ public:
     std::string retstr = " " + std::to_string(this->n) + ElementBase<S>::to_string() + " Points";
     if (ug) retstr += " with grads";
     return retstr;
+  }
+
+  std::string write_vtk(const size_t _index, const size_t _frameno, const double _time) {
+    assert(this->n > 0 && "Inside write_vtk with no points");
+  
+    const bool asbase64 = true;
+
+    bool has_radii = true;
+    bool has_strengths = true;
+    std::string prefix = "part_";
+    if (this->E==inert) {
+      has_strengths = false;
+      has_radii = false;
+      prefix = "fldpt_";
+    }
+  
+    // generate file name
+    std::stringstream vtkfn;
+    vtkfn << prefix << std::setfill('0') << std::setw(2) << _index << "_" << std::setw(5) << _frameno << ".vtu";
+    VtkXmlWriter ptsWriter = VtkXmlWriter(vtkfn.str(), asbase64);
+  
+    // include simulation time here
+    ptsWriter.addElement("FieldData");
+    {
+      std::map<std::string, std::string> attribs = {{"type",           "Float64"},
+                                                    {"Name",           "TimeValue"},
+                                                    {"NumberOfTuples", "1"}};
+      ptsWriter.addElement("DataArray", attribs);
+      Vector<double> time_vec = {_time};
+      ptsWriter.writeDataArray(time_vec);
+      // DataArray
+      ptsWriter.closeElement();
+    }
+    // FieldData
+    ptsWriter.closeElement();
+  
+    {
+      std::map<std::string, std::string> attribs = {{"NumberOfPoints", std::to_string(this->n).c_str()},
+                                                    {"NumberOfCells", std::to_string(this->n).c_str()}};
+      ptsWriter.addElement("Piece", attribs);
+    }
+    
+    ptsWriter.addElement("Points");
+    {
+      std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                    {"Name",               "position"},
+                                                    {"type",               "Float32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      Vector<float> pos = ptsWriter.unpackArray(this->x);
+      ptsWriter.writeDataArray(pos);
+      // DataArray
+      ptsWriter.closeElement();
+    }
+    // Points
+    ptsWriter.closeElement();
+  
+    ptsWriter.addElement("Cells");
+    
+    // https://discourse.paraview.org/t/cannot-open-vtu-files-with-paraview-5-8/3759
+    // apparently the Vtk format documents indicate that connectivities and offsets
+    //   must be in Int32, not UIntAnything. Okay...
+    {
+      std::map<std::string, std::string> attribs = {{"Name", "connectivity"},
+                                                    {"type", "Int32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      Vector<int32_t> v(this->n);
+      std::iota(v.begin(), v.end(), 0);
+      ptsWriter.writeDataArray(v);
+      // DataArray
+      ptsWriter.closeElement();
+    }
+  
+    {
+      std::map<std::string, std::string> attribs = {{"Name", "offsets"},
+                                                    {"type", "Int32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      Vector<int32_t> v(this->n);
+      std::iota(v.begin(), v.end(), 1);
+      ptsWriter.writeDataArray(v);
+      // DataArray
+      ptsWriter.closeElement();
+    }
+  
+    // except these, they can be chars
+    {
+      std::map<std::string, std::string> attribs = {{"Name", "types"},
+                                                    {"type", "UInt8"}};
+      ptsWriter.addElement("DataArray", attribs);
+      Vector<uint8_t> v(this->n);
+      std::fill(v.begin(), v.end(), 1);
+      ptsWriter.writeDataArray(v);
+      // DataArray
+      ptsWriter.closeElement();
+    }
+    // Cells
+    ptsWriter.closeElement();
+  
+    {
+      std::map<std::string, std::string> attribs = {{"Vectors", "velocity"}};
+
+      std::string scalar_list;
+      //if (has_strengths) scalar_list.append("circulation,");
+      if (has_radii) scalar_list.append("radius,");
+      //if (this->has_vort()) scalar_list.append("vorticity,");
+      if (scalar_list.size()>1) {
+        scalar_list.pop_back();
+        attribs.insert({"Scalars", scalar_list});
+      }
+
+      ptsWriter.addElement("PointData", attribs);
+    }
+  
+    if (has_strengths) {
+      std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                    {"Name", "circulation"},
+                                                    {"type", "Float32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      Vector<float> circ = ptsWriter.unpackArray(*(this->s));
+      ptsWriter.writeDataArray(circ);
+      ptsWriter.closeElement(); // DataArray
+    }
+
+    if (has_radii) {
+      std::map<std::string, std::string> attribs = {{"Name", "radius"},
+                                                    {"type", "Float32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      ptsWriter.writeDataArray(this->r);
+      ptsWriter.closeElement(); // DataArray
+    }
+
+/*
+    if (this->has_vort()) {
+      std::map<std::string, std::string> attribs = {{"Name", "vorticity"},
+                                                    {"type", "Float32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      ptsWriter.writeDataArray(*(this->w));
+      ptsWriter.closeElement(); // DataArray
+    }
+
+    if (this->has_shear()) {
+      std::map<std::string, std::string> attribs = {{"Name", "shearrate"},
+                                                    {"type", "Float32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      ptsWriter.writeDataArray(*(this->e));
+      ptsWriter.closeElement(); // DataArray
+    }
+*/
+
+    {
+      std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                    {"Name",               "velocity"},
+                                                    {"type",               "Float32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      Vector<float> vel = ptsWriter.unpackArray(this->u);
+      ptsWriter.writeDataArray(vel);
+      ptsWriter.closeElement(); // DataArray
+    }
+
+    // Point Data 
+    ptsWriter.closeElement();
+  
+    // here's the problem: ParaView's VTK/XML reader is not able to read "raw" bytestreams
+    // it parses each character and inevitably sees a > or <, so complains about mismatched
+    //   tags, and doesn't seem to point to the right place
+    // everyone who complains about raw data in the AppendedData section makes the mistake
+    //   of forgetting the 4-byte length - I've got that
+    // it's VTK's fault here
+    // Jesus, for how inefficient saving 2D particle data is, it's compounded by having to 
+    //   do it all in ascii!!! VTK just sucks. That's really what my 6 hours of wasted work
+    //   has taught me. It just sucks. Don't use it. Not that anything else is better.
+  /*
+    printer.OpenElement( "AppendedData" );
+    printer.PushAttribute( "encoding", "raw" );
+    printer.PushText( " " );
+    printer.PushText( "_" );
+    uint32_t arry_len = s.size() * sizeof(s[0]);
+    char* ptr = (char*)(&arry_len);
+    std::cout << "  writing " << arry_len << " bytes to appended data" << std::endl;
+    //std::fwrite(&arry_len, sizeof(uint32_t), 1, fp);
+    std::fwrite(ptr, sizeof(uint32_t), 1, fp);
+    std::fwrite(s.data(), sizeof(s[0]), s.size(), fp);
+    printer.PushText( " " );
+    printer.CloseElement();	// AppendedData
+  */
+  
+    // Piece 
+    ptsWriter.closeElement();
+    ptsWriter.finish();
+    std::cout << "Wrote " << this->n << " points to " << vtkfn.str() << std::endl;
+    return vtkfn.str();
   }
 
 protected:

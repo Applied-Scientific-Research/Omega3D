@@ -1,20 +1,23 @@
 /*
  * MeasureFeature.h - GUI-side descriptions of flow measurement features
  *
- * (c)2018-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2018-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
+ *            Blake B Hillier <blakehillier@mac.com>
  */
 
 #pragma once
 
 #include "Body.h"
-#include "ElementPacket.h"
-#include "Feature.h"
-#include "json/json.hpp"
 #include "Omega3D.h"
+#include "Feature.h"
+#include "ElementPacket.h"
+
+#include "json/json.hpp"
 
 #include <iostream>
 #include <vector>
+#include <string>
 
 //
 // Abstract class for any measurement feature (streamlines, rakes, tracers, etc.) present initially
@@ -28,23 +31,12 @@ public:
                  bool _moves,
                  bool _emits,
                  std::shared_ptr<Body> _bp)
-    : Feature(true),
-      m_x(_x),
-      m_y(_y),
-      m_z(_z),
+    : Feature(_x, _y, _z, true, _bp),
       m_is_lagrangian(_moves),
-      m_emits(_emits),
-      m_bp(_bp)
+      m_emits(_emits)
     {}
   virtual ~MeasureFeature() {}
   virtual MeasureFeature* copy() const = 0;
-
-  bool moves() const { return m_is_lagrangian; }
-  bool emits() const { return m_emits; }
-  float jitter(const float, const float) const;
-  ElementPacket<float> get_draw_packet() const { return m_draw; }
-  bool get_is_lagrangian() { return m_is_lagrangian; }
-  std::shared_ptr<Body> get_body() { return m_bp; }
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
@@ -54,18 +46,24 @@ public:
   virtual ElementPacket<float> step_elements(float) const = 0;
   virtual void generate_draw_geom() = 0;
 #ifdef USE_IMGUI
-  static bool draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &, const float, const float &);
   virtual bool draw_info_gui(const std::string, const float &, const float) = 0;
 #endif
 
+  bool moves() const { return m_is_lagrangian; }
+  bool emits() const { return m_emits; }
+  float jitter(const float, const float) const;
+  bool get_is_lagrangian() { return m_is_lagrangian; }
+
+#ifdef USE_IMGUI
+  static int draw_creation_gui(std::vector<std::unique_ptr<MeasureFeature>> &, const float, const float &);
+  static void draw_feature_list(std::vector<std::unique_ptr<MeasureFeature>> &,
+                                std::unique_ptr<MeasureFeature> &,
+                                int &, int &, bool &, int &);
+#endif
+
 protected:
-  float m_x;
-  float m_y;
-  float m_z;
-  bool  m_is_lagrangian;
+  bool m_is_lagrangian;
   bool m_emits;
-  std::shared_ptr<Body> m_bp;
-  ElementPacket<float> m_draw;
 };
 
 std::ostream& operator<<(std::ostream& os, MeasureFeature const& ff);

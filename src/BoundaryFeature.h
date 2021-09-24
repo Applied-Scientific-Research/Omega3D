@@ -1,7 +1,7 @@
 /*
  * BoundaryFeature.h - GUI-side descriptions of boundary features
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
@@ -13,11 +13,13 @@
 #include "ElementPacket.h"
 #include "Feature.h"
 #include "Simulation.h"
+
 #include "json/json.hpp"
 
 #include <iostream>
-#include <vector>
 #include <memory>
+#include <vector>
+#include <string>
 
 //
 // Abstract class for any boundary feature present initially
@@ -30,18 +32,12 @@ public:
                   float _x,
                   float _y,
                   float _z)
-    : Feature(true),
-      m_bp(_bp),
-      m_external(_ext),
-      m_x(_x),
-      m_y(_y),
-      m_z(_z)
+    : Feature(_x, _y, _z, true, _bp),
+      m_external(_ext)
     {}
 
   virtual ~BoundaryFeature() = default;
   virtual BoundaryFeature* copy() const = 0;
-
-  std::shared_ptr<Body> get_body() { return m_bp; }
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
@@ -51,22 +47,19 @@ public:
   virtual void create() = 0;
   virtual ElementPacket<float> init_elements(const float) const = 0;
   //virtual std::vector<float> step_elements(const float) const = 0;
-  void set_body(std::shared_ptr<Body> _bp) { m_bp = _bp; }
   virtual void generate_draw_geom() = 0;
-  virtual ElementPacket<float> get_draw_packet() { return m_draw; }
+
 #ifdef USE_IMGUI
-  static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
-  static bool draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
   virtual bool draw_info_gui(const std::string) = 0;
+  static int obj_movement_gui(int &, char*, char*, char*, char*, char*, char*);
+  static int draw_creation_gui(std::vector<std::unique_ptr<BoundaryFeature>> &, Simulation&);
+  static void draw_feature_list(std::vector<std::unique_ptr<BoundaryFeature>> &,
+                                std::unique_ptr<BoundaryFeature> &,
+                                int &, int &, bool &, int &);
 #endif
 
 protected:
-  std::shared_ptr<Body> m_bp;
   bool m_external;
-  float m_x;
-  float m_y;
-  float m_z;
-  ElementPacket<float> m_draw;
 };
 
 std::ostream& operator<<(std::ostream& os, BoundaryFeature const& ff);
@@ -96,6 +89,7 @@ public:
       m_sy(_sy),
       m_sz(_sz)
     {}
+  ~Ovoid() = default;
   Ovoid* copy() const override { return new Ovoid(*this); }
 
   void debug(std::ostream& os) const override;
@@ -135,6 +129,7 @@ public:
       m_sy(_sy),
       m_sz(_sz)
     {}
+  ~SolidRect() = default;
   SolidRect* copy() const override { return new SolidRect(*this); }
 
   void debug(std::ostream& os) const override;
@@ -148,10 +143,54 @@ public:
   bool draw_info_gui(const std::string) override;
 #endif
   void generate_draw_geom() override;
+
 protected:
   float m_sx;
   float m_sy;
   float m_sz;
+};
+
+
+//
+// Concrete class for a flat discoid
+//
+class SolidDisk : public BoundaryFeature {
+public:
+  SolidDisk(std::shared_ptr<Body> _bp = nullptr,
+                   bool _ext = true,
+                   float _x = 0.0,
+                   float _y = 0.0,
+                   float _z = 0.0,
+                   float _xf = 0.0,
+                   float _yf = 0.0,
+                   float _zf = 1.0,
+                   float _r = 0.5)
+    : BoundaryFeature(_bp, _ext, _x, _y, _z),
+      m_xf(_xf),
+      m_yf(_yf),
+      m_zf(_zf),
+      m_rad(_r)
+    {}
+  ~SolidDisk() = default;
+  SolidDisk* copy() const override { return new SolidDisk(*this); }
+
+  void debug(std::ostream& os) const override;
+  std::string to_string() const override;
+  std::string to_short_string() const override { return "disk"; }
+  void from_json(const nlohmann::json) override;
+  nlohmann::json to_json() const override;
+  void create() override { }
+  ElementPacket<float> init_elements(const float) const override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string) override;
+#endif
+  void generate_draw_geom() override;
+
+protected:
+  float m_xf;
+  float m_yf;
+  float m_zf;
+  float m_rad;
 };
 
 
@@ -190,6 +229,7 @@ public:
       m_bcy(_bcy),
       m_bcz(_bcz)
     {}
+  ~BoundaryQuad() = default;
   BoundaryQuad* copy() const override { return new BoundaryQuad(*this); }
 
   void debug(std::ostream& os) const override;
@@ -200,7 +240,7 @@ public:
   void create() override { }
   ElementPacket<float> init_elements(const float) const override;
 #ifdef USE_IMGUI
-  bool draw_info_gui(std::string) override;
+  bool draw_info_gui(const std::string) override;
 #endif
   void generate_draw_geom() override;
 
@@ -232,6 +272,7 @@ public:
       m_sz(_sz),
       m_infile(_infile)
     {}
+  ~ExteriorFromFile() = default;
   ExteriorFromFile* copy() const override { return new ExteriorFromFile(*this); }
   
   void debug(std::ostream& os) const override;

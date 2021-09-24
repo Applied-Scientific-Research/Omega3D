@@ -268,7 +268,6 @@ IF (CMAKE_COMPILER_IS_GNUCXX)
 ENDIF()
 
 FILE(GLOB IMGUISOURCES "lib/imgui/*.cpp" )
-FILE(GLOB HEADERS "src/*.h" )
 SET(SOURCES "src/Simulation.cpp"
             "src/FlowFeature.cpp"
             "src/CollectionHelper.cpp"
@@ -277,8 +276,11 @@ SET(SOURCES "src/Simulation.cpp"
             "src/Body.cpp"
             "src/RenderParams.cpp"
             "src/JsonHelper.cpp"
+            "src/GeomHelper.cpp"
             "src/IglReadGeom.cpp"
             "src/IglRefine.cpp"
+            "src/IglDecimate.cpp"
+            "src/IglMergeDups.cpp"
             "src/StatusFile.cpp"
             "lib/tinyxml2/tinyxml2.cpp"
             "lib/tinyexpr/tinyexpr.c" )

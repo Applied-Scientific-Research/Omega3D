@@ -32,6 +32,7 @@
 int main(int argc, char const *argv[]) {
 
   std::cout << std::endl << "Omega3D Batch" << std::endl;
+  if (VERBOSE) { std::cout << "  VERBOSE is on" << std::endl; }
 
   // Set up vortex particle simulation
   Simulation sim;
@@ -89,7 +90,12 @@ int main(int argc, char const *argv[]) {
   // check init for blow-up or errors
   sim_err_msg = sim.check_initialization();
 
-  if (not sim_err_msg.empty()) {
+  if (sim_err_msg.empty()) {
+
+    // nothing here
+
+  } else {
+
     // the initialization had some difficulty
     std::cout << std::endl << "ERROR: " << sim_err_msg;
     // stop the run
@@ -119,7 +125,10 @@ int main(int argc, char const *argv[]) {
 
       for (auto const& mf: mfeatures) {
         if (mf->is_enabled()) {
-          const move_t newMoveType = (mf->get_is_lagrangian() ? lagrangian : fixed);
+          move_t newMoveType = fixed;
+          if (mf->moves() or mf->emits()) {
+            newMoveType = lagrangian;
+          }
           sim.add_elements( mf->step_elements(rparams.tracer_scale*sim.get_ips()), inert, newMoveType, mf->get_body() );
         }
       }
@@ -154,7 +163,7 @@ int main(int argc, char const *argv[]) {
 
   // save data at final step
   if (true) {
-    //sim.write_vtk();
+    sim.write_vtk();
   }
 
   // Cleanup

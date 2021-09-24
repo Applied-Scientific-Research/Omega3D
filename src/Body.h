@@ -2,7 +2,7 @@
  * Body.h - class for an independent solid boundary
  *
  * (c)2017-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ *           Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -108,7 +108,7 @@ private:
   Vec avel;
 
   // enclosed volume (needed for total circulation of rotating body)
-  double vol;
+  //double vol;
 
   // name of parent
   std::string parent;

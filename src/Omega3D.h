@@ -14,7 +14,7 @@ using Int = uint32_t;
 #include <cstdlib>
 
 const size_t Dimensions = 3;
-const size_t numStrenPerNode = 3;
+const size_t numStrPerNode = 3;
 
 // element type
 enum elem_t {

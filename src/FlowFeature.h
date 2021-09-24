@@ -1,7 +1,7 @@
 /*
  * FlowFeature.h - GUI-side descriptions of flow features
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
@@ -11,10 +11,13 @@
 #include "Body.h"
 #include "Feature.h"
 #include "ElementPacket.h"
+
 #include "json/json.hpp"
 
+#include <memory>
 #include <iostream>
 #include <vector>
+#include <string>
 
 //
 // Abstract class for any flow feature present initially
@@ -26,16 +29,10 @@ public:
               float _y,
               float _z,
               std::shared_ptr<Body> _bp)
-    : Feature(true),
-      m_x(_x),
-      m_y(_y),
-      m_z(_z),
-      m_bp(_bp)
+    : Feature(_x, _y, _z, true, _bp)
     {}
-  virtual ~FlowFeature() {}
+  virtual ~FlowFeature() = default; 
   virtual FlowFeature* copy() const = 0;
-
-  std::shared_ptr<Body> get_body() { return m_bp; }
 
   virtual void debug(std::ostream& os) const = 0;
   virtual std::string to_string() const = 0;
@@ -44,19 +41,15 @@ public:
   virtual ElementPacket<float> init_elements(float) const = 0;
   virtual ElementPacket<float> step_elements(float) const = 0;
   virtual void generate_draw_geom() = 0;
-  virtual ElementPacket<float> get_draw_packet() { return m_draw; }
-#ifdef USE_IMGUI
-  static bool draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
-  virtual bool draw_info_gui(const std::string, const float) = 0;
-#endif
-  // emit particles as vector of float4
 
-protected:
-  float m_x;
-  float m_y;
-  float m_z;
-  ElementPacket<float> m_draw;
-  std::shared_ptr<Body> m_bp;
+#ifdef USE_IMGUI
+  virtual bool draw_info_gui(const std::string, const float) = 0;
+  static int draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &, const float);
+  static void draw_feature_list(std::vector<std::unique_ptr<FlowFeature>> &,
+                                std::unique_ptr<FlowFeature> &, int &,
+                                int &, bool &, int &);
+#endif
+
 };
 
 std::ostream& operator<<(std::ostream& os, FlowFeature const& ff);
@@ -142,7 +135,48 @@ protected:
 
 
 //
-// Concrete class for a rectangle of randomly-placed particles
+// Concrete class for a block of constant-strength particles
+//
+class UniformBlock : public SingleParticle {
+public:
+  UniformBlock(float _x = 0.0,
+               float _y = 0.0,
+               float _z = 0.0,
+               float _xsize = 1.0,
+               float _ysize = 1.0,
+               float _zsize = 1.0,
+               float _sx = 0.0,
+               float _sy = 0.0,
+               float _sz = 1.0,
+               std::shared_ptr<Body> _bp = nullptr)
+    : SingleParticle(_x, _y, _z, _sx, _sy, _sz, _bp),
+      m_xsize(_xsize),
+      m_ysize(_ysize),
+      m_zsize(_zsize)
+    {}
+  UniformBlock* copy() const override 
+                { return new UniformBlock(*this); }
+
+  void debug(std::ostream& os) const override;
+  std::string to_string() const override;
+  void from_json(const nlohmann::json) override;
+  nlohmann::json to_json() const override;
+  ElementPacket<float> init_elements(float) const override;
+  ElementPacket<float> step_elements(float) const override;
+  void generate_draw_geom() override;
+#ifdef USE_IMGUI
+  bool draw_info_gui(const std::string, const float) override;
+#endif
+
+private:
+  float m_xsize;
+  float m_ysize;
+  float m_zsize;
+};
+
+
+//
+// Concrete class for a block of randomly-placed particles
 //
 class BlockOfRandom : public FlowFeature {
 public:
@@ -297,13 +331,15 @@ protected:
   float m_minrad;
 };
 
+// uniformly-spaced particles
 
 // how about an oval ring? requires no radii, but two basis vectors: long axis and short axis
 // vortex ring emitter (singular)
-// particles from file
 
+// read particles from file
 
 //
 // Parser for converting json object to new feature
 //
 void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>&, const nlohmann::json);
+

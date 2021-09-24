@@ -2,7 +2,7 @@
  * GlState.h - Store general OpenGL state for drawing a Collection
  *
  * (c)2019 Applied Scientific Research, Inc.
- *         Written by Mark J Stock <markjstock@gmail.com>
+ *         Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -17,14 +17,14 @@
 #include <atomic>
 
 
-// 1-D elements
+// Hold state for OpenGL
 class GlState {
 public:
   GlState(const int _nvbo, const int _nspo) {
 
     assert(_nvbo>=0 && "Invalid number of VBOs requested");
     assert(_nspo>=0 && "Invalid number of shader program objects requested");
-    std::cout << "new GlState with " << _nvbo << " buffers and " << _nspo << " shader programs" << std::endl;
+    std::cout << "  new GlState with " << _nvbo << " buffers and " << _nspo << " shader programs" << std::endl;
 
     // generate the vao
     glGenVertexArrays(1, &vao);
@@ -44,6 +44,7 @@ public:
   // must specifically destroy buffers
   ~GlState() {
     //std::cout << "In ~GlState glIsVertexArray(vao) == " << (glIsVertexArray(vao)==GL_TRUE) << std::endl;
+    // closing out of the program dies here, but we put GlState in a unique_ptr, so wtf?
     if (glIsVertexArray(vao) == GL_FALSE) return;
     //std::cout << " finishing ~GlState" << std::endl;
 
@@ -81,8 +82,8 @@ public:
   GLint mvmat_attribute_bl, mvmat_attribute_pt;
   GLint quad_attribute_bl, quad_attribute_pt;
   GLint def_color_attribute, pos_color_attribute, neg_color_attribute; //, back_color_attribute; 
-  GLint str_scale_attribute, unif_rad_attribute, rad_scale_attribute;
   GLint use_def_attribute; //, use_back_attribute;
+  GLint str_scale_attribute, unif_rad_attribute, rad_scale_attribute;
 
   // compute attributes
   GLint source_offset_attr, source_count_attr, target_offset_attr, target_count_attr;

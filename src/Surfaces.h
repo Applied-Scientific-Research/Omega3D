@@ -1,7 +1,7 @@
 /*
  * Surfaces.h - Specialized class for trimesh surfaces in 3D
  *
- * (c)2019-20 Applied Scientific Research, Inc.
+ * (c)2019-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  */
 
@@ -17,10 +17,11 @@
 #include "RenderParams.h"
 #include "OglHelper.h"
 #include "ShaderHelper.h"
-#include "glad.h"
+#include "glad/glad.h"
 #endif
 
 #include <iostream>
+#include <iomanip> // for setfill and setw
 #include <vector>
 #include <array>
 #include <algorithm> // for max_element
@@ -46,12 +47,9 @@ template <class S> using Basis = std::array<std::array<Vector<S>,Dimensions>,Dim
 template <class S>
 class Surfaces: public ElementBase<S> {
 public:
-  // constructor - accepts vector of (x,y,z) triples, vector of indicies, vector of BCs
-  //               and makes one closed body
-  //               last parameter (_val) is either fixed strength or boundary condition
-  Surfaces(const std::vector<S>&   _x,
-           const std::vector<Int>& _idx,
-           const std::vector<S>&   _val,
+  // constructor - accepts standard ElementPacket now
+  //               last parameter (_val) is either fixed strength or BC for each panel
+  Surfaces(const ElementPacket<S>& _elems,
            const elem_t _e,
            const move_t _m,
            std::shared_ptr<Body> _bp)
@@ -59,16 +57,21 @@ public:
       np(0),
       source_str_is_unknown(true),
       vol(-1.0),
-      //solved_omega(0.0),
       max_strength(-1.0) {
+
+    // pull out the vectors
+    const std::vector<S>& _x   = _elems.x;
+    const std::vector<Int>&   _idx = _elems.idx;
+    const std::vector<S>& _val = _elems.val;
 
     // make sure input arrays are correctly-sized
     assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
-    const size_t nsurfs = _idx.size() / Dimensions;
+    assert(_elems.ndim == 2 && "Input elements are not (2D) surfaces");
+    assert(_idx.size() / Dimensions == _elems.nelem && "Index array is not the right size for nelems");
+    const size_t nsurfs = _elems.nelem;
 
     // always initialize the ps panel strength optionals
     if (this->E != inert) {
-      //for (size_t d=0; d<num_unknowns_per_panel(); ++d) {
       for (size_t d=0; d<3; ++d) {
         Vector<S> new_s;
         ps[d] = std::move(new_s);
@@ -82,6 +85,7 @@ public:
       return;
     }
 
+    std::cout << "Surfaces sizes: _x=" << _x.size() << " _idx=" << _idx.size() << " _val=" << _val.size() << std::endl;
     assert(_val.size() % nsurfs == 0 && "Value array is not an even multiple of panel count");
     assert(_x.size() % Dimensions == 0 && "Position array is not an even multiple of dimensions");
     const size_t nnodes = _x.size() / Dimensions;
@@ -104,7 +108,9 @@ public:
     // copy over the node indices (with a possible type change)
     bool idx_are_all_good = true;
     idx.resize(_idx.size());
-    for (size_t i=0; i<3*nsurfs; ++i) {
+    const size_t nper = _idx.size() / nsurfs;	// we can have >3 nodes per elem now
+    assert(nper == 3 && "Surfaces ctor cannot handle elems other than flat triangles");
+    for (size_t i=0; i<nper*nsurfs; ++i) {
       // make sure it exists in the nodes array
       if (_idx[i] >= nnodes) idx_are_all_good = false;
       idx[i] = _idx[i];
@@ -117,9 +123,10 @@ public:
     // are strengths/values on a per-node or per-panel basis? - per panel now
 
     // now, depending on the element type, put the value somewhere
+    const size_t nvalper = _val.size() / nsurfs;
     if (this->E == active) {
       // value is a fixed strength for the panel
-      assert(_val.size() == 3*nsurfs && "Value array is not an even multiple of panel count");
+      assert(_val.size() == nvalper*nsurfs && "Value array is not an even multiple of panel count");
       // value is a fixed strength for the panel: x1 and x2 vortex sheet strengths and source sheet str
       for (size_t d=0; d<Dimensions; ++d) {
         if (ps[d]) {
@@ -155,11 +162,13 @@ public:
       // convert the bc from velocities to basis-vector quantities
       bcs_to_bcs(0,nsurfs);
 
-      // make space for the unknown sheet strengths
-      for (size_t d=0; d<Dimensions; ++d) {
-        if (ps[d]) {
-          ps[d]->resize(nsurfs);
-          std::fill(ps[d]->begin(), ps[d]->end(), 0.0);
+      // make space for the unknown sheet strengths (only if reactive)
+      if (this->E == reactive) {
+        for (size_t d=0; d<Dimensions; ++d) {
+          if (ps[d]) {
+            ps[d]->resize(nsurfs);
+            std::fill(ps[d]->begin(), ps[d]->end(), 0.0);
+          }
         }
       }
 
@@ -181,13 +190,13 @@ public:
     }
 
     // debug print
-    if (VERBOSE) {
+    if (false) {
       std::cout << "Nodes" << std::endl;
-      for (size_t i=0; i<nnodes; ++i) {
+      for (size_t i=0; i<std::min((size_t)100,nnodes); ++i) {
         std::cout << "  " << i << " " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i] << std::endl;
       }
       std::cout << "Triangles" << std::endl;
-      for (size_t i=0; i<nsurfs; ++i) {
+      for (size_t i=0; i<std::min((size_t)100,nsurfs); ++i) {
         std::cout << "  " << i << " " << idx[3*i] << " " << idx[3*i+1] << " " << idx[3*i+2] << std::endl;
       }
     }
@@ -202,28 +211,20 @@ public:
     }
   }
 
-  // delegating constructor
-  Surfaces(const ElementPacket<S>& _elems,
-           const elem_t _e,
-           const move_t _m,
-           std::shared_ptr<Body> _bp)
-    : Surfaces(_elems.x, _elems.idx, _elems.val, _e, _m, _bp)
-  { }
-
-  size_t                         get_npanels()     const { return np; }
-  const S                        get_vol()         const { return vol; }
-  const std::array<S,Dimensions> get_geom_center() const { return tc; }
+  size_t                            get_npanels()     const { return np; }
+  const S                           get_vol()         const { return vol; }
+  const std::array<S,Dimensions>    get_geom_center() const { return tc; }
 
   // panel geometry
-  const std::vector<Int>&                 get_idx()  const { return idx; }
-  const std::array<Vector<S>,Dimensions>& get_x1()   const { return b[0]; }
-  const std::array<Vector<S>,Dimensions>& get_x2()   const { return b[1]; }
-  const std::array<Vector<S>,Dimensions>& get_norm() const { return b[2]; }
-  const Vector<S>&                        get_area() const { return area; }
+  const std::vector<Int>&                  get_idx()  const { return idx; }
+  const std::array<Vector<S>,Dimensions>&  get_x1()   const { return b[0]; }
+  const std::array<Vector<S>,Dimensions>&  get_x2()   const { return b[1]; }
+  const std::array<Vector<S>,Dimensions>&  get_norm() const { return b[2]; }
+  const Vector<S>&                         get_area() const { return area; }
 
   // override the ElementBase versions and send the panel-center vels and strengths
-  const std::array<Vector<S>,Dimensions>& get_vel() const { return pu; }
-  std::array<Vector<S>,Dimensions>&       get_vel()       { return pu; }
+  const std::array<Vector<S>,Dimensions>&   get_vel() const { return pu; }
+  std::array<Vector<S>,Dimensions>&         get_vel()       { return pu; }
 
   // fixed or unknown surface strengths, or those due to rotation
   const std::array<Vector<S>,Dimensions>& get_str() const { return ts; }
@@ -237,9 +238,9 @@ public:
   Vector<S>&                          get_src_str()       { return *ps[2]; }
 
   // and (reactive only) boundary conditions
-  const Vector<S>&                  get_tang1_bcs() const { return *bc[0]; }
-  const Vector<S>&                  get_tang2_bcs() const { return *bc[1]; }
-  const Vector<S>&                   get_norm_bcs() const { return *bc[2]; }
+  const Vector<S>&                    get_tang1_bcs() const { return *bc[0]; }
+  const Vector<S>&                    get_tang2_bcs() const { return *bc[1]; }
+  const Vector<S>&                     get_norm_bcs() const { return *bc[2]; }
 
   // find out the next row index in the BEM after this collection
   void set_first_row(const Int _i) { istart = _i; }
@@ -292,7 +293,6 @@ public:
   }
 
   // convert vortex sheet strength to absolute panel strength
-  // HACK - throw away the source strength
   void vortex_sheet_to_panel_strength(const size_t num) {
 
     assert(ps[0]->size() == num && "Input array sizes do not match");
@@ -318,6 +318,32 @@ public:
       //std::cout << "  ps " << (*ps[0])[i] << " " << (*ps[1])[i] << std::endl;
       //std::cout << "  ts " << ts[0][i] << " " << ts[1][i] << " " << ts[2][i] << std::endl;
       //std::cout << "elem " << i << " has s " << ts[0][i] << " " << ts[1][i] << " " << ts[2][i] << std::endl;
+    }
+  }
+
+  // convert vortex sheet strength components to vortex sheet strength vector
+  //
+  // the only difference between this and vortex_sheet_to_panel_strength is the area
+  void vortex_sheet_to_vector() {
+
+    assert(ps[0]->size() == np && "Input array sizes do not match");
+    assert(ps[1]->size() == np && "Input array sizes do not match");
+    assert(ps[0]->size() == b[0][0].size() && "Input array sizes do not match");
+
+    // make sure the arrays are sized properly
+    for (size_t d=0; d<3; ++d) {
+      ts[d].resize(np);
+    }
+
+    // convenience references
+    std::array<Vector<S>,3>& x1 = b[0];
+    std::array<Vector<S>,3>& x2 = b[1];
+
+    // now copy the values over (do them all)
+    for (size_t i=0; i<np; ++i) {
+      for (size_t d=0; d<Dimensions; ++d) {
+        ts[d][i] = ((*ps[0])[i]*x1[d][i] + (*ps[1])[i]*x2[d][i]);
+      }
     }
   }
 
@@ -359,10 +385,23 @@ public:
     }
   }
 
-  // add more nodes and panels to this collection
-  void add_new(const std::vector<S>&   _x,
-               const std::vector<Int>& _idx,
-               const std::vector<S>&   _val) {
+  // append nodes and panels to this collection
+  void add_new(const ElementPacket<float>& _in) {
+
+    // ensure that this packet really is Surfaces
+    assert(_in.idx.size() != 0 && "Input ElementPacket is not Surfaces");
+    assert(_in.ndim == 2 && "Input ElementPacket is not Surfaces");
+
+    // and that it has the right number of values per particle
+    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with inert Surfaces has nonzero val array");
+    else assert(_in.val.size()/Dimensions == _in.nelem && "Input ElementPacket with Surfaces has bad val array size");
+
+    // must explicitly call the method in the base class first - this pulls out positions and strengths
+    //ElementBase<S>::add_new(_in);
+
+    const std::vector<S>&   _x = _in.x;
+    const std::vector<Int>& _idx = _in.idx;
+    const std::vector<S>&   _val = _in.val;
 
     // remember old sizes of nodes and element arrays
     const size_t nnold = this->n;
@@ -370,8 +409,9 @@ public:
 
     // make sure input arrays are correctly-sized
     assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
-    const size_t nsurfs = _idx.size() / Dimensions;
+    //const size_t nsurfs = _idx.size() / Dimensions;
     // if no surfs, quit out now
+    const size_t nsurfs = _in.nelem;
     if (nsurfs == 0) return;
 
     assert(_val.size() % nsurfs == 0 && "Value array is not an even multiple of panel count");
@@ -478,7 +518,7 @@ public:
     }
 
     // debug print
-    if (VERBOSE) {
+    if (false) {
       std::cout << "Nodes" << std::endl;
       for (size_t i=0; i<nnold+nnodes; ++i) {
         std::cout << "  " << i << " " << this->x[0][i] << " " << this->x[1][i] << " " << this->x[2][i] << std::endl;
@@ -497,22 +537,6 @@ public:
     if (this->M == bodybound) {
       set_geom_center();
     }
-  }
-
-  // append nodes and panels to this collection
-  void add_new(const ElementPacket<float>& _in) {
-
-    // ensure that this packet really is Surfaces
-    assert(_in.idx.size() != 0 && "Input ElementPacket is not Surfaces");
-    assert(_in.ndim == 2 && "Input ElementPacket is not Surfaces");
-
-    // and that it has the right number of values per particle
-    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with inert Surfaces has nonzero val array");
-    else assert(_in.val.size()/Dimensions == _in.nelem && "Input ElementPacket with Surfaces has bad val array size");
-
-    // must explicitly call the method in the base class first - this pulls out positions and strengths
-    //ElementBase<S>::add_new(_in);
-    (void) add_new(_in.x, _in.idx, _in.val);
   }
 
 
@@ -682,31 +706,33 @@ public:
 
     std::cout << "  inside Surfaces::set_geom_center with " << get_npanels() << " panels" << std::endl;
 
-    // iterate over panels, accumulating vol and CM
-    double vsum = 0.0;
-    double xsum = 0.0;
-    double ysum = 0.0;
-    double zsum = 0.0;
+    // iterate over panels, accumulating vol and CM in double precision
+    using A = double;
+    A vsum = 0.0;
+    A xsum = 0.0;
+    A ysum = 0.0;
+    A zsum = 0.0;
     for (size_t i=0; i<get_npanels(); i++) {
       const size_t jp0 = idx[Dimensions*i];
       const size_t jp1 = idx[Dimensions*i+1];
       const size_t jp2 = idx[Dimensions*i+2];
       // assume a triangle from 0,0 to two ends of each panel
-      double thisvol = (*this->ux)[0][jp0] * (double)(*this->ux)[1][jp1] * (*this->ux)[2][jp2]
-                     - (*this->ux)[0][jp0] * (double)(*this->ux)[1][jp2] * (*this->ux)[2][jp1]
-                     - (*this->ux)[0][jp1] * (double)(*this->ux)[1][jp0] * (*this->ux)[2][jp2]
-                     + (*this->ux)[0][jp1] * (double)(*this->ux)[1][jp2] * (*this->ux)[2][jp0]
-                     + (*this->ux)[0][jp2] * (double)(*this->ux)[1][jp0] * (*this->ux)[2][jp1]
-                     - (*this->ux)[0][jp2] * (double)(*this->ux)[1][jp1] * (*this->ux)[2][jp0];
+      A thisvol = (*this->ux)[0][jp0] * (A)(*this->ux)[1][jp1] * (*this->ux)[2][jp2]
+                - (*this->ux)[0][jp0] * (A)(*this->ux)[1][jp2] * (*this->ux)[2][jp1]
+                - (*this->ux)[0][jp1] * (A)(*this->ux)[1][jp0] * (*this->ux)[2][jp2]
+                + (*this->ux)[0][jp1] * (A)(*this->ux)[1][jp2] * (*this->ux)[2][jp0]
+                + (*this->ux)[0][jp2] * (A)(*this->ux)[1][jp0] * (*this->ux)[2][jp1]
+                - (*this->ux)[0][jp2] * (A)(*this->ux)[1][jp1] * (*this->ux)[2][jp0];
       thisvol /= 6.0;
       // add this to the running sums
-      if (VERBOSE) { std::cout << "    and area " << thisvol << std::endl;
-        std::cout << (*this->ux)[0][jp0] << " " << (double)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp2] << std::endl;
-        std::cout << (*this->ux)[0][jp0] << " " << (double)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp1] << std::endl;
-        std::cout << (*this->ux)[0][jp1] << " " << (double)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp2] << std::endl;
-        std::cout << (*this->ux)[0][jp1] << " " << (double)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp0] << std::endl;
-        std::cout << (*this->ux)[0][jp2] << " " << (double)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp1] << std::endl;
-        std::cout << (*this->ux)[0][jp2] << " " << (double)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp0] << std::endl;
+      if (VERBOSE and false) {
+        std::cout << "    and area " << thisvol << std::endl;
+        std::cout << (*this->ux)[0][jp0] << " " << (A)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp2] << std::endl;
+        std::cout << (*this->ux)[0][jp0] << " " << (A)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp1] << std::endl;
+        std::cout << (*this->ux)[0][jp1] << " " << (A)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp2] << std::endl;
+        std::cout << (*this->ux)[0][jp1] << " " << (A)(*this->ux)[1][jp2] << " " << (*this->ux)[2][jp0] << std::endl;
+        std::cout << (*this->ux)[0][jp2] << " " << (A)(*this->ux)[1][jp0] << " " << (*this->ux)[2][jp1] << std::endl;
+        std::cout << (*this->ux)[0][jp2] << " " << (A)(*this->ux)[1][jp1] << " " << (*this->ux)[2][jp0] << std::endl;
       }
       vsum += thisvol;
       xsum += 0.25 * thisvol * ((*this->ux)[0][jp0] + (*this->ux)[0][jp1] + (*this->ux)[0][jp2]);
@@ -818,7 +844,7 @@ public:
       // HACK - might need to compute_bases() from here - but only if rotation happened
 
     } else {
-      // copy utc to tc
+      // transform the utc to tc here
       tc[0] = utc[0];
       tc[1] = utc[1];
       tc[2] = utc[2];
@@ -847,31 +873,17 @@ public:
     ElementBase<S>::finalize_vels(_fs);
   }
 
-/*
-  // up-size all arrays to the new size, filling with sane values
-  void resize(const size_t _nnew) {
-    const size_t currn = this->n;
-    //std::cout << "  inside Surfaces::resize with " << currn << " " << _nnew << std::endl;
-
-    // must explicitly call the method in the base class - this sets n
-    ElementBase<S>::resize(_nnew);
-
-    if (_nnew == currn) return;
-
-    // radii here
-    const size_t thisn = r.size();
-    r.resize(_nnew);
-    for (size_t i=thisn; i<_nnew; ++i) {
-      r[i] = 1.0;
-    }
-  }
 
   //
   // 1st order Euler advection and stretch
   //
-  void move(const double _time, const double _dt) {
+  void move(const double _time, const double _dt,
+            const double _wt1, Surfaces<S> const & _u1) {
+
     // must explicitly call the method in the base class
-    ElementBase<S>::move(_time, _dt);
+    ElementBase<S>::move(_time, _dt, _wt1, _u1);
+
+    assert(this->M != lagrangian && "Lagrangian surfaces are not yet supported");
 
     // no specialization needed
     if (this->M == lagrangian and this->E != inert) {
@@ -879,21 +891,22 @@ public:
       S thismax = 0.0;
 
       for (size_t i=0; i<this->n; ++i) {
-        S this_s = (*this->s)[i];
+        //S this_s = (*this->s)[i];
 
         // compute stretch term
-        std::array<S,2> wdu = {0.0};
+        //std::array<S,2> wdu = {0.0};
 
         // add Cottet SFS
 
         // update strengths
-        (*this->s)[i] = this_s + _dt * wdu[0];
+        //(*this->s)[i] = this_s + _dt * wdu[0];
 
         // check for max strength
-        S thisstr = std::abs((*this->s)[i]);
-        if (thisstr > thismax) thismax = thisstr;
-
+        //S thisstr = std::abs((*this->s)[i]);
+        //if (thisstr > thismax) thismax = thisstr;
       }
+
+    // and update the max strength measure
       if (max_strength < 0.0) {
         max_strength = thismax;
       } else {
@@ -905,22 +918,47 @@ public:
       max_strength = 1.0;
     }
   }
-*/
+
+
+  //
+  // 2nd order RK advection and stretch
+  //
+  void move(const double _time, const double _dt,
+            const double _wt1, Surfaces<S> const & _u1,
+            const double _wt2, Surfaces<S> const & _u2) {
+
+    // must explicitly call the method in the base class
+    ElementBase<S>::move(_time, _dt, _wt1, _u1, _wt2, _u2);
+
+    assert(this->M != lagrangian && "Lagrangian surfaces are not yet supported");
+
+    // must confirm that incoming time derivates include velocity (?)
+
+    // and update the max strength measure
+    (void) update_max_str();
+  }
+
 
   //
   // return a particle version of the panels (useful during Diffusion)
   // offset is in world units - NOT scaled
   //
-  std::vector<S> represent_as_particles(const S _offset, const S _vdelta) {
+  ElementPacket<float> represent_as_particles(const S _offset, const S _ips) {
+
+    // prepare the vectors
+    std::vector<float> _x;
+    std::vector<Int> _idx;
+    std::vector<float> _vals;
 
     // how many panels?
     const size_t num_pts = get_npanels();
 
+    // since there may be more points than panels, reserve space and emplace_back
+    _x.reserve(Dimensions*num_pts);
+    _vals.reserve(num_pts);
+
     // recompute the total strengths (ts)
     vortex_sheet_to_panel_strength(num_pts);
-
-    // init the output vector (x, y, z, sx, sy, sz, r)
-    std::vector<S> px(num_pts*7);
 
     // get basis vectors
     std::array<Vector<S>,3>&   x1 = b[0];
@@ -929,30 +967,33 @@ public:
     Vector<S>&                bc1 = *bc[0];
     Vector<S>&                bc2 = *bc[1];
 
-    for (size_t i=0; i<num_pts; i++) {
-      const Int id0 = idx[3*i];
-      const Int id1 = idx[3*i+1];
-      const Int id2 = idx[3*i+2];
-      const Int idx = 7*i;
+    const size_t nper = idx.size() / get_npanels();	// we can have >3 nodes per elem now
+
+    for (size_t i=0; i<num_pts; ++i) {
+      // panel corner points
+      const Int id0 = idx[nper*i];
+      const Int id1 = idx[nper*i+1];
+      const Int id2 = idx[nper*i+2];
+
       // start at center of panel
-      for (size_t j=0; j<3; ++j) px[idx+j] = (1./3.) * (this->x[j][id0] + this->x[j][id1] + this->x[j][id2]);
+      std::array<S,3> px;
+      for (size_t j=0; j<3; ++j) px[j] = (1./3.) * (this->x[j][id0] + this->x[j][id1] + this->x[j][id2]);
       // push out a fixed distance
       // this assumes properly resolved, vdelta and dt
-      for (size_t j=0; j<3; ++j) px[idx+j] += _offset * norm[j][i];
+      for (size_t j=0; j<3; ++j) px[j] += _offset * norm[j][i];
+      for (size_t j=0; j<3; ++j) _x.emplace_back(px[j]);
+
       // the panel strength is the solved strength plus the boundary condition
-      for (size_t j=0; j<3; ++j) px[idx+3+j] = ts[j][i];
+      for (size_t j=0; j<3; ++j) px[j] = ts[j][i];
       // add on the (vortex) bc values here
       if (this->E == reactive) {
-        for (size_t j=0; j<3; ++j) px[idx+3+j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
+        for (size_t j=0; j<3; ++j) px[j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
       }
-      // IGNORE SOURCE SHEET STRENGTHS
-      // and the core size
-      px[idx+6] = _vdelta;
-      //std::cout << "  new part at " << px[idx+0] << " " << px[idx+1] << " " << px[idx+2];
-      //std::cout << "     with str " << px[idx+3] << " " << px[idx+4] << " " << px[idx+5] << std::endl;
+      for (size_t j=0; j<3; ++j) _vals.emplace_back(px[j]);
+      // IGNORE SOURCE SHEET STRENGTHS AND ELONG
     }
 
-    return px;
+    return ElementPacket<float>({_x, _idx, _vals, num_pts, 0});
   }
 
   // find the new peak vortex sheet strength magnitude
@@ -992,15 +1033,14 @@ public:
     circ.fill(0.0);
 
     if (this->E != inert) {
-      // make this easy - represent as particles
-      std::vector<S> pts = represent_as_particles(0.0, 1.0);
+      // make this easy - set ts and use it
+      vortex_sheet_to_panel_strength(get_npanels());
 
       // now compute impulse of those
       for (size_t i=0; i<get_npanels(); ++i) {
-        const size_t idx = 7*i;
-        circ[0] += pts[idx+3+0];
-        circ[1] += pts[idx+3+1];
-        circ[2] += pts[idx+3+2];
+        circ[0] += ts[0][i];
+        circ[1] += ts[1][i];
+        circ[2] += ts[2][i];
       }
     }
 
@@ -1034,15 +1074,24 @@ public:
     imp.fill(0.0);
 
     if (this->E != inert) {
-      // make this easy - represent as particles
-      std::vector<S> pts = represent_as_particles(0.0, 1.0);
+      // make this easy - set ts and use it
+      vortex_sheet_to_panel_strength(get_npanels());
 
       // now compute impulse of those
       for (size_t i=0; i<get_npanels(); ++i) {
-        const size_t idx = 7*i;
-        imp[0] += pts[idx+3+1] * pts[idx+2] - pts[idx+3+2] * pts[idx+1];
-        imp[1] += pts[idx+3+2] * pts[idx+0] - pts[idx+3+0] * pts[idx+2];
-        imp[2] += pts[idx+3+0] * pts[idx+1] - pts[idx+3+1] * pts[idx+0];
+
+        // indices for this panel
+        const Int id0 = idx[3*i];
+        const Int id1 = idx[3*i+1];
+        const Int id2 = idx[3*i+2];
+        // panel center
+        const S xc = (this->x[0][id0] + this->x[0][id1] + this->x[0][id2])/3.0;
+        const S yc = (this->x[1][id0] + this->x[1][id1] + this->x[1][id2])/3.0;
+        const S zc = (this->x[2][id0] + this->x[2][id1] + this->x[2][id2])/3.0;
+
+        imp[0] += ts[i][1]*zc - ts[i][2]*yc;
+        imp[1] += ts[i][2]*xc - ts[i][0]*zc;
+        imp[2] += ts[i][0]*yc - ts[i][1]*xc;
       }
     }
 
@@ -1234,6 +1283,168 @@ public:
   std::string to_string() const {
     std::string retstr = " " + std::to_string(get_npanels()) + ElementBase<S>::to_string() + " Panels";
     return retstr;
+  }
+
+  std::string write_vtk(const size_t _index, const size_t _frameno, const double _time) {
+    assert(this->np > 0 && "Inside write_vtu_panels with no panels");
+  
+    const bool asbase64 = true;
+    bool has_vort_str = false;
+    bool has_src_str = false;
+    std::string prefix = "panel_";
+    if (this->E != inert) {
+      has_vort_str = true;
+      has_src_str = have_src_str();
+    }
+  
+    // generate file name
+    std::stringstream vtkfn;
+    vtkfn << prefix << std::setfill('0') << std::setw(2) << _index << "_" << std::setw(5) << _frameno << ".vtu";
+    VtkXmlWriter panelWriter = VtkXmlWriter(vtkfn.str(), asbase64);
+    // push comment with sim time?
+ 
+    // include simulation time here
+    panelWriter.addElement("FieldData");
+    {
+      std::map<std::string, std::string> attribs = {{"type",           "Float64"},
+                                                    {"Name",           "TimeValue"},
+                                                    {"NumberOfTuples", "1"}};
+      panelWriter.addElement("DataArray", attribs);
+      Vector<double> time_vec = {_time};
+      panelWriter.writeDataArray(time_vec);
+      panelWriter.closeElement();
+    }
+    // FieldData
+    panelWriter.closeElement();
+ 
+    {
+      std::map<std::string, std::string> attribs = {{"NumberOfPoints", std::to_string(this->n).c_str()},
+                                                    {"NumberOfCells", std::to_string(this->np).c_str()}};
+      panelWriter.addElement("Piece", attribs);
+    }
+
+    panelWriter.addElement("Points");
+    {
+      std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                    {"Name",               "position"},
+                                                    {"type",               "Float32"}}; 
+      panelWriter.addElement("DataArray", attribs);
+      Vector<float> pos = panelWriter.unpackArray(this->x);
+      panelWriter.writeDataArray(pos);
+      panelWriter.closeElement();
+    }
+    // Points
+    panelWriter.closeElement();
+ 
+    panelWriter.addElement("Cells");
+    // again, all connectivities and offsets must be Int32!
+    {
+      std::map<std::string, std::string> attribs = {{"Name", "connectivity"},
+                                                    {"type", "Int32"}};
+      panelWriter.addElement("DataArray", attribs);
+      std::vector<Int> const & idx = this->idx;
+      Vector<int32_t> v(std::begin(idx), std::end(idx));
+      panelWriter.writeDataArray(v);
+      panelWriter.closeElement();
+    }
+ 
+    {
+      std::map<std::string, std::string> attribs = {{"Name", "offsets"},
+                                                    {"type", "Int32"}};
+      panelWriter.addElement("DataArray", attribs);
+      Vector<int32_t> v(this->np);
+      std::iota(v.begin(), v.end(), 1);
+      std::transform(v.begin(), v.end(), v.begin(),
+                     std::bind(std::multiplies<int32_t>(), std::placeholders::_1, 3));
+      panelWriter.writeDataArray(v);
+      panelWriter.closeElement();
+    }
+ 
+    {
+      std::map<std::string, std::string> attribs = {{"Name", "types"},
+                                                    {"type", "UInt8"}};
+      panelWriter.addElement("DataArray", attribs);
+      Vector<uint8_t> v(this->np);
+      std::fill(v.begin(), v.end(), 5);
+      panelWriter.writeDataArray(v);
+      panelWriter.closeElement();
+    }
+    // Cells
+    panelWriter.closeElement();
+ 
+    // do we have CellData?
+    std::string scalar_list;
+    std::string vector_list;
+    if (has_vort_str) vector_list.append("vortex sheet strength,");
+    if (has_src_str) scalar_list.append("source sheet strength,");
+    //if (has_radii) scalar_list.append("area,");
+
+    if (scalar_list.size() + vector_list.size() > 0) {
+
+      {
+        std::map<std::string, std::string> attribs;
+        if (scalar_list.size()>1) {
+          scalar_list.pop_back();
+          attribs.insert({"Scalars", scalar_list});
+        }
+        panelWriter.addElement("CellData", attribs);
+      }
+ 
+      if (has_vort_str) {
+        std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                      {"Name", "vortex sheet strength"},
+                                                      {"type", "Float32"}};
+        panelWriter.addElement("DataArray", attribs);
+        // this call fills ts with vectorial vortex sheet strength
+        vortex_sheet_to_vector();
+        Vector<float> strs = panelWriter.unpackArray(this->ts);
+        panelWriter.writeDataArray(strs);
+        panelWriter.closeElement();
+      }
+ 
+      if (has_src_str) {
+        std::map<std::string, std::string> attribs = {{"Name", "source sheet strength"},
+                                                      {"type", "Float32"}};
+        panelWriter.addElement("DataArray", attribs);
+        panelWriter.writeDataArray(get_src_str());
+        panelWriter.closeElement();
+      }
+
+      // CellData
+      panelWriter.closeElement();
+    }
+
+    // do we have PointData?
+    bool havePointData = false;
+
+    if (havePointData) {
+
+      {
+        std::map<std::string, std::string> attribs = {{"Vectors", "velocity"}};
+        panelWriter.addElement("CellData", attribs);
+      }
+ 
+      // should write vels on a node-wise basis if type is "active"
+      {
+        std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                      {"Name",               "velocity"},
+                                                      {"type",               "Float32"}}; 
+        panelWriter.addElement("DataArray", attribs);
+        Vector<float> vel = panelWriter.unpackArray(this->u);
+        panelWriter.writeDataArray(vel);
+        panelWriter.closeElement();
+      }
+
+      // PointData
+      panelWriter.closeElement();
+    }
+
+    // Piece 
+    panelWriter.closeElement();
+  
+    panelWriter.finish();
+    std::cout << "Wrote " << this->np << " panels to " << vtkfn.str() << std::endl;
+    return vtkfn.str();
   }
 
 protected:

@@ -1,14 +1,15 @@
 /*
  * FlowFeature.cpp - GUI-side descriptions of flow features
  *
- * (c)2017-20 Applied Scientific Research, Inc.
+ * (c)2017-21 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  */
 
-#include "BoundaryFeature.h"
 #include "FlowFeature.h"
 #include "MathHelper.h"
+#include "GeomHelper.h"
+
 #include "imgui/imgui.h"
 
 #include <cmath>
@@ -36,6 +37,7 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 
   if      (ftype == "single particle") {  _flist.emplace_back(std::make_unique<SingleParticle>()); }
   else if (ftype == "vortex blob") {      _flist.emplace_back(std::make_unique<VortexBlob>()); }
+  else if (ftype == "uniform block") {    _flist.emplace_back(std::make_unique<UniformBlock>()); }
   else if (ftype == "block of random") {  _flist.emplace_back(std::make_unique<BlockOfRandom>()); }
   else if (ftype == "particle emitter") { _flist.emplace_back(std::make_unique<ParticleEmitter>()); }
   else if (ftype == "singular ring") {    _flist.emplace_back(std::make_unique<SingularRing>()); }
@@ -52,13 +54,13 @@ void parse_flow_json(std::vector<std::unique_ptr<FlowFeature>>& _flist,
 }
 
 #ifdef USE_IMGUI
-bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float _ips) {
+// 0 means keep open, 1 means create, 2 means cancel
+int FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &ffs, const float ips) {
   static int item = 1;
   static int oldItem = -1;
-  const int numItems = 6;
-  const char* items[] = { "vortex particle", "vortex blob", "random particles", "singular vortex ring", 
-                          "thick vortex ring", "particle emitter" };
-  ImGui::Combo("type", &item, items, numItems);
+  const char* items[] = { "vortex particle", "vortex blob", "uniform block", "random particles",  
+                          "singular vortex ring", "thick vortex ring", "particle emitter" };
+  ImGui::Combo("type", &item, items, 7);
 
   // show different inputs based on what is selected
   static std::unique_ptr<FlowFeature> ff = nullptr;
@@ -71,46 +73,79 @@ bool FlowFeature::draw_creation_gui(std::vector<std::unique_ptr<FlowFeature>> &f
         ff = std::make_unique<VortexBlob>();
       } break;
       case 2: {
-        ff = std::make_unique<BlockOfRandom>();
+        ff = std::make_unique<UniformBlock>();
       } break;
       case 3: {
-        ff = std::make_unique<SingularRing>();
+        ff = std::make_unique<BlockOfRandom>();
       } break;
       case 4: {
-        ff = std::make_unique<ThickRing>();
+        ff = std::make_unique<SingularRing>();
       } break;
       case 5: {
+        ff = std::make_unique<ThickRing>();
+      } break;
+      case 6: {
         ff = std::make_unique<ParticleEmitter>();
       } break;
     }
     oldItem = item;
   }
 
-  bool created = false;
-  if (ff->draw_info_gui("Add", _ips)) {
+  int created = 0;
+  if (ff->draw_info_gui("Add", ips)) {
     ff->generate_draw_geom();
     ffs.emplace_back(std::move(ff));
     ff = nullptr;
-    created = true;
+    created = 1;
     oldItem = -1;
-    ImGui::CloseCurrentPopup();
   }
 
   ImGui::SameLine();
   if (ImGui::Button("Cancel", ImVec2(120,0))) {
     oldItem = -1;
-    ImGui::CloseCurrentPopup();
+    created = 2;
+    ff = nullptr;
   }
 
-  ImGui::EndPopup();
   return created;
+}
+
+void FlowFeature::draw_feature_list(std::vector<std::unique_ptr<FlowFeature>> &feat,
+                                    std::unique_ptr<FlowFeature> &editingFeat, int &edit_feat_index,
+                                    int &del_feat_index, bool &redraw, int &buttonIDs) {
+  for (int i=0; i<(int)feat.size(); ++i) {
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::Checkbox("", feat[i]->addr_enabled())) { redraw = true; }
+    ImGui::PopID();
+    
+    // add an "edit" button after the checkbox (so it's not easy to accidentally hit remove)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("edit")) {
+      editingFeat = std::unique_ptr<FlowFeature>(feat[i]->copy());
+      edit_feat_index = i;
+    }
+    ImGui::PopID();
+    
+    if (feat[i]->is_enabled()) {
+      ImGui::SameLine();
+      ImGui::Text("%s", feat[i]->to_string().c_str());
+    } else {
+      ImGui::SameLine();
+      ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "%s", feat[i]->to_string().c_str());
+    }
+
+    // add a "remove" button at the end of the line (so it's not easy to accidentally hit)
+    ImGui::SameLine();
+    ImGui::PushID(++buttonIDs);
+    if (ImGui::SmallButton("remove")) { del_feat_index = i; }
+    ImGui::PopID();
+  }
 }
 #endif
 
 //
-// important feature: convert flow feature definition into 1-D vector of values
-//
-// each 7 floats is one particle's: [xyz] location, [xyz] strength, vdelta (radius)
+// important feature: convert flow feature definition into an ElementPacket
 //
 
 //
@@ -122,9 +157,9 @@ SingleParticle::init_elements(float _ips) const {
 
   std::vector<float> x = {m_x, m_y, m_z};
   std::vector<Int> idx = {};
-  std::vector<float> vals = {m_sx, m_sy, m_sz, 0.0};
+  std::vector<float> vals = {m_sx, m_sy, m_sz};
   ElementPacket<float> packet({x, idx, vals, (size_t)1, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -175,9 +210,8 @@ SingleParticle::to_json() const {
 // Single Particles cant be made by user
 void SingleParticle::generate_draw_geom() {
   const float diam = 0.01;
-  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
-
-  m_draw = tmp.init_elements(0.05*diam);
+  m_draw = generate_ovoid(diam, diam, diam, 0.05*diam);
+  m_draw.translate(m_x, m_y, m_z);
 
   // OpenGL expects a val for every point (3x's)
   const int numPts = m_draw.x.size()/Dimensions;
@@ -201,9 +235,11 @@ bool SingleParticle::draw_info_gui(const std::string _action, const float _ips) 
   if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
   m_y = xc[1];
+  m_z = xc[2];
+  m_sx = xs[0];
   m_sy = xs[1];
   m_sz = xs[2];
-  
+
   return add;
 }
 #endif
@@ -253,7 +289,7 @@ VortexBlob::init_elements(float _ips) const {
       tot_wgt += this_wgt;
 
       // this is the radius - still zero for now
-      vals.emplace_back(0.0f);
+      //vals.emplace_back(0.0f);
     }
   }
   }
@@ -263,14 +299,14 @@ VortexBlob::init_elements(float _ips) const {
   //   has exactly the right strength
   std::cout << "blob had " << tot_wgt << " initial circulation" << std::endl;
   double str_scale = 1.0 / tot_wgt;
-  for (size_t i=0; i<vals.size(); i+=4) {
+  for (size_t i=0; i<vals.size(); i+=3) {
     vals[i+0] = (float)((double)vals[i+0] * str_scale);
     vals[i+1] = (float)((double)vals[i+1] * str_scale);
     vals[i+2] = (float)((double)vals[i+2] * str_scale);
   }
 
-  ElementPacket<float> packet({x, idx, vals, x.size()/3, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+  ElementPacket<float> packet({x, idx, vals, x.size()/Dimensions, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -323,11 +359,9 @@ VortexBlob::to_json() const {
 }
 
 void VortexBlob::generate_draw_geom() {
-  // Based on irad in init_elems
-  const float rad = m_rad + 0.5*m_softness;
-  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, 2*rad, 2*rad, 2*rad);
-
-  m_draw = tmp.init_elements(0.1*rad);
+  const float diam = 2.0*m_rad + m_softness;
+  m_draw = generate_ovoid(diam, diam, diam, 0.05*diam);
+  m_draw.translate(m_x, m_y, m_z);
 
   // OpenGL expects a val for every point (3x's)
   const int numPts = m_draw.x.size()/Dimensions;
@@ -368,6 +402,141 @@ bool VortexBlob::draw_info_gui(const std::string _action, const float _ips) {
 #endif
 
 //
+// make the block of regular, and uniform-strength particles
+//
+ElementPacket<float>
+UniformBlock::init_elements(float _ips) const {
+
+  // what size 2D integer array will we loop over
+  const int isize = 1 + m_xsize / _ips;
+  const int jsize = 1 + m_ysize / _ips;
+  const int ksize = 1 + m_ysize / _ips;
+  const size_t totn = isize*jsize*ksize;
+  std::cout << "Creating block with " << totn << " particles" << std::endl;
+  //std::cout << "block needs " << isize << " by " << jsize << " particles" << std::endl;
+
+  // create a new vector to pass on
+  std::vector<float> x(Dimensions*totn);
+  std::vector<Int> idx;
+  std::vector<float> vals(numStrPerNode*totn);
+
+  const float each_str = 1.0 / (float)(totn);
+
+  // initialize the particles' locations and strengths, leave radius zero for now
+  size_t ix = 0;
+  size_t iv = 0;
+  for (int i=0; i<isize; ++i) {
+  for (int j=0; j<jsize; ++j) {
+  for (int k=0; k<ksize; ++k) {
+    x[ix++] = m_x + m_xsize * (((float)i + 0.5)/(float)isize - 0.5);
+    x[ix++] = m_y + m_ysize * (((float)j + 0.5)/(float)jsize - 0.5);
+    x[ix++] = m_z + m_zsize * (((float)k + 0.5)/(float)ksize - 0.5);
+    vals[iv++] = m_sx * each_str;
+    vals[iv++] = m_sy * each_str;
+    vals[iv++] = m_sz * each_str;
+  }
+  }
+  }
+
+  ElementPacket<float> packet({x, idx, vals, totn, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
+    return packet;
+  } else {
+    return ElementPacket<float>();
+  }
+}
+
+ElementPacket<float>
+UniformBlock::step_elements(float _ips) const {
+  return ElementPacket<float>();
+}
+
+void
+UniformBlock::debug(std::ostream& os) const {
+  os << to_string();
+}
+
+std::string
+UniformBlock::to_string() const {
+  std::stringstream ss;
+  ss << "block of uniform particles in [" << (m_x-0.5*m_xsize) << " " << (m_x+0.5*m_xsize) << "] ["
+                                          << (m_y-0.5*m_ysize) << " " << (m_y+0.5*m_ysize) << "] ["
+                                          << (m_z-0.5*m_zsize) << " " << (m_z+0.5*m_zsize) <<
+                                        "] with str " << m_sx << " " << m_sy << " " << m_sz;
+  return ss.str();
+}
+
+void
+UniformBlock::from_json(const nlohmann::json j) {
+  const std::vector<float> c = j["center"];
+  m_x = c[0];
+  m_y = c[1];
+  m_z = c[2];
+  const std::vector<float> z = j["size"];
+  m_xsize = z[0];
+  m_ysize = z[1];
+  m_zsize = z[2];
+  const std::vector<float> s = j["strength"];
+  m_sx = s[0];
+  m_sy = s[1];
+  m_sz = s[2];
+  m_enabled = j.value("enabled", true);
+}
+
+nlohmann::json
+UniformBlock::to_json() const {
+  nlohmann::json j;
+  j["type"] = "uniform block";
+  j["center"] = {m_x, m_y, m_z};
+  j["size"] = {m_xsize, m_ysize, m_zsize};
+  j["strength"] = {m_sx, m_sy, m_sz};
+  j["enabled"] = m_enabled;
+  return j;
+}
+
+void UniformBlock::generate_draw_geom() {
+
+  // generate draw geometry, OK to use more than 12 triangles
+  m_draw = generate_cuboid(m_xsize, m_ysize, m_zsize, 0.1*(m_xsize+m_ysize+m_zsize));
+  m_draw.translate(m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize);
+
+  // OpenGL expects a val for every point (3x's)
+  const size_t numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  const float maxval = std::sqrt(m_sx*m_sx + m_sy*m_sy + m_sz*m_sz);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), maxval);
+  //for (size_t i = 0; i < numPts; i++) {
+  //  m_draw.val[i] = maxval;
+  //}
+}
+
+#ifdef USE_IMGUI
+bool UniformBlock::draw_info_gui(const std::string action, const float ips) {
+  bool add = false;
+  static float xc[3] = {m_x, m_y, m_z};
+  static float xs[3] = {m_xsize, m_ysize, m_zsize};
+  static float vstr[3] = {m_sx, m_sy, m_sz};
+  const std::string buttonText = action+" block of vorticies";
+
+  ImGui::InputFloat3("center", xc);
+  ImGui::InputFloat3("strength", vstr);
+  ImGui::SliderFloat3("box size", xs, 0.01f, 10.0f, "%.4f", 2.0f);
+  ImGui::TextWrapped("This feature will add about %d particles", (int)(xs[0]*xs[1]*xs[2]/std::pow(ips,3)));
+  if (ImGui::Button(buttonText.c_str())) { add = true; }
+  m_x = xc[0];
+  m_y = xc[1];
+  m_z = xc[2];
+  m_xsize = xs[0];
+  m_ysize = xs[1];
+  m_zsize = xs[2];
+  m_sx = vstr[0];
+  m_sy = vstr[1];
+  m_sz = vstr[2];
+  return add;
+}
+#endif
+
+//
 // make the block of randomly-placed and random-strength particles
 //
 ElementPacket<float>
@@ -386,7 +555,7 @@ BlockOfRandom::init_elements(float _ips) const {
   std::vector<Int> idx;
   std::vector<float> vals;
   x.resize(Dimensions*m_num);
-  vals.resize(4*m_num);
+  vals.resize(numStrPerNode*m_num);
 
   // initialize the particles' locations and strengths, leave radius zero for now
   for (size_t i=0; i<(size_t)m_num; ++i) {
@@ -398,17 +567,17 @@ BlockOfRandom::init_elements(float _ips) const {
   }
 
   for (size_t i=0; i<(size_t)m_num; ++i) {
-    size_t idx = 4*i;
+    size_t idx = 3*i;
     // strengths
     vals[idx+0] = m_maxstr * zmean_dist(gen) / (float)m_num;
     vals[idx+1] = m_maxstr * zmean_dist(gen) / (float)m_num;
     vals[idx+2] = m_maxstr * zmean_dist(gen) / (float)m_num;
     // radius will get set later
-    vals[idx+3] = 0.0f;
+    //vals[idx+3] = 0.0f;
   }
 
-  ElementPacket<float> packet({x, idx, vals, x.size()/3, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 1)) {
+  ElementPacket<float> packet({x, idx, vals, x.size()/Dimensions, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -463,13 +632,11 @@ BlockOfRandom::to_json() const {
 }
 
 void BlockOfRandom::generate_draw_geom() {
-  SolidRect tmp = SolidRect(nullptr, true,
-                            m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize,
-                            m_xsize, m_ysize, m_zsize);
 
   // generate draw geometry, OK to use more than 12 triangles
-  m_draw = tmp.init_elements(0.05*(m_xsize+m_ysize+m_zsize));
-  
+  m_draw = generate_cuboid(m_xsize, m_ysize, m_zsize, 0.04*(m_xsize+m_ysize+m_zsize));
+  m_draw.translate(m_x-0.5*m_xsize, m_y-0.5*m_ysize, m_z-0.5*m_zsize);
+
   static std::random_device rd;  //Will be used to obtain a seed for the random number engine
   static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   static std::uniform_real_distribution<> zmean_dist(-0.5, 0.5);
@@ -568,10 +735,10 @@ ParticleEmitter::to_json() const {
 
 void ParticleEmitter::generate_draw_geom() {
   const float diam = 0.01;
-  Ovoid tmp = Ovoid(nullptr, true, m_x, m_y, m_z, diam, diam, diam);
+  m_draw = generate_ovoid(diam, diam, diam, 0.05*diam);
+  m_draw.translate(m_x, m_y, m_z);
 
-  m_draw = tmp.init_elements(0.05*diam);
-  
+  // OpenGL expects a val for every point (3x's)
   const int numPts = m_draw.val.size()/Dimensions;
   m_draw.val.resize(numPts);
   const float sign = std::copysign(1.0, m_sx+m_sy+m_sz);
@@ -639,11 +806,11 @@ SingularRing::init_elements(float _ips) const {
     vals.emplace_back(this_ips * m_circ * (b2[1]*std::cos(theta) - b1[1]*std::sin(theta)));
     vals.emplace_back(this_ips * m_circ * (b2[2]*std::cos(theta) - b1[2]*std::sin(theta)));
     // this is the radius - still zero for now
-    vals.emplace_back(0.0f);
+    //vals.emplace_back(0.0f);
   }
 
   ElementPacket<float> packet({x, idx, vals, (size_t)ndiam, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 7)) {
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -696,22 +863,10 @@ SingularRing::to_json() const {
 }
 
 void SingularRing::generate_draw_geom() {
-
-  std::cout << "generate_draw_geom() called" << std::endl;
   // For sake of visualization, imagine the torus sitting on your table like a doughnut
-  // Number of steps around the torus
-  const int ts = 77;
-  // Number of steps around the circle perpendicular to the table
-  const int cs = 7;
-  const float m_minrad = m_majrad * 0.02;
 
-  // We first make a circle we will then drag in a circular motion to create the torus
-  std::vector<float> circle;
-  for (int i=0; i<cs; i++) {
-    const float alpha = 2.0*M_PI*i/(float)cs;
-    circle.emplace_back(m_minrad*std::sin(alpha));
-    circle.emplace_back(m_minrad*std::cos(alpha));
-  }
+  // generate the ElementPacket here - scaled and along +z
+  m_draw = generate_torus(m_majrad, 0.02*m_majrad, 0.013*m_majrad);
 
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
@@ -719,56 +874,24 @@ void SingularRing::generate_draw_geom() {
   std::array<float,3> b1, b2;
   branchlessONB<float>(norm, b1, b2);
   
-  std::vector<float> x;
-  // loop over integer indices
-  for (int i=0; i<ts; ++i) {
-    const float theta = 2.0 * M_PI * (float)i / (float)ts;
-    const float st = std::sin(theta);
-    const float ct = std::cos(theta);
+  // rotate the points to the new basis
+  for (size_t i=0; i<m_draw.x.size()/Dimensions; ++i) {
+    const float px = m_draw.x[i*Dimensions+0];
+    const float py = m_draw.x[i*Dimensions+1];
+    const float pz = m_draw.x[i*Dimensions+2];
 
-    for (int j=0; j<cs; ++j) {
-      // helper indices for the disk particles
-      const size_t ix = 2*j;
-      const size_t iy = 2*j+1;
-
-      // create a particle here
-      x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
-      x.emplace_back(m_y + (m_majrad + circle[ix]) * (b1[1]*ct + b2[1]*st) + circle[iy]*norm[1]);
-      x.emplace_back(m_z + (m_majrad + circle[ix]) * (b1[2]*ct + b2[2]*st) + circle[iy]*norm[2]);
-    }
+    m_draw.x[i*Dimensions+0] = b1[0]*px + b2[0]*py + norm[0]*pz;
+    m_draw.x[i*Dimensions+1] = b1[1]*px + b2[1]*py + norm[1]*pz;
+    m_draw.x[i*Dimensions+2] = b1[2]*px + b2[2]*py + norm[2]*pz;
   }
+
+  // finally, translate to the desired center
+  m_draw.translate(m_x, m_y, m_z);
       
-  // Create triangles from points
-  std::vector<Int> idx;
-  for (int i=0; i<ts; i++) {
-    const Int ir1 = cs*i;
-    const Int ir2 = (i==ts-1 ? 0 : cs*(i+1));
-    for (int j=0; j<cs-1; j++) {
-      // set 1
-      idx.emplace_back(ir1+j);
-      idx.emplace_back(ir2+j);
-      idx.emplace_back(ir1+j+1);
-      // set 2
-      idx.emplace_back(ir2+j);
-      idx.emplace_back(ir2+j+1);
-      idx.emplace_back(ir1+j+1);
-    }
-    // set 1
-    idx.emplace_back(ir1+cs-1);
-    idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir1);
-    // set 2
-    idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir2);
-    idx.emplace_back(ir1);
-  }
-
   // OpenGL expects a val for every point (3x's)
-  const int numPts = x.size()/Dimensions;
-  std::vector<float> val;
-  val.resize(numPts);
-  std::fill(val.begin(), val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
-  m_draw = ElementPacket<float>{x, idx, val, idx.size()/Dimensions, 2};
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
 }
 
 #ifdef USE_IMGUI
@@ -776,7 +899,7 @@ bool SingularRing::draw_info_gui(const std::string _action, const float _ips) {
 
   float xc[3] = {m_x, m_y, m_z};
   float vstr[3] = {m_nx, m_ny, m_nz};
-  float guess_n = 1 + (2.0f * 3.1416f * m_majrad / _ips);
+  float guess_n = 1 + (2.0f * M_PI * m_majrad / _ips);
   std::string buttonText = _action+" singular ring";
   bool add = false;
 
@@ -870,12 +993,12 @@ ThickRing::init_elements(float _ips) const {
       vals.emplace_back(sscale * (b2[2]*ct - b1[2]*st));
 
       // this is the radius - still zero for now
-      vals.emplace_back(0.0f);
+      //vals.emplace_back(0.0f);
     }
   }
 
-  ElementPacket<float> packet({x, idx, vals, (size_t)x.size()/3, 0});
-  if (packet.verify(packet.x.size()+packet.val.size(), 1)) {
+  ElementPacket<float> packet({x, idx, vals, (size_t)x.size()/Dimensions, 0});
+  if (packet.verify(packet.x.size()+packet.val.size(), 6)) {
     return packet;
   } else {
     return ElementPacket<float>();
@@ -932,75 +1055,33 @@ ThickRing::to_json() const {
 void ThickRing::generate_draw_geom() {
   // For sake of visualization, imagine the torus sitting on your table like a doughnut
 
-  // Number of steps around the torus
-  const int ts = 77;
-  // Number of steps around the circle perpendicular to the table
-  const int cs = std::max(15, (int)std::floor(230*m_minrad));
-
-  // We first make a circle we will then drag in a circular motion to create the torus
-  std::vector<float> circle;
-  for (int i=0; i<cs; i++) {
-    const float alpha = 2.0*M_PI*i/(float)cs;
-    circle.emplace_back(m_minrad*std::sin(alpha));
-    circle.emplace_back(m_minrad*std::cos(alpha));
-  }
+  // generate the ElementPacket here - scaled and along +z
+  m_draw = generate_torus(m_majrad, m_minrad, 0.013*m_majrad);
 
   // generate a set of orthogonal basis vectors for the given normal
   std::array<float,3> norm = {m_nx, m_ny, m_nz};
   normalizeVec(norm);
   std::array<float,3> b1, b2;
   branchlessONB<float>(norm, b1, b2);
-  
-  std::vector<float> x;
-  // loop over integer indices
-  for (int i=0; i<ts; ++i) {
-    const float theta = 2.0 * M_PI * (float)i / (float)ts;
-    const float st = std::sin(theta);
-    const float ct = std::cos(theta);
 
-    for (int j=0; j<cs; ++j) {
-      // helper indices for the disk particles
-      const size_t ix = 2*j;
-      const size_t iy = 2*j+1;
+  // rotate the points to the new basis
+  for (size_t i=0; i<m_draw.x.size()/Dimensions; ++i) {
+    const float px = m_draw.x[i*Dimensions+0];
+    const float py = m_draw.x[i*Dimensions+1];
+    const float pz = m_draw.x[i*Dimensions+2];
 
-      // create a particle here
-      x.emplace_back(m_x + (m_majrad + circle[ix]) * (b1[0]*ct + b2[0]*st) + circle[iy]*norm[0]);
-      x.emplace_back(m_y + (m_majrad + circle[ix]) * (b1[1]*ct + b2[1]*st) + circle[iy]*norm[1]);
-      x.emplace_back(m_z + (m_majrad + circle[ix]) * (b1[2]*ct + b2[2]*st) + circle[iy]*norm[2]);
-    }
+    m_draw.x[i*Dimensions+0] = b1[0]*px + b2[0]*py + norm[0]*pz;
+    m_draw.x[i*Dimensions+1] = b1[1]*px + b2[1]*py + norm[1]*pz;
+    m_draw.x[i*Dimensions+2] = b1[2]*px + b2[2]*py + norm[2]*pz;
   }
+
+  // finally, translate to the desired center
+  m_draw.translate(m_x, m_y, m_z);
       
-  // Create triangles from points
-  std::vector<Int> idx;
-  for (int i=0; i<ts; i++) {
-    const Int ir1 = cs*i;
-    const Int ir2 = (i==ts-1 ? 0 : cs*(i+1));
-    for (int j=0; j<cs-1; j++) {
-      // set 1
-      idx.emplace_back(ir1+j);
-      idx.emplace_back(ir2+j);
-      idx.emplace_back(ir1+j+1);
-      // set 2
-      idx.emplace_back(ir2+j);
-      idx.emplace_back(ir2+j+1);
-      idx.emplace_back(ir1+j+1);
-    }
-    // set 1
-    idx.emplace_back(ir1+cs-1);
-    idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir1);
-    // set 2
-    idx.emplace_back(ir2+cs-1);
-    idx.emplace_back(ir2);
-    idx.emplace_back(ir1);
-  }
-
   // OpenGL expects a val for every point (3x's)
-  const int numPts = x.size()/Dimensions;
-  std::vector<float> val;
-  val.resize(numPts);
-  std::fill(val.begin(), val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
-  m_draw = ElementPacket<float>{x, idx, val, idx.size()/Dimensions, 2};
+  const int numPts = m_draw.x.size()/Dimensions;
+  m_draw.val.resize(numPts);
+  std::fill(m_draw.val.begin(), m_draw.val.end(), length(std::array<float,3>{m_nx, m_ny, m_nz}));
 }
 
 #ifdef USE_IMGUI

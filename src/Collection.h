@@ -2,7 +2,7 @@
  * Collection.h - definition of variant type for element collections
  *
  * (c)2018-9 Applied Scientific Research, Inc.
- *           Written by Mark J Stock <markjstock@gmail.com>
+ *           Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -13,8 +13,7 @@
 #include <variant>
 
 // alias for any type of collection of elements
-// eventually will have Volumes<float> here and in 3D
-//                  and Lines<float> in 3D only
+// eventually will have Lines<float> and Volumes<float> here
 
 using Collection = std::variant<Points<float>,
                                 Surfaces<float>>;

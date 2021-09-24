@@ -1,8 +1,8 @@
 /*
  * Influence.h - Non-class influence calculations
  *
- * (c)2017-20 Applied Scientific Research, Inc.
- *            Written by Mark J Stock <markjstock@gmail.com>
+ * (c)2017-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #pragma once
@@ -14,6 +14,7 @@
 #include "Kernels.h"
 #include "Points.h"
 #include "Surfaces.h"
+#include "ResultsType.h"
 #include "ExecEnv.h"
 
 #ifdef EXTERNAL_VEL_SOLVE
@@ -51,9 +52,12 @@ extern "C" float external_vel_solver_d_(int*, const double*, const double*, cons
 // Vc and x86 versions of Points/Particles affecting Points/Particles
 //
 template <class S, class A>
-void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) {
+void points_affect_points (const Points<S>& src, Points<S>& targ, const ResultsType& restype, const ExecEnv& env) {
 
   std::cout << "    in ptpt with" << env.to_string() << std::endl;
+  assert (!restype.compute_psi() && "Point elements cannot compute streamfunction yet.");
+  assert (!restype.compute_vort() && "Point elements cannot compute vorticity yet.");
+
   auto start = std::chrono::system_clock::now();
   float flops = (float)targ.get_n();
 
@@ -76,6 +80,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
       std::array<Vector<S>,9>& tug = *opttug;
       int ns = src.get_n();
       int nt = targ.get_n();
+      if (restype.compute_grads()) {
       flops = external_vel_solver_f_(&ns, sx[0].data(), sx[1].data(), sx[2].data(),
                                           ss[0].data(), ss[1].data(), ss[2].data(), sr.data(), 
                                      &nt, tx[0].data(), tx[1].data(), tx[2].data(),
@@ -83,6 +88,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
                                           tug[0].data(), tug[1].data(), tug[2].data(),
                                           tug[3].data(), tug[4].data(), tug[5].data(),
                                           tug[6].data(), tug[7].data(), tug[8].data());
+      }
     }
 
     auto end = std::chrono::system_clock::now();
@@ -194,8 +200,11 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
   if (targ.is_inert()) {
 
   // dispatch on presence of val grads
-  if (opttug) {
+  if (opttug and restype.get_type() == velandgrad) {
+
     std::cout << "    0v_0pg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+    assert(opttug and "Optional target vel grads are not present!");
+
     // get the pointer from the optional
     std::array<Vector<S>,9>& tug = *opttug;
 
@@ -287,7 +296,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
     }
     flops *= 12.0 + (float)flops_0v_0pg<S>() * (float)src.get_n();
 
-  } else {
+  } else if (restype.get_type() == velonly) {
 
     // velocity-only kernel
     std::cout << "    0v_0p compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
@@ -342,6 +351,9 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
       }
     }
     flops *= 3.0 + (float)flops_0v_0p<S>() * (float)src.get_n();
+
+  } else {
+    assert(false and "No results type matches in points_affect_points");
   }
 
   //
@@ -352,8 +364,11 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
     const Vector<S>&                            tr = targ.get_rad();
 
   // dispatch on presence of val grads
-  if (opttug) {
+  if (restype.get_type() == velandgrad) {
+
     std::cout << "    0v_0vg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+    assert(opttug and "Optional target vel grads are not present!");
+
     // get the pointer from the optional
     std::array<Vector<S>,9>& tug = *opttug;
 
@@ -411,7 +426,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
         tug[8][i] += accumwz.sum();
       }
     } else
-#endif // no Vc
+#endif // Vc
     {
       // velocity+grads kernel
       #pragma omp parallel for
@@ -446,7 +461,8 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
     }
     flops *= 12.0 + (float)flops_0v_0bg<S>() * (float)src.get_n();
 
-  } else {
+  } else if (restype.get_type() == velonly) {
+
     // velocity-only kernel
     std::cout << "    0v_0v compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
 
@@ -487,6 +503,7 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
     } else
 #endif  // Vc
     {
+      // velocity-only kernel
       #pragma omp parallel for
       for (int32_t i=0; i<(int32_t)targ.get_n(); ++i) {
         A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
@@ -502,6 +519,9 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
       }
     }
     flops *= 3.0 + (float)flops_0v_0b<S>() * (float)src.get_n();
+
+  } else {
+    assert(false and "No results type matches in points_affect_points");
   }
 
   //
@@ -522,10 +542,13 @@ void points_affect_points (Points<S> const& src, Points<S>& targ, ExecEnv& env) 
 // Vc and x86 versions of Panels/Surfaces affecting Points/Particles
 //
 template <class S, class A>
-void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env) {
+void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const ResultsType& restype, const ExecEnv& env) {
 
   std::cout << "    in panpt with" << env.to_string() << std::endl;
-  //std::cout << "    1_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  std::cout << "    1_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert (!restype.compute_psi() && "Surface elements cannot compute streamfunction yet.");
+  assert (!restype.compute_vort() && "Surface elements cannot compute vorticity yet.");
+
   auto start = std::chrono::system_clock::now();
   const int32_t ntarg = targ.get_n();
   float flops = 0.0;
@@ -1069,10 +1092,13 @@ void panels_affect_points (Surfaces<S> const& src, Points<S>& targ, ExecEnv& env
 // And sources are never inert points, always active particles
 //
 template <class S, class A>
-void points_affect_panels (Points<S> const& src, Surfaces<S>& targ, ExecEnv& env) {
+void points_affect_panels (const Points<S>& src, Surfaces<S>& targ, const ResultsType& restype, const ExecEnv& env) {
 
   std::cout << "    in ptpan with" << env.to_string() << std::endl;
   std::cout << "    0v_2p compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert (!restype.compute_psi() && "Point elements cannot compute streamfunction yet.");
+  assert (!restype.compute_grad() && "Point elements cannot compute velocity gradients yet.");
+
   auto start = std::chrono::system_clock::now();
   float flops = 0.0;
 
@@ -1183,20 +1209,22 @@ void points_affect_panels (Points<S> const& src, Surfaces<S>& targ, ExecEnv& env
 
 
 template <class S, class A>
-void panels_affect_panels (Surfaces<S> const& src, Surfaces<S>& targ, ExecEnv& env) {
+void panels_affect_panels (const Surfaces<S>& src, Surfaces<S>& targ, const ResultsType& restype, const ExecEnv& env) {
   std::cout << "    2_2 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert (!restype.compute_psi() && "Surface elements cannot compute streamfunction yet.");
+  assert (!restype.compute_grad() && "Surface elements cannot compute velocity gradients yet.");
 
   // run panels_affect_points instead
 
   // generate temporary colocation points as Points - is this inefficient?
-  std::vector<S> xysr = targ.represent_as_particles(0.001, 0.001);
-  Points<float> temppts(xysr, active, lagrangian, nullptr);
+  ElementPacket<float> surfaspts = targ.represent_as_particles(0.0001, -1.0);
+  Points<S> temppts(surfaspts, active, lagrangian, nullptr, 0.0001);
 
   // run the calculation
-  panels_affect_points<S,A>(src, temppts, env);
+  panels_affect_points<S,A>(src, temppts, restype, env);
 
   // and copy the velocities to the real target
-  std::array<Vector<S>,Dimensions>& fromvel = temppts.get_vel();
+  const std::array<Vector<S>,Dimensions>& fromvel = temppts.get_vel();
   std::array<Vector<S>,Dimensions>& tovel   = targ.get_vel();
   for (size_t i=0; i<Dimensions; ++i) {
     std::copy(fromvel[i].begin(), fromvel[i].end(), tovel[i].begin());
@@ -1207,14 +1235,15 @@ void panels_affect_panels (Surfaces<S> const& src, Surfaces<S>& targ, ExecEnv& e
 //
 // helper struct for dispatching through a variant
 //
-template <class A>
+template <class S, class A>
 struct InfluenceVisitor {
-  // source collection, target collection, execution environment
-  void operator()(Points<float> const& src,   Points<float>& targ)   { points_affect_points<float,A>(src, targ, env); }
-  void operator()(Surfaces<float> const& src, Points<float>& targ)   { panels_affect_points<float,A>(src, targ, env); }
-  void operator()(Points<float> const& src,   Surfaces<float>& targ) { points_affect_panels<float,A>(src, targ, env); }
-  void operator()(Surfaces<float> const& src, Surfaces<float>& targ) { panels_affect_panels<float,A>(src, targ, env); }
+  // source collection, target collection, solution type, execution environment
+  void operator()(const Points<S>& src,   Points<S>& targ)   { points_affect_points<S,A>(src, targ, restype, env); }
+  void operator()(const Surfaces<S>& src, Points<S>& targ)   { panels_affect_points<S,A>(src, targ, restype, env); }
+  void operator()(const Points<S>& src,   Surfaces<S>& targ) { points_affect_panels<S,A>(src, targ, restype, env); }
+  void operator()(const Surfaces<S>& src, Surfaces<S>& targ) { panels_affect_panels<S,A>(src, targ, restype, env); }
 
+  ResultsType restype;
   ExecEnv env;
 };
 

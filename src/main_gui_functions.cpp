@@ -10,10 +10,12 @@
 #pragma once
 
 #ifdef USE_IMGUI
-#include <GLFW/glfw3.h>
 #include "imgui/imgui.h"
-#include "algorithm"
+
 #include <Eigen/Geometry>
+#include <GLFW/glfw3.h>
+
+#include <algorithm>
 
 static void error_callback(int error, const char* description) {
   fprintf(stderr, "Error %d: %s\n", error, description);
@@ -24,7 +26,7 @@ static void error_callback(int error, const char* description) {
 //}
 
 //
-// This is NOT a GLFW callback, but my own, and it needs the
+// this is NOT a GLFW callback, but my own, and it needs the
 // ImGuiIO data structure for information on the mouse state
 // There are no OpenGL calls here
 //
@@ -288,7 +290,7 @@ void draw_render_gui(RenderParams &rp) {
 
 void draw_stats_window(const long int numPanels, const long int numFieldPts, const long int step, const float time,
                        const long int numParticles, bool* showStatsWindow, const int fontSize, const float displayH) {
-  // std::cout << "Creating stats window: " << std::endl;
+  //std::cout << "Creating stats window: " << std::endl;
   // there's no way to have this appear in the output png without the rest of the GUI
   const int numrows = 4 + (numPanels > 0 ? 1 : 0) + (numFieldPts > 0 ? 1 : 0);
   // std::cout << "   fontSize: " << fontSize << "\n   numrows: " << numrows << "\n   display_h: " << display_h << std::endl;

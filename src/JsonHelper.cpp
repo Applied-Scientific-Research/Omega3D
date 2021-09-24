@@ -1,8 +1,8 @@
 /*
  * JsonHelper.cpp - Methods to help with reading and writing JSON files
  *
- * (c)2019 Applied Scientific Research, Inc.
- *         Mark J Stock <markjstock@gmail.com>
+ * (c)2019-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #include "JsonHelper.h"
@@ -30,7 +30,12 @@ json read_json (const std::string filename) {
   std::cout << "  loading simulation " << filename << std::endl;
   std::ifstream json_in(filename);
   json j;
-  json_in >> j;
+  // TODO: this next line is where we crash if the file is not present!
+  try {
+    json_in >> j;
+  } catch (...) {
+    std::cout << "The json file " << filename << " does not exist." << std::endl;
+  }
   return j;
 }
 
@@ -67,26 +72,6 @@ void parse_json(Simulation& sim,
     }
   }
 
-  if (j.count("runtime") == 1) {
-    json params = j["runtime"];
-    // no runtime parameters used yet
-    if (params.find("statusFile") != params.end()) {
-      std::string sfile = params["statusFile"];
-      sim.set_status_file_name(sfile);
-      std::cout << "  status file name= " << sfile << std::endl;
-    }
-    if (params.find("autoStart") != params.end()) {
-      bool autostart = params["autoStart"];
-      sim.set_auto_start(autostart);
-      std::cout << "  autostart? " << autostart << std::endl;
-    }
-    if (params.find("quitOnStop") != params.end()) {
-      bool qos = params["quitOnStop"];
-      sim.set_quit_on_stop(qos);
-      std::cout << "  quit on stop? " << qos << std::endl;
-    }
-  }
-
   // must do this first, as we need to set viscous before reading Re
   if (j.count("simparams") == 1) {
     sim.from_json(j["simparams"]);
@@ -95,6 +80,11 @@ void parse_json(Simulation& sim,
   // now we can read Re, freestream
   if (j.count("flowparams") == 1) {
     sim.flow_from_json(j["flowparams"]);
+  }
+
+  // finish up with runtime stuff
+  if (j.count("runtime") == 1) {
+    sim.runtime_from_json(j["runtime"]);
   }
 
   // ask RenderParams to read itself
@@ -239,10 +229,7 @@ void write_json(Simulation& sim,
 
   j["version"] = { {"Omega3D", 1}, {"jsonInput", 1} };
 
-  const std::string sfile = sim.get_status_file_name();
-  if (not sfile.empty()) {
-    j["runtime"] = { {"statusFile", sfile} };
-  }
+  j["runtime"] = sim.runtime_to_json();
 
   j["flowparams"] = sim.flow_to_json();
 
