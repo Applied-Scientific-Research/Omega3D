@@ -108,7 +108,7 @@ private:
   Vec avel;
 
   // enclosed volume (needed for total circulation of rotating body)
-  double vol;
+  //double vol;
 
   // name of parent
   std::string parent;

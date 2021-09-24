@@ -89,6 +89,7 @@ public:
       m_sy(_sy),
       m_sz(_sz)
     {}
+  ~Ovoid() = default;
   Ovoid* copy() const override { return new Ovoid(*this); }
 
   void debug(std::ostream& os) const override;
@@ -128,6 +129,7 @@ public:
       m_sy(_sy),
       m_sz(_sz)
     {}
+  ~SolidRect() = default;
   SolidRect* copy() const override { return new SolidRect(*this); }
 
   void debug(std::ostream& os) const override;
@@ -141,6 +143,7 @@ public:
   bool draw_info_gui(const std::string) override;
 #endif
   void generate_draw_geom() override;
+
 protected:
   float m_sx;
   float m_sy;
@@ -168,6 +171,7 @@ public:
       m_zf(_zf),
       m_rad(_r)
     {}
+  ~SolidDisk() = default;
   SolidDisk* copy() const override { return new SolidDisk(*this); }
 
   void debug(std::ostream& os) const override;
@@ -181,6 +185,7 @@ public:
   bool draw_info_gui(const std::string) override;
 #endif
   void generate_draw_geom() override;
+
 protected:
   float m_xf;
   float m_yf;
@@ -224,6 +229,7 @@ public:
       m_bcy(_bcy),
       m_bcz(_bcz)
     {}
+  ~BoundaryQuad() = default;
   BoundaryQuad* copy() const override { return new BoundaryQuad(*this); }
 
   void debug(std::ostream& os) const override;
@@ -234,7 +240,7 @@ public:
   void create() override { }
   ElementPacket<float> init_elements(const float) const override;
 #ifdef USE_IMGUI
-  bool draw_info_gui(std::string) override;
+  bool draw_info_gui(const std::string) override;
 #endif
   void generate_draw_geom() override;
 
@@ -266,6 +272,7 @@ public:
       m_sz(_sz),
       m_infile(_infile)
     {}
+  ~ExteriorFromFile() = default;
   ExteriorFromFile* copy() const override { return new ExteriorFromFile(*this); }
   
   void debug(std::ostream& os) const override;

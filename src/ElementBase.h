@@ -21,6 +21,7 @@
 #include <cassert>
 #include <optional>
 #include <variant>
+#include <algorithm>
 #include <cmath>
 
 

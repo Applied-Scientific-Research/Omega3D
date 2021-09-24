@@ -1,8 +1,8 @@
 /*
  * Body.cpp - class for an independent solid boundary
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Mark J Stock <markjstock@gmail.com>
+ * (c)2017-21 Applied Scientific Research, Inc.
+ *            Mark J Stock <markjstock@gmail.com>
  */
 
 #include "Body.h"
@@ -30,8 +30,7 @@ Body::Body(const double _x, const double _y, const double _z) :
   pos(Vec({{_x, _y, _z}})),
   vel(Vec({{0.0, 0.0, 0.0}})),
   apos(Vec({{0.0, 0.0, 0.0}})),
-  avel(Vec({{0.0, 0.0, 0.0}})),
-  vol(0.0)
+  avel(Vec({{0.0, 0.0, 0.0}}))
 {
   // time (t) is the only variable allowed in the equations
   func_vars.push_back({"t", &this_time});
