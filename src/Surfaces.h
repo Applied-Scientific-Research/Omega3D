@@ -385,10 +385,23 @@ public:
     }
   }
 
-  // add more nodes and panels to this collection
-  void add_new(const std::vector<S>&   _x,
-               const std::vector<Int>& _idx,
-               const std::vector<S>&   _val) {
+  // append nodes and panels to this collection
+  void add_new(const ElementPacket<float>& _in) {
+
+    // ensure that this packet really is Surfaces
+    assert(_in.idx.size() != 0 && "Input ElementPacket is not Surfaces");
+    assert(_in.ndim == 2 && "Input ElementPacket is not Surfaces");
+
+    // and that it has the right number of values per particle
+    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with inert Surfaces has nonzero val array");
+    else assert(_in.val.size()/Dimensions == _in.nelem && "Input ElementPacket with Surfaces has bad val array size");
+
+    // must explicitly call the method in the base class first - this pulls out positions and strengths
+    //ElementBase<S>::add_new(_in);
+
+    const std::vector<S>&   _x = _in.x;
+    const std::vector<Int>& _idx = _in.idx;
+    const std::vector<S>&   _val = _in.val;
 
     // remember old sizes of nodes and element arrays
     const size_t nnold = this->n;
@@ -396,8 +409,9 @@ public:
 
     // make sure input arrays are correctly-sized
     assert(_idx.size() % Dimensions == 0 && "Index array is not an even multiple of dimensions");
-    const size_t nsurfs = _idx.size() / Dimensions;
+    //const size_t nsurfs = _idx.size() / Dimensions;
     // if no surfs, quit out now
+    const size_t nsurfs = _in.nelem;
     if (nsurfs == 0) return;
 
     assert(_val.size() % nsurfs == 0 && "Value array is not an even multiple of panel count");
@@ -523,22 +537,6 @@ public:
     if (this->M == bodybound) {
       set_geom_center();
     }
-  }
-
-  // append nodes and panels to this collection
-  void add_new(const ElementPacket<float>& _in) {
-
-    // ensure that this packet really is Surfaces
-    assert(_in.idx.size() != 0 && "Input ElementPacket is not Surfaces");
-    assert(_in.ndim == 2 && "Input ElementPacket is not Surfaces");
-
-    // and that it has the right number of values per particle
-    if (this->E == inert) assert(_in.val.size() == 0 && "Input ElementPacket with inert Surfaces has nonzero val array");
-    else assert(_in.val.size()/Dimensions == _in.nelem && "Input ElementPacket with Surfaces has bad val array size");
-
-    // must explicitly call the method in the base class first - this pulls out positions and strengths
-    //ElementBase<S>::add_new(_in);
-    (void) add_new(_in.x, _in.idx, _in.val);
   }
 
 
