@@ -338,6 +338,9 @@ SolidRect::init_elements(const float _ips) const {
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
   epack.nelem = epack.val.size()/Dimensions;
 
+  // reverse the normals by resetting the node order
+  if (not m_external) epack.reorient();
+
   return epack;
 }
 
@@ -405,12 +408,15 @@ bool SolidRect::draw_info_gui(const std::string _action) {
   bool add = false;
   
   // create a solid rectangle
-  ImGui::InputFloat3("center", xc);
+  ImGui::Checkbox("Object is in flow", &m_external);
+  ImGui::SameLine();
+  ShowHelpMarker("Keep checked if object is immersed in flow,\nuncheck if flow is inside of object");
+  ImGui::InputFloat3("lower corner", xc);
   ImGui::InputFloat3("side lengths", xs);
   //ImGui::SliderFloat("orientation", &rotdeg, 0.0f, 89.0f, "%.0f");
   //ImGui::SliderAngle("orientation", &rotdeg);
   ImGui::Spacing();
-  ImGui::TextWrapped("This feature will add a solid rectangular body centered at the given coordinates");
+  ImGui::TextWrapped("This feature will add a solid rectangular body with lower corner at the given coordinates and extending in the positive directions by the side lengths.");
   ImGui::Spacing();
   if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];

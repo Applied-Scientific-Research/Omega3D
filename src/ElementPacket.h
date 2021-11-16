@@ -136,6 +136,23 @@ public:
     }
   }
 
+  // flip the normals by juggling the node index order
+  void reorient() {
+    if (ndim == 0) {
+      // points can't be reversed
+      assert(false && "Trying to reorient a point in 3D");
+    } else if (ndim == 1) {
+      // lines can, but we won't here
+      assert(false && "Trying to reorient a line in 3D");
+    } else if (ndim == 2) {
+      // here is where it is important
+      const size_t nidxper = idx.size() / nelem;
+      for (size_t ielem=0; ielem<nelem; ++ielem) {
+        std::reverse(idx.begin()+ielem*nidxper, idx.begin()+(ielem+1)*nidxper-1);
+      }
+    }
+  }
+
   // output the nodes (for debugging only)
   void print() {
     for(size_t i=0; i<x.size()/Dimensions; i++) {
