@@ -242,6 +242,9 @@ Ovoid::init_elements(const float _ips) const {
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
   epack.nelem = epack.val.size()/Dimensions;
 
+  // reverse the normals by resetting the node order
+  if (not m_external) epack.reorient();
+
   return epack;
 }
 
@@ -307,6 +310,9 @@ bool Ovoid::draw_info_gui(const std::string _action) {
   bool add = false;
 
   // create a solid sphere
+  ImGui::Checkbox("Object is in flow", &m_external);
+  ImGui::SameLine();
+  ShowHelpMarker("Keep checked if object is immersed in flow,\nuncheck if flow is inside of object");
   ImGui::InputFloat3("center", xc);
   ImGui::SliderFloat("diameter", &scale, 0.01f, 10.0f, "%.4f", 2.0);
   ImGui::Spacing();
@@ -466,6 +472,9 @@ SolidDisk::init_elements(const float _ips) const {
   std::fill(epack.val.begin(), epack.val.end(), 0.0);
   epack.nelem = epack.val.size()/Dimensions;
 
+  // reverse the normals by resetting the node order
+  if (not m_external) epack.reorient();
+
   return epack;
 }
 
@@ -528,6 +537,9 @@ bool SolidDisk::draw_info_gui(const std::string _action) {
   bool add = false;
   
   // create a solid rectangle
+  ImGui::Checkbox("Object is in flow", &m_external);
+  ImGui::SameLine();
+  ShowHelpMarker("Keep checked if object is immersed in flow,\nuncheck if flow is inside of object");
   ImGui::InputFloat3("origin", xc);
   ImGui::InputFloat3("end point", xf);
   ImGui::InputFloat("radius", &rad);
