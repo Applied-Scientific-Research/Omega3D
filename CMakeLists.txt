@@ -20,6 +20,7 @@ SET (USE_OGL_COMPUTE FALSE CACHE BOOL "Use OpenGL compute shaders")
 SET (USE_PLUGIN_AVRM FALSE CACHE BOOL "Enable adaptive VRM plugin")
 SET (USE_PLUGIN_SIMPLEX FALSE CACHE BOOL "Enable simplex solver plugin for VRM")
 SET (USE_EXTERNAL_SUM FALSE CACHE BOOL "Enable external velocity solver")
+#SET (USE_HO_HYBRID FALSE CACHE BOOL "Enable external hybrid solver, if any")
 SET (DO_PROFILE FALSE CACHE BOOL "Enable profiling via gprof")
 SET (CMAKE_VERBOSE_MAKEFILE on)
 SET (CMAKE_EXPORT_COMPILE_COMMANDS on)
@@ -142,7 +143,7 @@ ELSEIF( APPLE )
   #SET( FRAMEWORK_LIBS glfw3 )
   FIND_LIBRARY( FRAMEWORK_LIBS NAMES glfw3 glfw libglfw PATHS /usr/local/lib)
 
-  # turn OFF compute shaders
+  # turn OFF compute shaders because Apple doesn't support them
   SET( USE_OGL_COMPUTE FALSE )
 
   INCLUDE_DIRECTORIES ( "/usr/local/include" )
@@ -247,12 +248,23 @@ IF( USE_EXTERNAL_SUM )
   SET (CPREPROCDEFS ${CPREPROCDEFS} -DEXTERNAL_VEL_SOLVE)
   SET (FASTSUM_LIBS "libfastsumm.a" CACHE STRING "Static library exposing velocity summation function call" )
   #FIND_LIBRARY( FASTSUM_LIBS NAMES Vc PATHS "${VC_ROOT}/lib" )
+  SET( EXTERNAL_LIBS ${FASTSUM_LIBS} )
 ELSE()
   SET (FASTSUM_LIBS "")
+  SET( EXTERNAL_LIBS ${FASTSUM_LIBS} )
 ENDIF()
-#SET( EXTERNAL_LIBS ${FASTSUM_LIBS} gfortran )
-SET( EXTERNAL_LIBS ${FASTSUM_LIBS} )
 
+# Enable submodules
+IF( USE_HO_HYBRID )
+  #ADD_SUBDIRECTORY( extern/HO-3D )
+  #INCLUDE_DIRECTORIES( "extern/HO-3D/src" )
+  #INCLUDE_DIRECTORIES ( "${EIGEN_ROOT}" )
+  #INCLUDE_DIRECTORIES ( "${AMGCL_ROOT}" )
+  #SET( EXTERNAL_LIBS ${EXTERNAL_LIBS} HO-3D )
+  #SET (CPREPROCDEFS ${CPREPROCDEFS} -DHO-3D)
+ENDIF()
+
+# Define files and targets
 
 ADD_DEFINITIONS (${CPREPROCDEFS})
 
@@ -261,6 +273,8 @@ INCLUDE_DIRECTORIES( "lib" )
 INCLUDE_DIRECTORIES( "lib/glad" )
 # For some of the internal libraries who need nanoflann
 INCLUDE_DIRECTORIES( "lib/nanoflann" )
+# For some of the internal libraries who need nnls 
+INCLUDE_DIRECTORIES( "lib/eigen-nnls" )
 INCLUDE_DIRECTORIES( "src" )
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
@@ -312,5 +326,5 @@ IF( BUILD_BATCH )
 ENDIF()
 
 INSTALL( DIRECTORY 3Dexamples/ DESTINATION 3Dexamples )
-#INSTALL( FILES LICENSE DESTINATION LICENSE )
+INSTALL( FILES LICENSE DESTINATION LICENSE )
 
