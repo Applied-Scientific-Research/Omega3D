@@ -2,7 +2,7 @@
  * main_gui.cpp - Driver code for Omega3D + ImGui + Vc vortex particle method
  *                and boundary element method solver, GUI version
  *
- * (c)2017-21 Applied Scientific Research, Inc.
+ * (c)2017-22 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  *
@@ -259,6 +259,15 @@ int main(int argc, char const *argv[]) {
           ElementPacket<float> newpacket = mf->init_elements(rparams.tracer_scale*sim.get_ips());
           const move_t newMoveType = (mf->get_is_lagrangian() ? lagrangian : fixed);
           sim.add_elements(newpacket, inert, newMoveType, mf->get_body() );
+        }
+      }
+
+      // initialize hybrid features
+      for (auto const& bf : bfeatures) {
+        if (bf->is_enabled()) {
+          // get interior elems and then boundaries
+          // this is a noop if hybrid is not enabled
+          //sim.add_hybrid(bf->init_hybrid(1.0), bf->get_body() );
         }
       }
 

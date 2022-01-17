@@ -2,7 +2,7 @@
  * main_batch.cpp - Driver code for Omega3D + Vc vortex particle method
  *                  and boundary element method solver, batch version
  *
- * (c)2017-21 Applied Scientific Research, Inc.
+ * (c)2017-22 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  *
@@ -96,7 +96,14 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-  // initialize hybrid features (when ready)
+  // initialize hybrid features
+  for (auto const& bf : bfeatures) {
+    if (bf->is_enabled()) {
+      // get interior elems and then boundaries
+      // this is a noop if hybrid is not enabled
+      //sim.add_hybrid(bf->init_hybrid(1.0), bf->get_body() );
+    }
+  }
 
   sim.set_initialized();
 
@@ -105,7 +112,8 @@ int main(int argc, char const *argv[]) {
 
   if (sim_err_msg.empty()) {
 
-    // nothing here
+    // take the 0 step (find state at t=0)
+    sim.first_step();
 
   } else {
 
