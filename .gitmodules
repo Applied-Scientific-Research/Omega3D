@@ -1,0 +1,3 @@
+[submodule "extern/HO-3D"]
+	path = extern/HO-3D
+	url = git@github.com:Applied-Scientific-Research/HO-3D.git
