@@ -281,10 +281,8 @@ public:
   //
   // generate and save a measure of the area of each *solution* node
   //
-#ifdef HOFORTRAN
-  void set_soln_areas() {
-#elif HOCXX
-  void set_soln_areas(HO_2D& solver) {
+#ifdef HO3D
+  void set_soln_areas(HO3D& solver) {
 #endif
 
     // return if we do not need to recalculate these (vdelta changes)
