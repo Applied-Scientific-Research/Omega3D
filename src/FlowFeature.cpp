@@ -401,7 +401,7 @@ bool VortexBlob::draw_info_gui(const std::string _action, const float _ips) {
   ImGui::SliderFloat("radius", &m_rad, _ips, 10.0f*_ips, "%.4f");
   ImGui::SliderFloat("softness", &m_softness, _ips, m_rad, "%.4f");
   ImGui::Spacing();
-  ImGui::TextWrapped("This feature will add about %f particles", guess_n);
+  ImGui::TextWrapped("This feature will add about %d particles", (int)guess_n);
   ImGui::Spacing();
   if (ImGui::Button(buttonText.c_str())) { add = true; }
   m_x = xc[0];
@@ -921,7 +921,7 @@ bool SingularRing::draw_info_gui(const std::string _action, const float _ips) {
   ImGui::SliderFloat("circulation", &m_circ, 0.001f, 10.0f, "%.3f");
   ImGui::SliderFloat("radius", &m_majrad, 3.0f*_ips, 10.0f, "%.3f");
   ImGui::Spacing();
-  ImGui::TextWrapped("This feature will add about %f particles", guess_n);
+  ImGui::TextWrapped("This feature will add about %d particles", (int)guess_n);
   ImGui::Spacing();
   if (ImGui::Button("Add singular vortex ring")) { add = true; }
   m_x = xc[0];
@@ -1101,7 +1101,7 @@ void ThickRing::generate_draw_geom() {
 bool ThickRing::draw_info_gui(const std::string _action, const float _ips) {
   float xc[3] = {m_x, m_y, m_z};
   float vstr[3] = {m_nx, m_ny, m_nz};
-  float guess_n = (1 + (2.0f * 3.1416f * m_majrad / _ips) * std::pow(m_minrad/_ips, 2));
+  float guess_n = (1 + (2.0f * M_PI * m_majrad / _ips) * std::pow(m_minrad/_ips, 2));
   std::string buttonText = _action+" thick vortex ring";
   bool add = false;
 
@@ -1111,7 +1111,7 @@ bool ThickRing::draw_info_gui(const std::string _action, const float _ips) {
   ImGui::SliderFloat("radius", &m_majrad, 3.0f*_ips, 10.0f, "%.3f");
   ImGui::SliderFloat("thickness", &m_minrad, _ips, 10.0f*_ips, "%.4f");
   ImGui::Spacing();
-  ImGui::TextWrapped("This feature will add about %f particles", guess_n);
+  ImGui::TextWrapped("This feature will add about %d particles", (int)guess_n);
   ImGui::Spacing();
   if (ImGui::Button("Add thick vortex ring")) { add = true; }
   m_x = xc[0];
