@@ -1,7 +1,7 @@
 /*
  * ElementPacket.h - Pass around fundamental geometry
  *
- * (c)2018-21 Applied Scientific Research, Inc.
+ * (c)2018-22 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *            Blake B Hillier <blakehillier@mac.com>
  *
@@ -145,11 +145,14 @@ public:
       // lines can, but we won't here
       assert(false && "Trying to reorient a line in 3D");
     } else if (ndim == 2) {
-      // here is where it is important
+      // here is where it is important - only works on non-high-order surfaces
       const size_t nidxper = idx.size() / nelem;
       for (size_t ielem=0; ielem<nelem; ++ielem) {
         std::reverse(idx.begin()+ielem*nidxper, idx.begin()+(ielem+1)*nidxper-1);
       }
+    } else if (ndim == 3) {
+      // volumes can, but we won't
+      assert(false && "Trying to reorient a volume in 3D");
     }
   }
 
@@ -165,7 +168,7 @@ public:
   std::vector<Int> idx;
   std::vector<S> val;
   size_t nelem;
-  uint8_t ndim;	// 0=points, 1=surfaces, 2=volumes for 2D
-                // 0=points, 1=lines, 2=surfaces, 3=volumes for 3D
+  uint8_t ndim;	// in 2D this means: 0=points, 1=surfaces, 2=volumes
+                // in 3D this means: 0=points, 1=lines, 2=surfaces, 3=volumes
 };
 
