@@ -28,7 +28,7 @@
 #include "Reflect.h"
 
 // versions of the HO solver
-#ifdef HO-3D
+#ifdef HO3D
 #include "HO-3D.hpp"
 #endif
 
@@ -60,7 +60,7 @@ public:
       inlet_s(Surfaces<S>(ElementPacket<float>((uint8_t)1), _e, _m, _bp)),
       outlet_s(Surfaces<S>(ElementPacket<float>((uint8_t)1), _e, _m, _bp))
       //reduced_p(Points<S>(ElementPacket<S>((uint8_t)0), _e, _m, _bp, 0.0))
-#ifdef HO-3D
+#ifdef HO3D
       ,solver()
 #endif
   { std::cout << "  in HOVolumes()" << std::endl; }
@@ -78,7 +78,7 @@ public:
   const Points<S>& get_vol_nodes(const S _time) const { return soln_p; }
   Points<S>&       get_vol_nodes(const S _time)       { return soln_p; }
 
-#ifdef HO-3D
+#ifdef HO3D
   HO_2D& get_ho_solver() { return solver; }
 #endif
 
@@ -301,7 +301,7 @@ public:
 
     // get an array of weights from the HO solver for a HO element
     //std::vector<double> wgt(nper);
-#ifdef HO-3D
+#ifdef HO3D
     solver.getsolnareas_d((int32_t)hoarea.size(), hoarea.data());
 #endif
     //std::cout << "  first row of weight mask is ";
@@ -463,8 +463,8 @@ protected:
   Surfaces<S>           outlet_s;	// outlet boundary surface (from msh file)
 
   // the HO Solver
-#ifdef HO-3D
-  HO-3D solver;
+#ifdef HO3D
+  HO3D solver;
 #endif
 
 private:

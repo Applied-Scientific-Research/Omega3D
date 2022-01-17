@@ -20,7 +20,7 @@ SET (USE_OGL_COMPUTE FALSE CACHE BOOL "Use OpenGL compute shaders")
 SET (USE_PLUGIN_AVRM FALSE CACHE BOOL "Enable adaptive VRM plugin")
 SET (USE_PLUGIN_SIMPLEX FALSE CACHE BOOL "Enable simplex solver plugin for VRM")
 SET (USE_EXTERNAL_SUM FALSE CACHE BOOL "Enable external velocity solver")
-#SET (USE_HO_HYBRID FALSE CACHE BOOL "Enable external hybrid solver, if any")
+SET (USE_HO_HYBRID FALSE CACHE BOOL "Enable external hybrid solver, if any")
 SET (DO_PROFILE FALSE CACHE BOOL "Enable profiling via gprof")
 SET (CMAKE_VERBOSE_MAKEFILE on)
 SET (CMAKE_EXPORT_COMPILE_COMMANDS on)
@@ -245,6 +245,7 @@ ENDIF()
 
 # external fast summation routine
 IF( USE_EXTERNAL_SUM )
+  # this is for the C++-based onbody solver
   SET (CPREPROCDEFS ${CPREPROCDEFS} -DEXTERNAL_VEL_SOLVE)
   SET (FASTSUM_LIBS "libfastsumm.a" CACHE STRING "Static library exposing velocity summation function call" )
   #FIND_LIBRARY( FASTSUM_LIBS NAMES Vc PATHS "${VC_ROOT}/lib" )
@@ -256,12 +257,12 @@ ENDIF()
 
 # Enable submodules
 IF( USE_HO_HYBRID )
-  #ADD_SUBDIRECTORY( extern/HO-3D )
-  #INCLUDE_DIRECTORIES( "extern/HO-3D/src" )
-  #INCLUDE_DIRECTORIES ( "${EIGEN_ROOT}" )
-  #INCLUDE_DIRECTORIES ( "${AMGCL_ROOT}" )
-  #SET( EXTERNAL_LIBS ${EXTERNAL_LIBS} HO-3D )
-  #SET (CPREPROCDEFS ${CPREPROCDEFS} -DHO-3D)
+  ADD_SUBDIRECTORY( extern/HO-3D )
+  INCLUDE_DIRECTORIES( "extern/HO-3D/src" )
+  INCLUDE_DIRECTORIES ( "${EIGEN_ROOT}" )
+  INCLUDE_DIRECTORIES ( "${AMGCL_ROOT}" )
+  SET( EXTERNAL_LIBS ${EXTERNAL_LIBS} HO-3D )
+  SET (CPREPROCDEFS ${CPREPROCDEFS} -DHO3D)
 ENDIF()
 
 # Define files and targets
