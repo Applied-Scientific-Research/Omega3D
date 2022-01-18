@@ -1098,6 +1098,19 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
   printf("    panels_affect_points: [%.4f] seconds at %.3f GFlop/s\n", (float)elapsed_seconds.count(), gflops);
 }
 
+//
+// Vc and x86 versions of Volumes affecting Points/Particles
+//
+template <class S, class A>
+void bricks_affect_points (const Volumes<S>& src, Points<S>& targ, const ResultsType& restype, const ExecEnv& env) {
+  std::cout << "    3_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert (false && "Volume elements cannot affect points yet.");
+  assert (!restype.compute_psi() && "Volume elements cannot compute streamfunction yet.");
+  assert (!restype.compute_grad() && "Volume elements cannot compute velocity gradients yet.");
+}
+
+
+// ==========================================================================================================
 
 //
 // Vc and x86 versions of Points/Particles affecting Panels/Surfaces
@@ -1245,6 +1258,92 @@ void panels_affect_panels (const Surfaces<S>& src, Surfaces<S>& targ, const Resu
 }
 
 
+template <class S, class A>
+void bricks_affect_panels (const Volumes<S>& src, Surfaces<S>& targ, const ResultsType& restype, const ExecEnv& env) {
+  std::cout << "    3_2 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert (false && "Volume elements cannot affect panels yet.");
+  assert (!restype.compute_psi() && "Volume elements cannot compute streamfunction yet.");
+  assert (!restype.compute_grad() && "Volume elements cannot compute velocity gradients yet.");
+}
+
+
+// ==========================================================================================================
+
+
+template <class S, class A>
+void points_affect_bricks (const Points<S>& src, Volumes<S>& targ, const ResultsType& restype, const ExecEnv& env) {
+  std::cout << "    in ptvol with" << env.to_string() << std::endl;
+  std::cout << "    0_3 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert (false && "Points cannot affect Volumes yet.");
+  assert (!restype.compute_psi() && "Point elements cannot compute streamfunction yet.");
+  assert (!restype.compute_grad() && "Point elements cannot compute velocity gradients yet.");
+
+  // generate temporary collocation points as Points
+  ElementPacket<float> nodesaspts = targ.represent_nodes_as_particles(true);
+  Points<S> volsaspts(nodesaspts, inert, fixed, nullptr, 0.0f);
+  // don't use this for hybrid
+  //ElementPacket<float> nodesaspts = targ.represent_nodes_as_particles(false);
+  //Points<S> volsaspts(nodesaspts, active, fixed, nullptr, 0.018f);
+  //ElementPacket<float> nodesaspts = targ.represent_nodes_as_particles(false);
+  //Points<S> volsaspts(nodesaspts, active, fixed, nullptr, targ.get_representative_size(1.0));
+
+  // run the calculation
+  points_affect_points<S,A>(src, volsaspts, restype, env);
+
+  // and add the velocities to the real target
+  const std::array<Vector<S>,Dimensions>& fromvel = volsaspts.get_vel();
+  std::array<Vector<S>,Dimensions>& tovel   = targ.get_vel();
+  for (size_t i=0; i<Dimensions; ++i) {
+    std::transform(tovel[i].begin( ), tovel[i].end( ), fromvel[i].begin( ), tovel[i].begin( ), std::plus<S>( ));
+  }
+
+  // and the vorticity also
+  if (restype.compute_vort()) {
+    const std::array<Vector<S>,Dimensions>& fromvort = volsaspts.get_vort();
+    std::array<Vector<S>,Dimensions>& tovort         = targ.get_vort();
+    for (size_t i=0; i<Dimensions; ++i) {
+      std::transform(tovort[i].begin( ), tovort[i].end( ), fromvort[i].begin( ), tovort[i].begin( ), std::plus<S>( ));
+    }
+  }
+
+  // and the vel grads - if need be
+}
+
+template <class S, class A>
+void panels_affect_bricks (const Surfaces<S>& src, Volumes<S>& targ, const ResultsType& soln, const ExecEnv& env) {
+  std::cout << "    in panvol with" << env.to_string() << std::endl;
+  std::cout << "    2_3 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert (!soln.compute_psi() && "Surface elements cannot compute streamfunction yet.");
+  assert (!soln.compute_grad() && "Surface elements cannot compute velocity gradients yet.");
+
+  // generate temporary collocation points as Points
+  ElementPacket<float> nodesaspts = targ.represent_nodes_as_particles(true);
+  Points<S> volsaspts(nodesaspts, inert, fixed, nullptr, 0.0f);
+
+  // run the calculation
+  panels_affect_points<S,A>(src, volsaspts, soln, env);
+
+  // and add the velocities to the real target
+  const std::array<Vector<S>,Dimensions>& fromvel = volsaspts.get_vel();
+  std::array<Vector<S>,Dimensions>& tovel   = targ.get_vel();
+  for (size_t i=0; i<Dimensions; ++i) {
+    std::transform(tovel[i].begin( ), tovel[i].end( ), fromvel[i].begin( ), tovel[i].begin( ), std::plus<S>( ));
+  }
+
+  // and the vel grads - if need be
+}
+
+template <class S, class A>
+void bricks_affect_bricks (const Volumes<S>& src, Volumes<S>& targ, const ResultsType& restype, const ExecEnv& env) {
+  std::cout << "    3_3 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  assert (false && "Volume elements cannot affect themselves yet.");
+  assert (!restype.compute_psi() && "Volume elements cannot compute streamfunction yet.");
+  assert (!restype.compute_grad() && "Volume elements cannot compute velocity gradients yet.");
+}
+
+
+// ==========================================================================================================
+
 //
 // helper struct for dispatching through a variant
 //
@@ -1253,8 +1352,13 @@ struct InfluenceVisitor {
   // source collection, target collection, solution type, execution environment
   void operator()(const Points<S>& src,   Points<S>& targ)   { points_affect_points<S,A>(src, targ, restype, env); }
   void operator()(const Surfaces<S>& src, Points<S>& targ)   { panels_affect_points<S,A>(src, targ, restype, env); }
+  void operator()(const Volumes<S>& src,  Points<S>& targ)   { bricks_affect_points<S,A>(src, targ, restype, env); }
   void operator()(const Points<S>& src,   Surfaces<S>& targ) { points_affect_panels<S,A>(src, targ, restype, env); }
   void operator()(const Surfaces<S>& src, Surfaces<S>& targ) { panels_affect_panels<S,A>(src, targ, restype, env); }
+  void operator()(const Volumes<S>& src,  Surfaces<S>& targ) { bricks_affect_panels<S,A>(src, targ, restype, env); }
+  void operator()(const Points<S>& src,   Volumes<S>& targ)  { points_affect_bricks<S,A>(src, targ, restype, env); }
+  void operator()(const Surfaces<S>& src, Volumes<S>& targ)  { panels_affect_bricks<S,A>(src, targ, restype, env); }
+  void operator()(const Volumes<S>& src,  Volumes<S>& targ)  { bricks_affect_bricks<S,A>(src, targ, restype, env); }
 
   ResultsType restype;
   ExecEnv env;

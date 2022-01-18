@@ -1,7 +1,7 @@
 /*
  * Convection.h - a class for forward integration of elements and their strengths
  *
- * (c)2017-21 Applied Scientific Research, Inc.
+ * (c)2017-22 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #include "Influence.h"
 #include "BEM.h"
 #include "BEMHelper.h"
+#include "InfluenceVort.h"
 #include "Reflect.h"
 #include "GuiHelper.h"
 #include "ExecEnv.h"
@@ -52,6 +53,9 @@ public:
       conv_env()
     {}
 
+  void find_vort( std::vector<Collection>&,
+                  std::vector<Collection>&,
+                  std::vector<Collection>&);
   void find_vels( const std::array<double,Dimensions>&,
                   std::vector<Collection>&,
                   std::vector<Collection>&,
@@ -123,6 +127,46 @@ private:
   // execution environment for velocity summations (not BEM)
   ExecEnv conv_env;
 };
+
+
+//
+// helper function to find vorticity at a given state
+//
+template <class S, class A, class I>
+void Convection<S,A,I>::find_vort(std::vector<Collection>&             _vort,
+                                  std::vector<Collection>&             _bdry,
+                                  std::vector<Collection>&             _targets) {
+
+  assert(false && "Convection::find_vort unsupported in 3D");
+
+  //if (_targets.size() > 0) std::cout << std::endl << "Solving for velocities" << std::endl;
+  //if (_targets.size() > 0) std::cout << std::endl;
+
+  // find the influence on every target collection that is Points
+  for (auto &targ : _targets) if (std::holds_alternative<Points<S>>(targ)) {
+    Points<S>& ptarg = std::get<Points<S>>(targ);
+
+    std::cout << "  Solving vorticity on" << to_string(targ) << std::endl;
+
+    // zero vels and vorticity
+    ptarg.zero_vels();
+
+    // accumulate from vorticity, but only from Points
+    for (auto &src : _vort) if (std::holds_alternative<Points<S>>(src)) {
+      Points<S>& psrc = std::get<Points<S>>(src);
+      points_affect_points_vorticity<S,A>(psrc, ptarg, conv_env);
+    }
+
+    // accumulate from reactive, but only from Points
+    for (auto &src : _bdry) if (std::holds_alternative<Points<S>>(src)) {
+      Points<S>& psrc = std::get<Points<S>>(src);
+      points_affect_points_vorticity<S,A>(psrc, ptarg, conv_env);
+    }
+
+    // finalize vels and vorticity by dividing by constant
+    ptarg.finalize_vels(std::array<double,Dimensions>({0.0,0.0}));
+  }
+}
 
 
 //

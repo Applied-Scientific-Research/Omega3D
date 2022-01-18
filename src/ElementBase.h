@@ -1,7 +1,7 @@
 /*
  * ElementBase.h - abstract class for arrays of any computational elements
  *
- * (c)2018-21 Applied Scientific Research, Inc.
+ * (c)2018-22 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -58,8 +58,8 @@ public:
   std::shared_ptr<Body>                   get_body_ptr()   { return B; }
   const std::array<Vector<S>,Dimensions>& get_pos() const  { return x; }
   std::array<Vector<S>,Dimensions>&       get_pos()        { return x; }
-  const std::array<Vector<S>,Dimensions>& get_str() const  { return *s; }
-  std::array<Vector<S>,Dimensions>&       get_str()        { return *s; }
+  const std::array<Vector<S>,numStrPerNode>& get_str() const  { return *s; }
+  std::array<Vector<S>,numStrPerNode>&       get_str()        { return *s; }
   const std::array<Vector<S>,Dimensions>& get_vel() const  { return u; }
   std::array<Vector<S>,Dimensions>&       get_vel()        { return u; }
 
@@ -68,6 +68,39 @@ public:
     // can't change this object, so return what we have
     return *w;
   }
+  std::array<Vector<S>,Dimensions>& get_vort() {
+    // allowed to change this object, to resize or create the Vector
+    if (w) {
+      // check size before returning
+      for (size_t d=0; d<Dimensions; d++) {
+        if ((*w)[d].size() != n) (*w)[d].resize(n);
+      }
+    } else {
+      // allocate and zero before returning
+      std::array<Vector<S>,Dimensions> new_vort;
+      for (size_t d=0; d<Dimensions; d++) {
+        new_vort[d].resize(n);
+        std::fill(new_vort[d].begin(), new_vort[d].end(), 0.0);
+      }
+      w = std::move(new_vort);
+    }
+    return *w;
+  }
+/*
+  void set_vort(Vector<S> _in) {
+    assert(_in.size() == n && "ERROR (ElementBase::set_vort) input vector length mismatch");
+    if (w) {
+      if (w->size() != _in.size()) w->resize(n);
+    } else {
+      // allocate and move
+      Vector<S> new_vort;
+      new_vort.resize(n);
+      w = std::move(new_vort);
+    }
+    *w = _in;
+    //std::cout << "Received vorticity on " << n << " nodes, starting with " << (*w)[0] << std::endl;
+  }
+*/
 
   const bool has_shear() const { return (bool)e; }
   const Vector<S>& get_shear() const {

@@ -1,8 +1,8 @@
 /*
  * Omega3D.h - Useful definitions for anywhere in the code
  *
- * (c)2018-20 Applied Scientific Research, Inc.
- *            Mark J Stock <markjstock@gmail.com>
+ * (c)2018-20,2 Applied Scientific Research, Inc.
+ *              Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,8 @@ const size_t numStrPerNode = 3;
 enum elem_t {
   active   = 1,  // active vorticity
   reactive = 2,  // active once strength is solved
-  inert    = 3   // does not affect flow
+  inert    = 3,  // does not affect flow
+  hybrid   = 4   // does not affect flow
 };
 
 // movement type

@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "Omega2D.h"
+#include "Omega3D.h"
 #include "VectorHelper.h"
 #include "Volumes.h"
 #include "Surfaces.h"
@@ -29,7 +29,7 @@
 
 // versions of the HO solver
 #ifdef HO3D
-#include "HO-3D.hpp"
+#include "HO_3D.hpp"
 #endif
 
 #include <iostream>
@@ -79,7 +79,7 @@ public:
   Points<S>&       get_vol_nodes(const S _time)       { return soln_p; }
 
 #ifdef HO3D
-  HO_2D& get_ho_solver() { return solver; }
+  HO_3D& get_ho_solver() { return solver; }
 #endif
 
   const bool have_inlet() const  { return (inlet_s.get_npanels()  > 0) ? true : false; }
@@ -282,7 +282,7 @@ public:
   // generate and save a measure of the area of each *solution* node
   //
 #ifdef HO3D
-  void set_soln_areas(HO3D& solver) {
+  void set_soln_areas(HO_3D& solver) {
 #endif
 
     // return if we do not need to recalculate these (vdelta changes)
@@ -373,9 +373,9 @@ public:
   // new particles have given vdelta core size
   // only generate new particles with strength greater than a threshold
   //
-  ElementPacket<float> get_equivalent_particles(const Vector<S>& _circ, const S _vd, const S _thresh) {
+  ElementPacket<float> get_equivalent_particles(const std::array<Vector<S>,Dimensions>& _circ, const S _vd, const S _thresh) {
 
-    assert(_circ.size() == soln_p.get_n() && "HOVolumes::get_equivalent_particles input vector size mismatch");
+    assert(_circ[0].size() == soln_p.get_n() && "HOVolumes::get_equivalent_particles input vector size mismatch");
 
     // prepare the data arrays for the element packet (there's an "idx" in Volumes)
     std::vector<float> _x;
@@ -387,13 +387,16 @@ public:
     const std::array<Vector<S>,Dimensions>& ptx = soln_p.get_pos();
 
     // loop over volume elements which have appreciable strength change
-    for (size_t i=0; i<soln_p.get_n(); ++i) if (std::fabs(_circ[i]) > _thresh) {
+    for (size_t i=0; i<soln_p.get_n(); ++i) if (std::fabs(_circ[0][i]) > _thresh) {	// FIX THIS
 
       // convert input _circ and underlying geometry into particles
       // just one per element for starters
       _x.push_back(ptx[0][i]);
       _x.push_back(ptx[1][i]);
-      _val.push_back(_circ[i]);
+      _x.push_back(ptx[2][i]);
+      _val.push_back(_circ[0][i]);
+      _val.push_back(_circ[1][i]);
+      _val.push_back(_circ[2][i]);
       thisn++;
 
       // use size of element and particle radius to ensure overlap
@@ -401,46 +404,6 @@ public:
 
     return ElementPacket<float>(_x, _idx, _val, thisn, (uint8_t)0);
   }
-/*
-  std::vector<S> represent_elems_as_particles(const S _offset, const S _vdelta) {
-
-    // how many elements?
-    const size_t num_pts = get_nelems();
-
-    // init the output vector (x, y, s, r)
-    std::vector<S> px(num_pts*4);
-
-    // get basis vectors
-    std::array<Vector<S>,2>& norm = b[1];
-
-    // the fluid is to the left walking from one point to the next
-    // so go CW around an external boundary starting at theta=0 (+x axis)
-
-    for (size_t i=0; i<num_pts; i++) {
-      Int id0 = idx[2*i];
-      Int id1 = idx[2*i+1];
-      // start at center of element
-      px[4*i+0] = 0.5 * (this->x[0][id1] + this->x[0][id0]);
-      px[4*i+1] = 0.5 * (this->x[1][id1] + this->x[1][id0]);
-      //std::cout << "  element center is " << px[4*i+0] << " " << px[4*i+1];
-      // push out a fixed distance
-      // this assumes properly resolved, vdelta and dt
-      px[4*i+0] += _offset * norm[0][i];
-      px[4*i+1] += _offset * norm[1][i];
-      // the element strength is the solved strength plus the boundary condition
-      float this_str = (*ps[0])[i];
-      // add on the (vortex) bc value here
-      if (this->E == reactive) this_str += (*bc[0])[i];
-      // complete the element with a strength
-      px[4*i+2] = this_str * area[i];
-      // and the core size
-      px[4*i+3] = _vdelta;
-      //std::cout << "  new part is " << px[4*i+0] << " " << px[4*i+1] << " " << px[4*i+2] << " " << px[4*i+3] << std::endl;
-    }
-
-    return px;
-  }
-*/
 
 protected:
   // ElementBase.h has x, s, u, ux on the *nodes*
@@ -462,7 +425,7 @@ protected:
 
   // the HO Solver
 #ifdef HO3D
-  HO3D solver;
+  HO_3D solver;
 #endif
 
 private:

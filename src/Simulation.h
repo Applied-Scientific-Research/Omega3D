@@ -1,8 +1,8 @@
 /*
  * Simulation.h - a class to control a 3D vortex particle sim
  *
- * (c)2017-20 Applied Scientific Research, Inc.
- *            Mark J Stock <markjstock@gmail.com>
+ * (c)2017-20,2 Applied Scientific Research, Inc.
+ *              Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,6 +27,10 @@
 #include "BEM.h"
 #include "Convection.h"
 #include "Diffusion.h"
+#ifdef HO3D
+#include "HOVolumes.h"
+#include "Hybrid.h"
+#endif
 #include "ElementPacket.h"
 #include "StatusFile.h"
 
@@ -101,6 +105,7 @@ public:
   // receive and add a set of elements
   void add_elements(const ElementPacket<float>, const elem_t, const move_t, std::shared_ptr<Body>);
   void file_elements(std::vector<Collection>&, const ElementPacket<float>, const elem_t, const move_t, std::shared_ptr<Body>);
+  void add_hybrid(const std::vector<ElementPacket<float>>, std::shared_ptr<Body>);
 
   // access body list
   void add_body(std::shared_ptr<Body>);
@@ -131,6 +136,7 @@ public:
   std::string check_simulation();
   bool do_any_bodies_move();
   bool any_nonzero_bcs();
+  void conserve_iolet_volume();
   bool test_for_new_results();
   std::vector<std::string> write_vtk(const int _index = -1,
                                      const bool _do_bdry = true,
@@ -185,6 +191,11 @@ private:
   // Object with all of the non-reactive, non-active (inert) points
   std::vector<Collection> fldpt;	// tracers and field points
 
+#ifdef HO3D
+  // Object with all of the near-body, Eulerian solution regions
+  std::vector<HOVolumes<STORE>> euler;	// hybrid/euler regions
+#endif
+
   // The need to solve for the unknown strengths of reactive elements inside both the
   //   diffusion and convection steps necessitates a BEM object here
   BEM<STORE,Int> bem;
@@ -200,6 +211,13 @@ private:
   //   also copies of the panels, which will be recreated for each step, and solutions to unknowns
   // Note that with Vc, the storage and accumulator classes have to be the same
   Convection<STORE,ACCUM,Int> conv;
+
+#ifdef HO3D
+  // Hybrid class controls data exchange to and from an external Euler solver
+  //   to be used for near-body regions, and routines to affect existing vortex
+  //   particles from grid-based vorticity
+  Hybrid<STORE,ACCUM,Int> hybr;
+#endif
 
   // status file
   StatusFile sf;

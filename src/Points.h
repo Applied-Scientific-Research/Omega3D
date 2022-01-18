@@ -849,8 +849,8 @@ public:
   }
 
   std::string write_vtk(const size_t _index, const size_t _frameno, const double _time) {
-    assert(this->n > 0 && "Inside write_vtk with no points");
-  
+    assert(this->n > 0 && "Inside Points::write_vtk with no points");
+
     const bool asbase64 = true;
 
     bool has_radii = true;
@@ -861,12 +861,12 @@ public:
       has_radii = false;
       prefix = "fldpt_";
     }
-  
+
     // generate file name
     std::stringstream vtkfn;
     vtkfn << prefix << std::setfill('0') << std::setw(2) << _index << "_" << std::setw(5) << _frameno << ".vtu";
     VtkXmlWriter ptsWriter = VtkXmlWriter(vtkfn.str(), asbase64);
-  
+
     // include simulation time here
     ptsWriter.addElement("FieldData");
     {
@@ -876,18 +876,17 @@ public:
       ptsWriter.addElement("DataArray", attribs);
       Vector<double> time_vec = {_time};
       ptsWriter.writeDataArray(time_vec);
-      // DataArray
       ptsWriter.closeElement();
     }
     // FieldData
     ptsWriter.closeElement();
-  
+
     {
       std::map<std::string, std::string> attribs = {{"NumberOfPoints", std::to_string(this->n).c_str()},
                                                     {"NumberOfCells", std::to_string(this->n).c_str()}};
       ptsWriter.addElement("Piece", attribs);
     }
-    
+
     ptsWriter.addElement("Points");
     {
       std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
@@ -896,14 +895,13 @@ public:
       ptsWriter.addElement("DataArray", attribs);
       Vector<float> pos = ptsWriter.unpackArray(this->x);
       ptsWriter.writeDataArray(pos);
-      // DataArray
       ptsWriter.closeElement();
     }
     // Points
     ptsWriter.closeElement();
-  
+
     ptsWriter.addElement("Cells");
-    
+
     // https://discourse.paraview.org/t/cannot-open-vtu-files-with-paraview-5-8/3759
     // apparently the Vtk format documents indicate that connectivities and offsets
     //   must be in Int32, not UIntAnything. Okay...
@@ -917,7 +915,7 @@ public:
       // DataArray
       ptsWriter.closeElement();
     }
-  
+
     {
       std::map<std::string, std::string> attribs = {{"Name", "offsets"},
                                                     {"type", "Int32"}};
@@ -928,7 +926,7 @@ public:
       // DataArray
       ptsWriter.closeElement();
     }
-  
+
     // except these, they can be chars
     {
       std::map<std::string, std::string> attribs = {{"Name", "types"},
@@ -942,7 +940,7 @@ public:
     }
     // Cells
     ptsWriter.closeElement();
-  
+
     {
       std::map<std::string, std::string> attribs = {{"Vectors", "velocity"}};
 
@@ -957,7 +955,7 @@ public:
 
       ptsWriter.addElement("PointData", attribs);
     }
-  
+
     if (has_strengths) {
       std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
                                                     {"Name", "circulation"},
@@ -1006,7 +1004,7 @@ public:
 
     // Point Data 
     ptsWriter.closeElement();
-  
+
     // here's the problem: ParaView's VTK/XML reader is not able to read "raw" bytestreams
     // it parses each character and inevitably sees a > or <, so complains about mismatched
     //   tags, and doesn't seem to point to the right place
@@ -1030,8 +1028,8 @@ public:
     printer.PushText( " " );
     printer.CloseElement();	// AppendedData
   */
-  
-    // Piece 
+
+    // Piece
     ptsWriter.closeElement();
     ptsWriter.finish();
     std::cout << "Wrote " << this->n << " points to " << vtkfn.str() << std::endl;

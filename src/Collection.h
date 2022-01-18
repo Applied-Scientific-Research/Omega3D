@@ -1,8 +1,8 @@
 /*
  * Collection.h - definition of variant type for element collections
  *
- * (c)2018-9 Applied Scientific Research, Inc.
- *           Mark J Stock <markjstock@gmail.com>
+ * (c)2018-9,22 Applied Scientific Research, Inc.
+ *              Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,12 +22,14 @@
 
 #include "Points.h"
 #include "Surfaces.h"
+#include "Volumes.h"
 
 #include <variant>
 
 // alias for any type of collection of elements
-// eventually will have Lines<float> and Volumes<float> here
+// eventually will have Lines<float>
 
 using Collection = std::variant<Points<float>,
-                                Surfaces<float>>;
+                                Surfaces<float>,
+                                Volumes<float>>;
 

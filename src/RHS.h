@@ -1,8 +1,8 @@
 /*
  * RHS.h - Non-class velocity-to-right-hand-side calculations
  *
- * (c)2017-9 Applied Scientific Research, Inc.
- *           Mark J Stock <markjstock@gmail.com>
+ * (c)2017-9,22 Applied Scientific Research, Inc.
+ *              Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -122,6 +122,19 @@ std::vector<S> vels_to_rhs_panels (Surfaces<S> const& targ) {
   return rhs;
 }
 
+// No need to return anything because brick elems currently cannot be reactive
+template <class S>
+std::vector<S> vels_to_rhs_elems (Volumes<S> const& targ) {
+  std::cout << "    NOT converting vels to RHS vector for " << targ.to_string() << std::endl;
+
+  // size the return vector
+  //size_t ntarg  = targ.get_nelems();
+  std::vector<S> rhs;
+  rhs.resize(0);
+
+  return rhs;
+}
+
 
 // helper struct for dispatching through a variant
 template <class S>
@@ -129,5 +142,6 @@ struct RHSVisitor {
   // source collection, target collection
   std::vector<S> operator()(Points<S> const& targ)   { return vels_to_rhs_points<S>(targ); } 
   std::vector<S> operator()(Surfaces<S> const& targ) { return vels_to_rhs_panels<S>(targ); } 
+  std::vector<S> operator()(Volumes<S> const& targ)  { return vels_to_rhs_elems<S>(targ); } 
 };
 

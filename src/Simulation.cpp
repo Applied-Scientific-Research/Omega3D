@@ -1,7 +1,7 @@
 /*
  * Simulation.cpp - a class to control a 3D vortex particle sim
  *
- * (c)2017-21 Applied Scientific Research, Inc.
+ * (c)2017-22 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -45,9 +45,15 @@ Simulation::Simulation()
     vort(),
     bdry(),
     fldpt(),
+#ifdef HO3D
+    euler(),
+#endif
     bem(),
     diff(),
     conv(),
+#ifdef HO3D
+    hybr(),
+#endif
     sf(),
     description(),
     time(0.0),
@@ -108,8 +114,8 @@ size_t Simulation::get_npanels() {
   for (auto &coll: bdry) {
     //std::visit([&n](auto& elem) { n += elem.get_npanels(); }, coll);
     // only proceed if the last collection is Surfaces
-    if (std::holds_alternative<Surfaces<float>>(coll)) {
-      Surfaces<float>& surf = std::get<Surfaces<float>>(coll);
+    if (std::holds_alternative<Surfaces<STORE>>(coll)) {
+      Surfaces<STORE>& surf = std::get<Surfaces<STORE>>(coll);
       n += surf.get_npanels();
     }
   }
@@ -201,6 +207,11 @@ Simulation::from_json(const nlohmann::json j) {
 
   // Diffusion will find and set "viscous", "VRM" and "AMR" parameters
   diff.from_json(j);
+
+#ifdef HO3D
+  // set hybrid Eulerian-Lagrangian solution parameters
+  hybr.from_json(j);
+#endif
 }
 
 // create and write a json object for "simparams"
@@ -220,6 +231,11 @@ Simulation::to_json() const {
 
   // Diffusion will write "viscous", "VRM" and "AMR" parameters
   diff.add_to_json(j);
+
+#ifdef HO3D
+  // Hybrid will create a "hybrid" section
+  hybr.add_to_json(j);
+#endif
 
   return j;
 }
@@ -300,6 +316,11 @@ void Simulation::draw_advanced() {
 
   // set the diffusion parameters in Diffusion.h
   diff.draw_advanced();
+  
+#ifdef HO3D
+  // set the hybrid parameters in Hybrid.h
+  hybr.draw_advanced();
+#endif
 }
 #endif
 
@@ -572,6 +593,10 @@ void Simulation::reset() {
   bdry.clear();
   fldpt.clear();
   bem.reset();
+#ifdef HO3D
+  hybr.reset(euler);
+  euler.clear();
+#endif
   sf.reset_sim();
   sim_is_initialized = false;
   step_has_started = false;
@@ -635,6 +660,14 @@ std::vector<std::string> Simulation::write_vtk(const int _index,
     }
   }
 
+#ifdef HO3D
+  if (hybr.is_active()) {
+    // there is only one hybrid volume allowed now, so no counting needed
+    hybr.trigger_write(stepnum, euler);
+    files.emplace_back("and a HO grid file");
+  }
+#endif
+
   return files;
 }
 
@@ -672,9 +705,12 @@ std::string Simulation::check_initialization() {
   }
 
   // Check for very large BEM problem
-  if (get_npanels() > 21000) {
+  if (get_npanels() > 10000) {
     retstr.append("Boundary features have too many panels, program will run out of memory. Reduce Reynolds number or increase time step or both.\n");
   }
+
+  // adjust outlet speeds to conserve volume - this may be hard in 3D?
+  //(void)conserve_iolet_volume();
 
   // Check for excessive elongation
   float max_elong = 0.0;
@@ -740,6 +776,13 @@ bool Simulation::any_nonzero_bcs() {
 }
 
 //
+// check all inlets and outlets to ensure volume conservation
+//
+void Simulation::conserve_iolet_volume() {
+  // LATER
+}
+
+//
 // query and get() the future if possible
 //
 bool Simulation::test_for_new_results() {
@@ -790,6 +833,11 @@ void Simulation::first_step() {
   // update BEM and find vels on any particles but DO NOT ADVECT
   conv.advect_1st(time, 0.0, thisfs, get_ips(), vort, bdry, fldpt, bem);
 
+#ifdef HO3D
+  // call HO grid solver, but only to send first velocity results and initialize vorticity
+  hybr.first_step(time, thisfs, vort, bdry, bem, conv, euler);
+#endif
+
   // and write status file
   dump_stats_to_status();
 }
@@ -831,6 +879,11 @@ void Simulation::step() {
 
   // step complete, now split any elongated particles (move this to Split)
   split_operation<float>(vort, diff.get_core_func(), overlap_ratio, 1.2);
+
+#ifdef HO3D
+  // call HO grid solver to recalculate vorticity at the end of this time step
+  hybr.step(time, dt, re, thisfs, vort, bdry, bem, conv, euler, overlap_ratio, get_vdelta());
+#endif
 
   // update time
   time += (double)dt;
@@ -990,9 +1043,11 @@ void Simulation::file_elements(std::vector<Collection>& _collvec,
 
     // check Collections element dimension
     auto& coll = _collvec[i];
-    if (std::holds_alternative<Points<float>>(coll) and _elems.ndim != 0) {
+    if (std::holds_alternative<Points<STORE>>(coll) and _elems.ndim != 0) {
       this_match = false;
-    } else if (std::holds_alternative<Surfaces<float>>(coll) and _elems.ndim != 2) {
+    } else if (std::holds_alternative<Surfaces<STORE>>(coll) and _elems.ndim != 2) {
+      this_match = false;
+    } else if (std::holds_alternative<Volumes<STORE>>(coll) and _elems.ndim != 3) {
       this_match = false;
     }
 
@@ -1006,7 +1061,7 @@ void Simulation::file_elements(std::vector<Collection>& _collvec,
   if (no_match) {
     // make a new collection according to element dimension
     if (_elems.ndim == 0) {
-      _collvec.push_back(Points<float>(_elems, _et, _mt, _bptr, get_vdelta()));
+      _collvec.push_back(Points<STORE>(_elems, _et, _mt, _bptr, get_vdelta()));
 #ifdef USE_OGL_COMPUTE
       { // tell the new collection where the compute shader vao is
         Points<float>& pts = std::get<Points<float>>(_collvec.back());
@@ -1014,7 +1069,7 @@ void Simulation::file_elements(std::vector<Collection>& _collvec,
       }
 #endif
     } else if (_elems.ndim == 2) {
-      _collvec.push_back(Surfaces<float>(_elems, _et, _mt, _bptr));
+      _collvec.push_back(Surfaces<STORE>(_elems, _et, _mt, _bptr));
 #ifdef USE_OGL_COMPUTE
       // tell it where the compute shader vao is
       {
@@ -1022,6 +1077,8 @@ void Simulation::file_elements(std::vector<Collection>& _collvec,
         surf.set_opengl_compute_state(cgl);
       }
 #endif
+    } else if (_elems.ndim == 3) {
+      _collvec.push_back(Volumes<STORE>(_elems, _et, _mt, _bptr));
     }
 
   } else {
@@ -1030,13 +1087,54 @@ void Simulation::file_elements(std::vector<Collection>& _collvec,
 
     // proceed to add the correct object type
     if (_elems.ndim == 0) {
-      Points<float>& pts = std::get<Points<float>>(coll);
+      Points<STORE>& pts = std::get<Points<STORE>>(coll);
       pts.add_new(_elems, get_vdelta());
     } else if (_elems.ndim == 2) {
-      Surfaces<float>& surf = std::get<Surfaces<float>>(coll);
+      Surfaces<STORE>& surf = std::get<Surfaces<STORE>>(coll);
       surf.add_new(_elems);
+    } else if (_elems.ndim == 3) {
+      Volumes<STORE>& vols = std::get<Volumes<STORE>>(coll);
+      vols.add_new(_elems);
     }
   }
+}
+
+// Add elements - cells for hybrid calculation
+void Simulation::add_hybrid(const std::vector<ElementPacket<float>> _elems,
+                            std::shared_ptr<Body> _bptr) {
+
+  // skip out early if nothing's here
+  if (_elems.size() == 0) return;
+
+#ifdef HO3D
+  // or if hybrid isn't turned on
+  if (not hybr.is_active()) return;
+
+  std::cout << "In Simulation::add_hybrid" << std::endl;
+  std::cout << "  incoming vector has " << _elems.size() << " ElementPackets" << std::endl;
+
+  // make sure we've got the right data
+  assert((_elems.size() == 3 ||  _elems.size() == 5) && "Bad number of ElementPackets in add_hybrid");
+
+  //_elems[0] is the volume elements - always add unique Collection to euler
+  //_elems[1] is the wall boundaries
+  //_elems[2] is the open boundaries
+  euler.emplace_back(HOVolumes<STORE>(_elems[0], _elems[1], _elems[2], hybrid, fixed, _bptr));
+  std::cout << "  euler now has " << euler.size() << " HOVolumes" << std::endl;
+
+  // alternate way to assign the wall and open bc elements
+  //euler.back().add_wall(_elems[1]);
+  //euler.back().add_open(_elems[2]);
+
+  // generate inlets and outlets, if available
+  if (_elems.size() > 3) {
+    euler.back().add_inlet(_elems[3]);
+    euler.back().add_outlet(_elems[4]);
+  }
+
+  // tell the HOVolume to run its own conserve_iolet_volume routine to set/scale outlet rates
+  //euler.back().conserve_iolet_volume();
+#endif
 }
 
 // add a new Body with the given name

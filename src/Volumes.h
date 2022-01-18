@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "Omega2D.h"
+#include "Omega3D.h"
 #include "VectorHelper.h"
 
 #ifdef USE_GL
@@ -28,7 +28,7 @@
 #include "RenderParams.h"
 #include "OglHelper.h"
 #include "ShaderHelper.h"
-#include <glad/glad.h>
+#include "glad/glad.h"
 #endif
 
 #include <iostream>
@@ -48,7 +48,7 @@
 //template <class S> using Strength = std::array<std::optional<Vector<S>>,2>;
 
 
-// 1-D elements
+// 3-D elements
 template <class S>
 class Volumes: public ElementBase<S> {
 public:
@@ -63,6 +63,10 @@ public:
       nb(_elems.nelem),
       max_strength(-1.0) {
 
+    // ensure that this packet really is Volumes
+    assert(_elems.idx.size() == 3 && "Input ElementPacket is not Volumes");
+    assert(_elems.ndim == 3 && "Input ElementPacket is not Volumes");
+
     const std::vector<float>&   _x = _elems.x;
     const std::vector<Int>&   _idx = _elems.idx;
     const std::vector<float>& _val = _elems.val;
@@ -71,7 +75,7 @@ public:
     const size_t nper = _idx.size() / nb;
     assert(_idx.size() == nb*nper && "Index array is not an even size");
     assert(_elems.ndim == 3 && "Incoming ElementPacket is not 3D");
-    assert((nper==8 or nper==27) && "Index array is not multiple of 8 or 27");
+    assert((nper==8 or nper==27) && "Index array is not multiple of 8 or 27");  // FIX THIS
 
     // always initialize the ps element strength optionals
 /*
@@ -788,18 +792,8 @@ public:
     // no specialization needed
     if (this->M == lagrangian and this->E != inert) {
       //std::cout << "  Stretching" << to_string() << " using 1st order" << std::endl;
+      assert(false && "In Volumes::move - Volume elements do not stretch");
 
-      for (size_t i=0; i<this->n; ++i) {
-        S this_s = (*this->s)[i];
-
-        // compute stretch term
-        std::array<S,2> wdu = {0.0};
-
-        // add Cottet SFS
-
-        // update strengths
-        (*this->s)[i] = this_s + _dt * wdu[0];
-      }
     } else {
       //std::cout << "  Not stretching" << to_string() << std::endl;
     }
@@ -814,10 +808,15 @@ public:
   void move(const double _time, const double _dt,
             const double _wt1, Volumes<S> const & _u1,
             const double _wt2, Volumes<S> const & _u2) {
+
     // must explicitly call the method in the base class
     ElementBase<S>::move(_time, _dt, _wt1, _u1, _wt2, _u2);
 
     // must confirm that incoming time derivates include velocity (?)
+
+    if (this->M == lagrangian and this->E != inert) {
+      assert(false && "In Volumes::move - Volume elements do not stretch");
+    }
 
     // and update the max strength measure
     (void) update_max_str();
@@ -831,10 +830,15 @@ public:
             const double _wt0, Volumes<S> const & _u0,
             const double _wt1, Volumes<S> const & _u1,
             const double _wt2, Volumes<S> const & _u2) {
+
     // must explicitly call the method in the base class
     ElementBase<S>::move(_time, _dt, _wt0, _u0, _wt1, _u1, _wt2, _u2);
 
     // must confirm that incoming time derivates include velocity (?)
+
+    if (this->M == lagrangian and this->E != inert) {
+      assert(false && "In Volumes::move - Volume elements do not stretch");
+    }
 
     // and update the max strength measure
     (void) update_max_str();
@@ -1075,7 +1079,8 @@ public:
   }
 
   // OpenGL3 stuff to draw quads, called once per frame
-  void drawGL(std::vector<float>& _projmat,
+  void drawGL(std::vector<float>& _modelviewmat,
+              std::vector<float>& _projmat,
               RenderParams&       _rparams,
               const float         _vdelta) {
   }
@@ -1087,15 +1092,15 @@ public:
   }
 
   std::string write_vtk(const size_t _index, const size_t _frameno, const double _time) {
-    assert(this->nb > 0 && "Inside write_vtk_grid with no elements");
+    assert(this->nb > 0 && "Inside Volumes::write_vtk with no elements");
     const bool asbase64 = true;
-  
+
     // generate file name
-    std::string prefix = "grid_";
+    std::string prefix = "brick_";
     std::stringstream vtkfn;
     vtkfn << prefix << std::setfill('0') << std::setw(2) << _index << "_" << std::setw(5) << _frameno << ".vtu";
     VtkXmlWriter gridWriter = VtkXmlWriter(vtkfn.str(), asbase64);
-  
+
     // include simulation time here
     gridWriter.addElement("FieldData");
     {
@@ -1109,13 +1114,13 @@ public:
     }
     // FieldData
     gridWriter.closeElement();
-  
+
     {
       std::map<std::string, std::string> attribs = {{"NumberOfPoints", std::to_string(this->n)},
                                                     {"NumberOfCells", std::to_string(this->nb)}};
       gridWriter.addElement("Piece", attribs);
     }
-  
+
     gridWriter.addElement("Points");
     {
       std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
@@ -1128,13 +1133,13 @@ public:
     }
     // Points
     gridWriter.closeElement();
-  
+
     gridWriter.addElement("Cells");
 
     // useful: what kinds of elements are these?
     const int32_t nper = (int32_t)(idx.size() / nb);
-    assert((nper==4 or nper==9 or nper==16) && "Volumes vtu writer only supports vtk elem types 9, 28, 70");
-  
+    assert((nper==4 or nper==9 or nper==16) && "Volumes vtu writer only supports vtk elem types 9, 28, 70");  // FIX THIS
+
     // again, all connectivities and offsets must be Int32!
     {
       std::map<std::string, std::string> attribs = {{"Name", "connectivity"},
@@ -1143,10 +1148,9 @@ public:
       std::vector<Int> const & idx = this->idx;
       Vector<int32_t> v(std::begin(idx), std::end(idx));
       gridWriter.writeDataArray(v);
-      // DataArray
       gridWriter.closeElement();
     }
-  
+
     {
       std::map<std::string, std::string> attribs = {{"Name", "offsets"},
                                                     {"type", "Int32"}};
@@ -1154,11 +1158,10 @@ public:
       Vector<int32_t> v(this->nb);
       // vector of 1 to n
       std::iota(v.begin(), v.end(), 1);
-      // how much do we scale it? nper=4 if linear quads, 9 if biquadratic quads
+      // how much do we scale it? nper=8 if linear hexas, 27 if biquadratic hexas
       std::transform(v.begin(), v.end(), v.begin(),
                      std::bind(std::multiplies<int32_t>(), std::placeholders::_1, nper));
       gridWriter.writeDataArray(v);
-      // DataArray
       gridWriter.closeElement();
     }
   
@@ -1167,13 +1170,12 @@ public:
                                                     {"type", "UInt8"}};
       gridWriter.addElement("DataArray", attribs);
       Vector<uint8_t> v(this->nb);
-      // switch on vtk element type
+      // switch on vtk element type - MUST CHANGE THESE
       uint8_t etype = 9;
       if (nper==9) etype = 28;
       if (nper==16) etype = 70;
       std::fill(v.begin(), v.end(), etype);
       gridWriter.writeDataArray(v);
-      // DataArray
       gridWriter.closeElement();
     }
     // Cells
@@ -1194,6 +1196,7 @@ public:
       gridWriter.addElement("PointData", attribs);
     }
 
+/*
     if (this->has_vort()) {
       std::map<std::string, std::string> attribs = {{"Name", "vorticity"},
                                                     {"type", "Float32"}};
@@ -1201,6 +1204,7 @@ public:
       gridWriter.writeDataArray(*(this->w));
       gridWriter.closeElement(); // DataArray
     }
+*/
 
     {
       std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
@@ -1209,17 +1213,17 @@ public:
       gridWriter.addElement("DataArray", attribs);
       Vector<float> vel = gridWriter.unpackArray(this->u);
       gridWriter.writeDataArray(vel);
-      // DataArray
       gridWriter.closeElement();
     }
-   
+
     // PointData
     gridWriter.closeElement();
+
     // Piece
     gridWriter.closeElement();
-  
+
     gridWriter.finish();
-    std::cout << "Wrote " << this->n << " elements to " << vtkfn.str() << std::endl;
+    std::cout << "Wrote " << this->nb << " elements to " << vtkfn.str() << std::endl;
     return vtkfn.str();
   }
 
