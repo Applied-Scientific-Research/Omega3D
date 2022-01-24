@@ -423,7 +423,7 @@ UniformBlock::init_elements(float _ips) const {
   // what size 2D integer array will we loop over
   const int isize = 1 + m_xsize / _ips;
   const int jsize = 1 + m_ysize / _ips;
-  const int ksize = 1 + m_ysize / _ips;
+  const int ksize = 1 + m_zsize / _ips;
   const size_t totn = isize*jsize*ksize;
   std::cout << "Creating block with " << totn << " particles" << std::endl;
   //std::cout << "block needs " << isize << " by " << jsize << " particles" << std::endl;
