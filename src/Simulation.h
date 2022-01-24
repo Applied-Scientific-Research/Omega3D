@@ -178,7 +178,7 @@ private:
   float fs[Dimensions];
 
   // List of independent rigid bodies (and one for ground)
-  std::vector< std::shared_ptr<Body> > bodies;
+  std::vector<std::shared_ptr<Body>> bodies;
 
   // Object to contain all Lagrangian elements
   std::vector<Collection> vort;		// active elements
