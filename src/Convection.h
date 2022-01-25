@@ -50,6 +50,8 @@ class Convection {
 public:
   Convection()
     : convection_order(2),
+      clear_vort_thick(0.5/std::sqrt(2.0*M_PI)),
+      clear_fldpt_thick(0.25/std::sqrt(2.0*M_PI)),
       conv_env()
     {}
 
@@ -123,6 +125,10 @@ private:
 
   // integrator order
   int32_t convection_order;
+
+  // layer below which to clear vorticity
+  S clear_vort_thick;
+  S clear_fldpt_thick;
 
   // execution environment for velocity summations (not BEM)
   ExecEnv conv_env;
@@ -301,8 +307,8 @@ void Convection<S,A,I>::advect_1st(const double                         _time,
   }
 
   // wrap up movement by pushing away particles inside or too close to the body
-  clear_inner_layer<S>(1, _bdry, _vort, 0.5/std::sqrt(2.0*M_PI), _ips);
-  clear_inner_layer<S>(1, _bdry, _fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, _vort, clear_vort_thick, _ips);
+  clear_inner_layer<S>(1, _bdry, _fldpt, clear_fldpt_thick, _ips);
 }
 
 
@@ -331,7 +337,7 @@ void Convection<S,A,I>::advect_2nd_heun(const double                         _ti
   for (auto &coll : interim_vort) {
     std::visit([=](auto& elem) { elem.move(_time, _dt, 1.0, elem); }, coll);
   }
-  clear_inner_layer<S>(1, _bdry, interim_vort, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, interim_vort, clear_vort_thick, _ips);
   // now _vort has its original positions and the velocities evaluated there
   // and interm_vort has the positions at t+dt
 
@@ -340,7 +346,7 @@ void Convection<S,A,I>::advect_2nd_heun(const double                         _ti
   for (auto &coll : interim_fldpt) {
     std::visit([=](auto& elem) { elem.move(_time, _dt, 1.0, elem); }, coll);
   }
-  clear_inner_layer<S>(1, _bdry, interim_fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, interim_fldpt, clear_fldpt_thick, _ips);
 
   // begin the 2nd step ---------
 
@@ -382,8 +388,8 @@ void Convection<S,A,I>::advect_2nd_heun(const double                         _ti
   }
 
   // wrap up movement by pushing away *active* particles inside or too close to the body
-  clear_inner_layer<S>(1, _bdry, _vort, 0.5/std::sqrt(2.0*M_PI), _ips);
-  clear_inner_layer<S>(1, _bdry, _fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, _vort, clear_vort_thick, _ips);
+  clear_inner_layer<S>(1, _bdry, _fldpt, clear_fldpt_thick, _ips);
 }
 
 
@@ -413,7 +419,7 @@ void Convection<S,A,I>::advect_2nd_ralston(const double                         
   for (auto &coll : interim_vort) {
     std::visit([=](auto& elem) { elem.move(_time, twothirds*_dt, 1.0, elem); }, coll);
   }
-  clear_inner_layer<S>(1, _bdry, interim_vort, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, interim_vort, clear_vort_thick, _ips);
   // now _vort has its original positions and the velocities evaluated there
   // and interm_vort has the positions at t+2dt/3
 
@@ -422,7 +428,7 @@ void Convection<S,A,I>::advect_2nd_ralston(const double                         
   for (auto &coll : interim_fldpt) {
     std::visit([=](auto& elem) { elem.move(_time, twothirds*_dt, 1.0, elem); }, coll);
   }
-  clear_inner_layer<S>(1, _bdry, interim_fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, interim_fldpt, clear_fldpt_thick, _ips);
 
   // begin the 2nd step ---------
 
@@ -464,8 +470,8 @@ void Convection<S,A,I>::advect_2nd_ralston(const double                         
   }
 
   // wrap up movement by pushing away *active* particles inside or too close to the body
-  clear_inner_layer<S>(1, _bdry, _vort, 0.5/std::sqrt(2.0*M_PI), _ips);
-  clear_inner_layer<S>(1, _bdry, _fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, _vort, clear_vort_thick, _ips);
+  clear_inner_layer<S>(1, _bdry, _fldpt, clear_fldpt_thick, _ips);
 }
 
 
@@ -494,14 +500,14 @@ void Convection<S,A,I>::advect_3rd(const double                         _time,
   for (auto &coll : vort1) {
     std::visit([=](auto& elem) { elem.move(_time, 0.5*_dt, 1.0, elem); }, coll);
   }
-  clear_inner_layer<S>(1, _bdry, vort1, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, vort1, clear_vort_thick, _ips);
 
   // do the same for fldpt
   std::vector<Collection> fldpt1 = _fldpt;
   for (auto &coll : fldpt1) {
     std::visit([=](auto& elem) { elem.move(_time, 0.5*_dt, 1.0, elem); }, coll);
   }
-  clear_inner_layer<S>(1, _bdry, fldpt1, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, fldpt1, clear_fldpt_thick, _ips);
 
   // now _vort has its original positions and the velocities evaluated there
   // and vort1 has the positions at t+0.5*dt
@@ -529,7 +535,7 @@ void Convection<S,A,I>::advect_3rd(const double                         _time,
     ++v1p;
     ++v2p;
   }
-  clear_inner_layer<S>(1, _bdry, vort2, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, vort2, clear_vort_thick, _ips);
 
   // do the same for fldpt
   std::vector<Collection> fldpt2 = _fldpt;
@@ -547,7 +553,7 @@ void Convection<S,A,I>::advect_3rd(const double                         _time,
     ++v1p;
     ++v2p;
   }
-  clear_inner_layer<S>(1, _bdry, fldpt2, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, fldpt2, clear_fldpt_thick, _ips);
   // now vort2 has positions at t+0.75*dt
 
   // begin the 3rd step -------------------------------------------
@@ -596,8 +602,8 @@ void Convection<S,A,I>::advect_3rd(const double                         _time,
   }
 
   // wrap up movement by pushing away *active* particles inside or too close to the body
-  clear_inner_layer<S>(1, _bdry, _vort, 0.5/std::sqrt(2.0*M_PI), _ips);
-  clear_inner_layer<S>(1, _bdry, _fldpt, 0.5/std::sqrt(2.0*M_PI), _ips);
+  clear_inner_layer<S>(1, _bdry, _vort, clear_vort_thick, _ips);
+  clear_inner_layer<S>(1, _bdry, _fldpt, clear_fldpt_thick, _ips);
 }
 
 
