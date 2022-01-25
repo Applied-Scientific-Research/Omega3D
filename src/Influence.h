@@ -662,7 +662,7 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
       #ifdef USE_VC
       if (env.get_instrs() == cpu_vc) {
 
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:flops)
         for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
@@ -720,7 +720,7 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
       #endif // Vc
 
       {
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:flops)
         for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
           A accumux = 0.0; A accumvx = 0.0; A accumwx = 0.0;
@@ -785,7 +785,7 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
       #ifdef USE_VC
       if (env.get_instrs() == cpu_vc) {
 
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:flops)
         for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
@@ -826,7 +826,7 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
       } else
       #endif  // Vc
       {
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:flops)
         for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
           if (havess) {
@@ -885,7 +885,7 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
       #ifdef USE_VC
       if (env.get_instrs() == cpu_vc) {
 
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:flops)
         for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
@@ -945,7 +945,7 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
       } else
       #endif  // Vc
       {
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:flops)
         for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
           A accumux = 0.0; A accumvx = 0.0; A accumwx = 0.0;
@@ -1011,7 +1011,7 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
       #ifdef USE_VC
       if (env.get_instrs() == cpu_vc) {
 
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:flops)
         for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           const StoreVec txv(tx[0][i]);
           const StoreVec tyv(tx[1][i]);
@@ -1053,7 +1053,7 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
       } else
       #endif  // Vc
       {
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:flops)
         for (int32_t i=0; i<(int32_t)ntarg; ++i) {
           A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
           if (havess) {
@@ -1157,7 +1157,7 @@ void points_affect_panels (const Points<S>& src, Surfaces<S>& targ, const Result
     const Vc::Memory<StoreVec> ssyv = stdvec_to_vcvec<S>(ss[1], 0.0);
     const Vc::Memory<StoreVec> sszv = stdvec_to_vcvec<S>(ss[2], 0.0);
 
-    #pragma omp parallel for
+    #pragma omp parallel for reduction(+:flops)
     for (int32_t i=0; i<(int32_t)targ.get_npanels(); ++i) {
 
       // prepare vector registers for target accumulators
@@ -1202,7 +1202,7 @@ void points_affect_panels (const Points<S>& src, Surfaces<S>& targ, const Result
 
   #endif  // Vc
   {
-    #pragma omp parallel for
+    #pragma omp parallel for reduction(+:flops)
     for (int32_t i=0; i<(int32_t)targ.get_npanels(); ++i) {
       A accumu = 0.0; A accumv = 0.0; A accumw = 0.0;
       const size_t ip0 = ti[3*i];
