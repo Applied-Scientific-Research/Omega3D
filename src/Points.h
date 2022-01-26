@@ -63,7 +63,7 @@ public:
     assert(_in.idx.size() == 0 && "Input ElementPacket is not Points");
     assert(_in.ndim == 0 && "Input ElementPacket is not Points");
 
-    std::cerr << "Packet sizes are " << _in.x.size() << " " << _in.idx.size() << " " << _in.val.size() << std::endl;
+    //std::cerr << "Packet sizes are " << _in.x.size() << " " << _in.idx.size() << " " << _in.val.size() << std::endl;
 
     // and that it has the right number of values per particle
     if (_e == inert) assert(_in.val.size() == 0 && "Input ElementPacket with fldpts has val array");

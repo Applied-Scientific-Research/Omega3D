@@ -558,7 +558,7 @@ template <class S, class A>
 void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const ResultsType& restype, const ExecEnv& env) {
 
   std::cout << "    in panpt with" << env.to_string() << std::endl;
-  std::cout << "    1_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
+  //std::cout << "    2_0 compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
   assert (!restype.compute_psi() && "Surface elements cannot compute streamfunction yet.");
   assert (!restype.compute_vort() && "Surface elements cannot compute vorticity yet.");
 
