@@ -1,7 +1,7 @@
 /*
  * CoreSpread.h - the pure core-spreading method for diffusion in 3D
  *
- * (c)2020-1 Applied Scientific Research, Inc.
+ * (c)2020-2 Applied Scientific Research, Inc.
  *           Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -45,7 +45,8 @@ public:
   CoreSpread();
 
   // all-to-all diffuse; can change array sizes
-  void diffuse_all(const std::array<Vector<ST>,3>&,
+  void diffuse_all(const std::array<Vector<ST>,Dimensions>&,
+                   const std::array<Vector<ST>,3>&,
                    Vector<ST>&,
                    const ST,
                    const CoreType);
@@ -66,14 +67,16 @@ CoreSpread<ST>::CoreSpread() {}
 // Apply the random vortex method to the particles
 //
 template <class ST>
-void CoreSpread<ST>::diffuse_all(const std::array<Vector<ST>,3>& pos,
+void CoreSpread<ST>::diffuse_all(const std::array<Vector<ST>,Dimensions>& pos,
+                                 const std::array<Vector<ST>,3>& str,
                                  Vector<ST>& rad,
                                  const ST h_nu,
                                  const CoreType core_func) {
 
   // make sure all vector sizes are identical
   assert(pos[0].size()==pos[1].size() && "Input arrays are not uniform size");
-  assert(pos[0].size()==rad.size() && "Input arrays are not uniform size");
+  assert(pos[0].size()==str[0].size() && "Input arrays are not uniform size");
+  assert(str[0].size()==rad.size() && "Input arrays are not uniform size");
   const size_t n = rad.size();
 
   std::cout << "  Running CoreSpread with n " << n << std::endl;

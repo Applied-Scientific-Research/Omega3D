@@ -272,6 +272,7 @@ void Diffusion<S,A,I>::step(const double                _time,
       } else if (curr_pd_type==pd_core) {
         // core-spreading only changes the radii, nothing else
         coresp.diffuse_all(pts.get_pos(),
+                        pts.get_str(),
                         pts.get_rad(),
                         h_nu, core_func);
 
