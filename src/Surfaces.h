@@ -956,22 +956,19 @@ public:
   // return a particle version of the panels (useful during Diffusion)
   // offset is in world units - NOT scaled
   //
-  ElementPacket<float> represent_as_particles(const S _offset, const S _ips) {
+  ElementPacket<float> represent_as_particles(const S _offset) {
 
     // prepare the vectors
     std::vector<float> _x;
     std::vector<Int> _idx;
     std::vector<float> _vals;
 
-    // how many panels?
-    const size_t num_pts = get_npanels();
-
     // since there may be more points than panels, reserve space and emplace_back
-    _x.reserve(Dimensions*num_pts);
-    _vals.reserve(num_pts);
+    _x.reserve(Dimensions*get_npanels());
+    _vals.reserve(get_npanels());
 
     // recompute the total strengths (ts)
-    vortex_sheet_to_panel_strength(num_pts);
+    vortex_sheet_to_panel_strength(get_npanels());
 
     // get basis vectors
     std::array<Vector<S>,3>&   x1 = b[0];
@@ -982,7 +979,7 @@ public:
 
     const size_t nper = idx.size() / get_npanels();	// we can have >3 nodes per elem now
 
-    for (size_t i=0; i<num_pts; ++i) {
+    for (size_t i=0; i<get_npanels(); ++i) {
       // panel corner points
       const Int id0 = idx[nper*i];
       const Int id1 = idx[nper*i+1];
@@ -997,16 +994,17 @@ public:
       for (size_t j=0; j<3; ++j) _x.emplace_back(px[j]);
 
       // the panel strength is the solved strength plus the boundary condition
-      for (size_t j=0; j<3; ++j) px[j] = ts[j][i];
+      std::array<S,3> pstr;
+      for (size_t j=0; j<3; ++j) pstr[j] = ts[j][i];
       // add on the (vortex) bc values here
       if (this->E == reactive) {
-        for (size_t j=0; j<3; ++j) px[j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
+        for (size_t j=0; j<3; ++j) pstr[j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
       }
-      for (size_t j=0; j<3; ++j) _vals.emplace_back(px[j]);
+      for (size_t j=0; j<3; ++j) _vals.emplace_back(pstr[j]);
       // IGNORE SOURCE SHEET STRENGTHS AND ELONG
     }
 
-    return ElementPacket<float>({_x, _idx, _vals, num_pts, 0});
+    return ElementPacket<float>({_x, _idx, _vals, get_npanels(), 0});
   }
 
   // find the new peak vortex sheet strength magnitude

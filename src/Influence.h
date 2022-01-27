@@ -1243,7 +1243,7 @@ void panels_affect_panels (const Surfaces<S>& src, Surfaces<S>& targ, const Resu
   // run panels_affect_points instead
 
   // generate temporary colocation points as Points - is this inefficient?
-  ElementPacket<float> surfaspts = targ.represent_as_particles(0.0001, -1.0);
+  ElementPacket<float> surfaspts = targ.represent_as_particles(0.0001);
   Points<S> temppts(surfaspts, active, lagrangian, nullptr, 0.0001);
 
   // run the calculation

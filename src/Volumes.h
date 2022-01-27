@@ -1022,7 +1022,7 @@ public:
 /*
     if (ps[0]) {
       // make this easy - represent as particles - do we count BCs here?!?
-      ElementPacket<float> pts = represent_as_particles(0.0, -1.0);
+      ElementPacket<float> pts = represent_as_particles(0.0);
 
       // now compute impulse of those
       for (size_t i=0; i<pts.nelems; ++i) {

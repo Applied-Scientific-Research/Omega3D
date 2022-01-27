@@ -197,7 +197,7 @@ void Diffusion<S,A,I>::step(const double                _time,
         Surfaces<S>& surf = std::get<Surfaces<S>>(coll);
 
         // generate particles just above the surface
-        ElementPacket<S> new_pts = surf.represent_as_particles(0.01*(S)h_nu, _vdelta/_overlap);
+        ElementPacket<S> new_pts = surf.represent_as_particles(0.01*(S)h_nu);
 
         // add those particles to the main particle list
         if (_vort.size() == 0) {
@@ -299,9 +299,10 @@ void Diffusion<S,A,I>::step(const double                _time,
 
 
   //
-  // clean up by removing the innermost layer - the one that will be represented by boundary strengths
+  // clean up by pushing out the innermost layer
   //
-  // use method which simply pushes all still-active particles to be at or above a threshold distance
+  // method 0 trims and weakens particles to allow the new strengths to be represented as thick-cored parts
+  // method 1 simply pushes all still-active particles to be at or above a threshold distance
   // cutoff is a multiple of ips (these are the last two arguments)
   (void) clear_inner_layer<S>(1, _bdry, _vort, clear_thick, _vdelta/_overlap);
 
@@ -318,7 +319,7 @@ void Diffusion<S,A,I>::step(const double                _time,
 
         // generate particles above the surface at the centroid of one step of
         //   diffusion from a flat plate
-        ElementPacket<S> new_pts = surf.represent_as_particles(h_nu*std::sqrt(4.0/M_PI), _vdelta/_overlap);
+        ElementPacket<S> new_pts = surf.represent_as_particles(h_nu*std::sqrt(4.0/M_PI));
 
         // add those particles to the main particle list
         if (_vort.size() == 0) {
