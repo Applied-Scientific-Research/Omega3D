@@ -622,8 +622,9 @@ std::vector<std::string> Simulation::write_vtk(const int _index,
   //clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
   solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
 
-  // why not velandvort ? Oh, because we can't compute that yet
+  // why not velandvort ? Oh, because we can't compute that for all kernels
   if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, velonly, true);
+  //if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, velandvort, true);
   if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt, velonly, true);
   if (_do_bdry)    conv.find_vels(thisfs, vort, bdry, bdry, velonly, true);
 #endif
@@ -705,7 +706,7 @@ std::string Simulation::check_initialization() {
   }
 
   // Check for very large BEM problem
-  if (get_npanels() > 10000) {
+  if (get_npanels() > 14000) {
     retstr.append("Boundary features have too many panels, program will run out of memory. Reduce Reynolds number or increase time step or both.\n");
   }
 
@@ -1055,6 +1056,11 @@ void Simulation::file_elements(std::vector<Collection>& _collvec,
       imatch = i;
       no_match = false;
     }
+  }
+
+  // all inert field points are (typically) measurement features that should remain separate
+  if (_et == inert) {
+    no_match = true;
   }
 
   // if no match, or no collections exist
