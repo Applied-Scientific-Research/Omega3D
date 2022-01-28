@@ -622,10 +622,8 @@ std::vector<std::string> Simulation::write_vtk(const int _index,
   //clear_inner_layer<STORE>(1, bdry, vort, 1.0/std::sqrt(2.0*M_PI), get_ips());
   solve_bem<STORE,ACCUM,Int>(time, thisfs, vort, bdry, bem);
 
-  // why not velandvort ? Oh, because we can't compute that for all kernels
-  if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, velonly, true);
-  //if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, velandvort, true);
-  if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt, velonly, true);
+  if (_do_flow)    conv.find_vels(thisfs, vort, bdry, vort, velandgrad, true);
+  if (_do_measure) conv.find_vels(thisfs, vort, bdry, fldpt, velandgrad, true);
   if (_do_bdry)    conv.find_vels(thisfs, vort, bdry, bdry, velonly, true);
 #endif
 
