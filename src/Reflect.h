@@ -473,10 +473,23 @@ void clear_inner_panp2 (const int _method,
   const bool are_fldpts = tr.empty();
 
   size_t num_cropped = 0;
+  // FLT_EPSILON is 1.2e-7
   const S eps = 10.0*std::numeric_limits<S>::epsilon();
 
   #pragma omp parallel for reduction(+:num_cropped)
   for (int32_t i=0; i<(int32_t)_targ.get_n(); ++i) {
+
+    bool part_was_moved = true;
+    int32_t num_times = 0;
+    int last_close_panel = _src.get_npanels()+1;
+    std::array<S,3> last_normal = {0.0, 0.0, 0.0};
+
+    // iterate until the particle stops moving
+    while (part_was_moved and num_times < 3) {
+
+    // assume the particle does not get moved
+    part_was_moved = false;
+    last_close_panel = -1;
 
     S mindist = std::numeric_limits<S>::max();
     std::vector<ClosestReturn<S>> hits;
@@ -499,27 +512,27 @@ void clear_inner_panp2 (const int _method,
         result.jidx = j;
         hits.clear();
         hits.push_back(result);
-        //std::cout << "  THIS BLOWS AWAY THE CLOSEST, AT " << std::sqrt(mindist) << std::endl;
+        //std::cout << "  THIS BLOWS AWAY THE CLOSEST, AT " << std::sqrt(mindist) << "\n";
 
       } else if (result.distsq < mindist + eps) {
         // we are effectively the same as the old closest
         // rewrite jidx as the panel index
         result.jidx = j;
         hits.push_back(result);
-        //std::cout << "  THIS TIES THE CLOSEST, AT " << std::sqrt(mindist) << std::endl;
+        //std::cout << "  THIS TIES THE CLOSEST, AT " << std::sqrt(mindist) << "\n";
       }
     } // end of loop over panels
 
     // dump out the hits
     if (false) {
-      std::cout << "point " << i << " is " << tx[0][i] << " " << tx[1][i] << std::endl;
+      std::cout << "point " << i << " is " << tx[0][i] << " " << tx[1][i] << "\n";
       for (auto & ahit: hits) {
         if (ahit.disttype == node) {
-          std::cout << "  node on panel " << ahit.jidx << " is " << std::sqrt(ahit.distsq) << std::endl;
+          std::cout << "  node on panel " << ahit.jidx << " is " << std::sqrt(ahit.distsq) << "\n";
         } else if (ahit.disttype == edge) {
-          std::cout << "  edge on panel " << ahit.jidx << " is " << std::sqrt(ahit.distsq) << std::endl;
+          std::cout << "  edge on panel " << ahit.jidx << " is " << std::sqrt(ahit.distsq) << "\n";
         } else {
-          std::cout << "  panel " << ahit.jidx << " is " << std::sqrt(ahit.distsq) << std::endl;
+          std::cout << "  panel " << ahit.jidx << " is " << std::sqrt(ahit.distsq) << "\n";
         }
       }
     }
@@ -529,7 +542,7 @@ void clear_inner_panp2 (const int _method,
 
     //std::cout << "  CLEARING pt at " << tx[0][i] << " " << tx[1][i] << std::endl;
 
-    // init the mean normal and the mean contact point
+    // init the mean normal (always pointing into fluid) and the mean contact point
     std::array<S,3> mnorm = {0.0, 0.0, 0.0};
     std::array<S,3> mcp = {0.0, 0.0, 0.0};
 
@@ -552,6 +565,20 @@ void clear_inner_panp2 (const int _method,
 
     // compare this mean norm to the vector from the contact point to the particle
     std::array<S,3> dx = {tx[0][i]-mcp[0], tx[1][i]-mcp[1], tx[2][i]-mcp[2]};
+
+    // detect internal vs. external hits by comparing the mean contact point to 
+    if (dot_product(mnorm, dx) < std::sqrt(hits[0].distsq) - eps) {
+      //std::cout << "  ITS AN INSIDE CORNER\n";
+      // node is nearest to an inside (convex) corner/edge, use hits[0] instead of mean point
+      for (size_t d=0; d<3; ++d) mnorm[d] = sn[d][hits[0].jidx];
+      mcp[0] = hits[0].cpx;
+      mcp[1] = hits[0].cpy;
+      mcp[2] = hits[0].cpz;
+      for (size_t d=0; d<3; ++d) dx[d] = tx[d][i]-mcp[d];
+    } else {
+      // node is nearest an external (convex) corner/edge, continue with mean normal and cp
+    }
+
     const S dotp = dot_product(mnorm, dx) - _cutoff_mult*_ips;
     // now dotp is how far this point is above the cutoff layer
     // if dotp == 0.0 then the point is exactly on the cutoff layer, and it loses half of its strength
@@ -560,9 +587,17 @@ void clear_inner_panp2 (const int _method,
 
     const S this_radius = are_fldpts ? _ips : tr[i];
 
-    if (_method == 0) {
+    if (last_close_panel == hits[0].jidx) {
+      // can't be pushed away by the same panel twice, that means we're good
+      //std::cout << "  SAME LAST PANEL\n";
+
+    } else if (dot_product(mnorm, last_normal) > 0.5) {
+      // this normal is the same as last one
+      //std::cout << "  SAME NORMAL\n";
+
+    } else if (_method == 0) {
       if (dotp < this_radius) {
-        //std::cout << "  CLEARING pt at " << tx[0][i] << " " << tx[1][i] << " because dotp " << dotp << " and norm " << norm[0] << " " << norm[1] << std::endl;
+        //if (num_times > 1) std::cout << "  CLEARING pt at " << tx[0][i] << " " << tx[1][i] << " " << tx[2][i] << " because dotp " << dotp << " and norm " << mnorm[0] << " " << mnorm[1] << " " << mnorm[2] << "\n";
 
         // use precomputed table lookups for new position and remaining strength
         if (not are_fldpts) {
@@ -571,14 +606,17 @@ void clear_inner_panp2 (const int _method,
           // modify the particle in question
           for (size_t d=0; d<3; ++d) ts[d][i] *= std::get<0>(entry);
           for (size_t d=0; d<3; ++d) tx[d][i] += std::get<1>(entry) * this_radius * mnorm[d];
+
+          part_was_moved = true;
+          num_times++;
+          last_close_panel = hits[0].jidx;
+          for (size_t d=0; d<3; ++d) last_normal[d] = mnorm[d];
         }
 
-      //std::cout << "  PUSHING " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]);
-      //std::cout << "    to " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]) << " and scale str by " << sfac << std::endl;
-      // do not change radius yet
-      //std::cout << "    TO " << tx[0][i] << " " << tx[1][i] << " and weaken by " << sfac << std::endl;
-
-        num_cropped++;
+        //std::cout << "  PUSHING " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]);
+        //std::cout << "    to " << std::sqrt(tx[0][i]*tx[0][i]+tx[1][i]*tx[1][i]) << " and scale str by " << sfac << std::endl;
+        // do not change radius yet
+        //std::cout << "    TO " << tx[0][i] << " " << tx[1][i] << " and weaken by " << sfac << std::endl;
       }
 
     } else if (_method == 1) {
@@ -589,9 +627,17 @@ void clear_inner_panp2 (const int _method,
         //std::cout << "  pushing " << tx[0][i] << " " << tx[1][i];
         for (size_t d=0; d<3; ++d) tx[d][i] -= dotp * mnorm[d];
         //std::cout << " to " << tx[0][i] << " " << tx[1][i] << std::endl;
-        num_cropped++;
+
+        part_was_moved = true;
+        num_times++;
+        last_close_panel = hits[0].jidx;
+        for (size_t d=0; d<3; ++d) last_normal[d] = mnorm[d];
       }
     }
+
+    } // end while (part_was_moved)
+
+    if (num_times > 0) num_cropped++;
 
   } // end loop over particles
 
