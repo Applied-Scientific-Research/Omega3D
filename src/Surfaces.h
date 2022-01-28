@@ -1,7 +1,7 @@
 /*
  * Surfaces.h - Specialized class for trimesh surfaces in 3D
  *
- * (c)2019-21 Applied Scientific Research, Inc.
+ * (c)2019-22 Applied Scientific Research, Inc.
  *            Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -271,11 +271,6 @@ public:
     // pop off the "unknown" rotation rate and save it
     if (is_augmented()) {
       assert(false && "Augmentation not supported!");
-      //solved_omega = _in.back();
-      //std::cout << "    solved rotation rate is " << solved_omega << std::endl;
-      //omega_error = solved_omega - this->B->get_rotvel();
-      //std::cout << "    error in rotation rate is " << omega_error << std::endl;
-      //_in.pop_back();
     }
 
     assert(_in.size() == (*ps[0]).size()*num_unknowns_per_panel() && "Set strength array size does not match");
@@ -293,7 +288,7 @@ public:
       }
     } else {
       assert(_in.size() == get_npanels()*2 && "Set strength array size does not match");
-      // vortex only
+      // only vortex strengths
       for (size_t i=0; i<get_npanels(); ++i) {
         (*ps[0])[i] = _in[2*i+0];
         (*ps[1])[i] = _in[2*i+1];
@@ -993,10 +988,10 @@ public:
       for (size_t j=0; j<3; ++j) px[j] += _offset * norm[j][i];
       for (size_t j=0; j<3; ++j) _x.emplace_back(px[j]);
 
-      // the panel strength is the solved strength plus the boundary condition
+      // the panel strength is the solved strength...
       std::array<S,3> pstr;
       for (size_t j=0; j<3; ++j) pstr[j] = ts[j][i];
-      // add on the (vortex) bc values here
+      // ...plus the boundary condition (vortex bc values);
       if (this->E == reactive) {
         for (size_t j=0; j<3; ++j) pstr[j] += (bc1[i]*x1[j][i] + bc2[i]*x2[j][i]) * area[i];
       }
@@ -1302,11 +1297,16 @@ public:
     const bool asbase64 = true;
     bool has_vort_str = false;
     bool has_src_str = false;
+    const bool write_normal = true;
+    bool write_bcvel = true;
     std::string prefix = "panel_";
+
     if (this->E != inert) {
       has_vort_str = true;
       has_src_str = have_src_str();
     }
+
+    if (not (bc[0] and bc[1] and bc[2])) write_bcvel = false;
 
     // generate file name
     std::stringstream vtkfn;
@@ -1387,6 +1387,8 @@ public:
     std::string vector_list;
     if (has_vort_str) vector_list.append("vortex sheet strength,");
     if (has_src_str) scalar_list.append("source sheet strength,");
+    if (write_normal) vector_list.append("normal,");
+    if (write_bcvel) vector_list.append("boundary vel,");
     //if (has_radii) scalar_list.append("area,");
 
     if (scalar_list.size() + vector_list.size() > 0) {
@@ -1417,6 +1419,26 @@ public:
                                                       {"type", "Float32"}};
         panelWriter.addElement("DataArray", attribs);
         panelWriter.writeDataArray(get_src_str());
+        panelWriter.closeElement();
+      }
+
+      if (write_bcvel) {
+        std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                      {"Name", "boundary vel"},
+                                                      {"type", "Float32"}};
+        panelWriter.addElement("DataArray", attribs);
+        Vector<float> bcv = panelWriter.unpackArray(this->bc);
+        panelWriter.writeDataArray(bcv);
+        panelWriter.closeElement();
+      }
+
+      if (write_normal) {
+        std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                      {"Name", "normal"},
+                                                      {"type", "Float32"}};
+        panelWriter.addElement("DataArray", attribs);
+        Vector<float> pnorm = panelWriter.unpackArray(get_norm());
+        panelWriter.writeDataArray(pnorm);
         panelWriter.closeElement();
       }
 

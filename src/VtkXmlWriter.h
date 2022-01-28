@@ -5,9 +5,9 @@
  * Currently only supports 64 encoding and unstructured grids.
  * The next step is to start generalizing bigger writing processes for the vtu format.
  * 
- * (c)2019-20 Applied Scientific Research, Inc.
- *            Mark J Stock <markjstock@gmail.com>
- *            Blake B Hillier <blakehillier@mac.com>
+ * (c)2019-20,2 Applied Scientific Research, Inc.
+ *              Mark J Stock <markjstock@gmail.com>
+ *              Blake B Hillier <blakehillier@mac.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -71,7 +71,7 @@ public:
   template <class S, long unsigned int I>
   Vector<float> unpackArray(std::array<Vector<S>,I> const & _data) {
     // interleave the (2,3) vectors into a new one
-    { assert((I==2 || I==3) && "ERROR with template I"); }
+    { assert((I==2 || I==3) && "ERROR (unpackArray): template I"); }
     Vector<float> newvec;
     newvec.resize(3 * _data[0].size());
     for (size_t i=0; i<_data[0].size(); ++i) {
@@ -81,6 +81,33 @@ public:
         newvec[3*i+2] = 0.0;
       } else if (I == 3) {
         newvec[3*i+2] = _data[2][i];
+      }
+    }
+    return newvec;
+  }
+
+  // interleave arrays and write to the vtk file
+  template <class S, long unsigned int I>
+  Vector<float> unpackArray(std::array<std::optional<Vector<S>>,I> const & _data) {
+    // interleave the (2,3) vectors into a new one
+    assert((I==2 || I==3) && "ERROR (unpackArray): template I");
+    assert(_data[0] && "ERROR (unpackArray): no vectors present");
+
+    Vector<float> newvec;
+    // we use -> because of std::optional
+    newvec.resize(3 * _data[0]->size());
+
+    if (I == 2) {
+      for (size_t i=0; i<_data[0]->size(); ++i) {
+        newvec[3*i+0] = (*_data[0])[i];
+        newvec[3*i+1] = (*_data[1])[i];
+        newvec[3*i+2] = 0.0;
+      }
+    } else if (I == 3) {
+      for (size_t i=0; i<_data[0]->size(); ++i) {
+        newvec[3*i+0] = (*_data[0])[i];
+        newvec[3*i+1] = (*_data[1])[i];
+        newvec[3*i+2] = (*_data[2])[i];
       }
     }
     return newvec;
