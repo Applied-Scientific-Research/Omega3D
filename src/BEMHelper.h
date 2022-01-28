@@ -168,6 +168,7 @@ void solve_bem(const double                         _time,
   // actually make or remake the A matrix
   if (rebuild_every_block or rebuild_some_blocks) {
 
+    bool write_timing = false;
     auto start = std::chrono::system_clock::now();
 
     // need this to inform bem that we need to re-init the solver
@@ -219,6 +220,8 @@ void solve_bem(const double                         _time,
           assert(coeffs.size() == tnum*snum && "Number of coefficients does not match predicted");
           // targets are rows, sources are cols
           _bem.set_block(tstart, tnum, sstart, snum, coeffs);
+
+          write_timing = true;
         }
       }
     }
@@ -227,7 +230,7 @@ void solve_bem(const double                         _time,
 
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
-    printf("    make A matrix:\t[%.4f] cpu seconds\n", (float)elapsed_seconds.count());
+    if (write_timing) printf("    make A matrix:\t[%.4f] cpu seconds\n", (float)elapsed_seconds.count());
   }
 
   //
