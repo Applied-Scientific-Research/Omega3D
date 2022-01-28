@@ -377,7 +377,7 @@ void points_affect_points (const Points<S>& src, Points<S>& targ, const ResultsT
     const Vector<S>&                            tr = targ.get_rad();
 
   // dispatch on presence of val grads
-  if (restype.get_type() == velandgrad) {
+  if (opttug and restype.get_type() == velandgrad) {
 
     std::cout << "    0v_0vg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
     assert(opttug and "Optional target vel grads are not present!");
@@ -649,7 +649,9 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
   //
   if (targ.is_inert()) {
 
-    if (opttug) { // velocity-and-grads kernel -------------------------------------------------
+    // velocity-and-grads kernel -------------------------------------------------
+    if (opttug and restype.get_type() == velandgrad) {
+
       if (havess) {
         std::cout << "    2vs_0pg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
       } else {
@@ -872,7 +874,9 @@ void panels_affect_points (const Surfaces<S>& src, Points<S>& targ, const Result
     // get the core radius
     //const Vector<S>&                            tr = targ.get_rad();
 
-    if (opttug) { // velocity-and-grads kernel -------------------------------------------------
+    // velocity-and-grads kernel -------------------------------------------------
+    if (opttug and restype.get_type() == velandgrad) {
+
       if (havess) {
         std::cout << "    2vs_0bg compute influence of" << src.to_string() << " on" << targ.to_string() << std::endl;
       } else {
