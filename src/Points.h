@@ -276,6 +276,21 @@ public:
     }
   }
 
+  // vtu output can require a flat vector of particle vorticities
+  Vector<float> get_flat_vorts() {
+    Vector<float> vorts;
+    if (not ug) return vorts;
+    vorts.resize(3*this->n);
+
+    for (size_t i=0; i<this->n; ++i) {
+      vorts[3*i+0] = (*ug)[5][i] - (*ug)[7][i];
+      vorts[3*i+1] = (*ug)[6][i] - (*ug)[2][i];
+      vorts[3*i+2] = (*ug)[1][i] - (*ug)[3][i];
+    }
+
+    return vorts;
+  }
+
   void transform(const double _time) {
     // must explicitly call the method in the base class
     ElementBase<S>::transform(_time);
@@ -855,6 +870,7 @@ public:
 
     bool has_radii = true;
     bool has_strengths = true;
+    bool has_vorts = ug;
     std::string prefix = "part_";
     if (this->E==inert) {
       has_strengths = false;
@@ -941,19 +957,40 @@ public:
     // Cells
     ptsWriter.closeElement();
 
-    {
-      std::map<std::string, std::string> attribs = {{"Vectors", "velocity"}};
+    // do we have CellData?
 
-      std::string scalar_list;
-      //if (has_strengths) scalar_list.append("circulation,");
-      if (has_radii) scalar_list.append("radius,");
-      //if (this->has_vort()) scalar_list.append("vorticity,");
-      if (scalar_list.size()>1) {
-        scalar_list.pop_back();
+    std::string scalar_list;
+    std::string vector_list;
+    if (has_radii) scalar_list.append("radius,");
+    // don't bother writing elong
+    if (has_strengths) vector_list.append("circulation,");
+    vector_list.append("velocity,");
+    if (has_vorts) vector_list.append("vorticity,");
+    // maybe write shear rates?
+
+    if (scalar_list.size() + vector_list.size() > 0) {
+
+      std::map<std::string, std::string> attribs;
+
+      if (scalar_list.size()>0) {
+        scalar_list.pop_back();	// trims trailing comma
         attribs.insert({"Scalars", scalar_list});
       }
 
+      if (vector_list.size()>0) {
+        vector_list.pop_back();	// trims trailing comma
+        attribs.insert({"Vectors", vector_list});
+      }
+
       ptsWriter.addElement("PointData", attribs);
+    }
+
+    if (has_radii) {
+      std::map<std::string, std::string> attribs = {{"Name", "radius"},
+                                                    {"type", "Float32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      ptsWriter.writeDataArray(this->r);
+      ptsWriter.closeElement(); // DataArray
     }
 
     if (has_strengths) {
@@ -966,32 +1003,6 @@ public:
       ptsWriter.closeElement(); // DataArray
     }
 
-    if (has_radii) {
-      std::map<std::string, std::string> attribs = {{"Name", "radius"},
-                                                    {"type", "Float32"}};
-      ptsWriter.addElement("DataArray", attribs);
-      ptsWriter.writeDataArray(this->r);
-      ptsWriter.closeElement(); // DataArray
-    }
-
-/*
-    if (this->has_vort()) {
-      std::map<std::string, std::string> attribs = {{"Name", "vorticity"},
-                                                    {"type", "Float32"}};
-      ptsWriter.addElement("DataArray", attribs);
-      ptsWriter.writeDataArray(*(this->w));
-      ptsWriter.closeElement(); // DataArray
-    }
-
-    if (this->has_shear()) {
-      std::map<std::string, std::string> attribs = {{"Name", "shearrate"},
-                                                    {"type", "Float32"}};
-      ptsWriter.addElement("DataArray", attribs);
-      ptsWriter.writeDataArray(*(this->e));
-      ptsWriter.closeElement(); // DataArray
-    }
-*/
-
     {
       std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
                                                     {"Name",               "velocity"},
@@ -999,6 +1010,15 @@ public:
       ptsWriter.addElement("DataArray", attribs);
       Vector<float> vel = ptsWriter.unpackArray(this->u);
       ptsWriter.writeDataArray(vel);
+      ptsWriter.closeElement(); // DataArray
+    }
+
+    if (has_vorts) {
+      std::map<std::string, std::string> attribs = {{"NumberOfComponents", "3"},
+                                                    {"Name",               "vorticity"},
+                                                    {"type",               "Float32"}};
+      ptsWriter.addElement("DataArray", attribs);
+      ptsWriter.writeDataArray(get_flat_vorts());
       ptsWriter.closeElement(); // DataArray
     }
 
