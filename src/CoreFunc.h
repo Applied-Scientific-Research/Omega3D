@@ -1,8 +1,8 @@
 /*
  * CoreFunc.h - Non-class core function inlines for influence calculations
  *
- * (c)2020 Applied Scientific Research, Inc.
- *         Mark J Stock <markjstock@gmail.com>
+ * (c)2020,2 Applied Scientific Research, Inc.
+ *           Mark J Stock <markjstock@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,9 +32,9 @@
 
 #include <cmath>
 
-//#define USE_RM_KERNEL
+#define USE_RM_KERNEL
 //#define USE_EXPONENTIAL_KERNEL
-#define USE_WL_KERNEL
+//#define USE_WL_KERNEL
 //#define USE_V2_KERNEL
 //#define USE_V3_KERNEL	// not programmed
 
@@ -51,7 +51,7 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 }
 template <class S> inline size_t flops_tv_nograds () { return 7; }
 
-// and the one for non-singular targets
+// and the one for singular targets
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S r2 = distsq + sr*sr;
@@ -71,7 +71,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 }
 template <class S> inline size_t flops_tv_grads () { return 9; }
 
-// and the one for non-singular targets
+// and the one for singular targets
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -250,7 +250,7 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 }
 template <class S> inline size_t flops_tv_nograds () { return 10; }
 
-// and the one for non-singular targets
+// and the one for singular targets
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S r2 = sr*sr;
@@ -274,7 +274,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 }
 template <class S> inline size_t flops_tv_grads () { return 16; }
 
-// and the one for non-singular targets
+// and the one for singular targets
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
@@ -302,7 +302,7 @@ static inline S core_func (const S distsq, const S sr, const S tr) {
 }
 template <class S> inline size_t flops_tv_nograds () { return 11; }
 
-// and for non-singular targets
+// and for singular targets
 template <class S>
 static inline S core_func (const S distsq, const S sr) {
   const S s2 = sr*sr;
@@ -328,7 +328,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
 }
 template <class S> inline size_t flops_tv_grads () { return 13; }
 
-// and the one for non-singular targets
+// and the one for singular targets
 template <class S>
 static inline void core_func (const S distsq, const S sr,
                               S* const __restrict__ r3, S* const __restrict__ bbb) {
