@@ -36,7 +36,7 @@
 //#define USE_EXPONENTIAL_KERNEL
 //#define USE_WL_KERNEL
 #define USE_V2_KERNEL
-//#define USE_V3_KERNEL	// not programmed
+//#define USE_V3_KERNEL
 
 
 
@@ -320,10 +320,10 @@ static inline void core_func (const S distsq, const S sr, const S tr,
   const S s2 = sr*sr;
   const S t2 = tr*tr;
   const S denom = distsq*distsq + s2*s2 + t2*t2;
-  *r3 = oor0p75<S>(denom);
-  *bbb = S(-3.0) * distsq * (*r3) * my_recip(denom);
+  *r3 = oor0p75<S>(denom);	// 4 flops in oor0p75
+  *bbb = S(-3.0) * distsq * (*r3) * my_recip<S>(denom);
 }
-template <class S> inline size_t flops_tv_grads () { return 13; }
+template <class S> inline size_t flops_tv_grads () { return 14; }
 
 // and the one for singular targets
 template <class S>
@@ -332,9 +332,9 @@ static inline void core_func (const S distsq, const S sr,
   const S s2 = sr*sr;
   const S denom = distsq*distsq + s2*s2;
   *r3 = oor0p75<S>(denom);
-  *bbb = S(-3.0) * distsq * (*r3) * my_recip(denom);
+  *bbb = S(-3.0) * distsq * (*r3) * my_recip<S>(denom);
 }
-template <class S> inline size_t flops_tp_grads () { return 10; }
+template <class S> inline size_t flops_tp_grads () { return 11; }
 #endif
 
 
@@ -342,5 +342,47 @@ template <class S> inline size_t flops_tp_grads () { return 10; }
 //
 // Vatistas n=3 - velocity only
 //
+template <class S>
+static inline S core_func (const S distsq, const S sr, const S tr) {
+  const S s3 = sr*sr*sr;
+  const S t3 = tr*tr*tr;
+  const S denom = distsq*distsq*distsq + s3*s3 + t3*t3;
+  return my_rsqrt<S>(denom);
+}
+template <class S> inline size_t flops_tv_nograds () { return 11; }
+
+// and for singular targets
+template <class S>
+static inline S core_func (const S distsq, const S sr) {
+  const S s3 = sr*sr*sr;
+  const S denom = distsq*distsq*distsq + s3*s3;
+  return my_rsqrt<S>(denom);	// 1 or 2 flops
+}
+template <class S> inline size_t flops_tp_nograds () { return 7; }
+
+//
+// Vatistas n=3 - with gradients
+//
+template <class S>
+static inline void core_func (const S distsq, const S sr, const S tr,
+                              S* const __restrict__ r3, S* const __restrict__ bbb) {
+  const S s3 = sr*sr*sr;
+  const S t3 = tr*tr*tr;
+  const S denom = distsq*distsq*distsq + s3*s3 + t3*t3;
+  *r3 = my_rsqrt<S>(denom);
+  *bbb = S(-3.0) * distsq * distsq * (*r3) * my_recip(denom);
+}
+template <class S> inline size_t flops_tv_grads () { return 15; }
+
+// and the one for singular targets
+template <class S>
+static inline void core_func (const S distsq, const S sr,
+                              S* const __restrict__ r3, S* const __restrict__ bbb) {
+  const S s3 = sr*sr*sr;
+  const S denom = distsq*distsq*distsq + s3*s3;
+  *r3 = my_rsqrt<S>(denom);
+  *bbb = S(-3.0) * distsq * distsq * (*r3) * my_recip(denom);
+}
+template <class S> inline size_t flops_tp_grads () { return 11; }
 #endif
 
