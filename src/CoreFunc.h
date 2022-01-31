@@ -32,10 +32,10 @@
 
 #include <cmath>
 
-#define USE_RM_KERNEL
+//#define USE_RM_KERNEL
 //#define USE_EXPONENTIAL_KERNEL
 //#define USE_WL_KERNEL
-//#define USE_V2_KERNEL
+#define USE_V2_KERNEL
 //#define USE_V3_KERNEL	// not programmed
 
 
@@ -321,10 +321,7 @@ static inline void core_func (const S distsq, const S sr, const S tr,
   const S t2 = tr*tr;
   const S denom = distsq*distsq + s2*s2 + t2*t2;
   *r3 = oor0p75<S>(denom);
-  // this did not find elong correctly
-  //*bbb = S(-3.0) * distsq / denom;
-  // this looks right
-  *bbb = S(-3.0) * (*r3) * my_rsqrt(denom);
+  *bbb = S(-3.0) * distsq * (*r3) * my_recip(denom);
 }
 template <class S> inline size_t flops_tv_grads () { return 13; }
 
@@ -335,7 +332,7 @@ static inline void core_func (const S distsq, const S sr,
   const S s2 = sr*sr;
   const S denom = distsq*distsq + s2*s2;
   *r3 = oor0p75<S>(denom);
-  *bbb = S(-3.0) * (*r3) * my_rsqrt(denom);
+  *bbb = S(-3.0) * distsq * (*r3) * my_recip(denom);
 }
 template <class S> inline size_t flops_tp_grads () { return 10; }
 #endif
