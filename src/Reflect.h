@@ -444,6 +444,10 @@ std::pair<S,S> get_cut_entry (std::vector<std::tuple<S,S,S>>& ct, const S _pos) 
 //
 // naive caller for the O(N^2) panel-particle clear-inner-layer kernel
 //
+// _method = 0 trims parts of core function that are under threshold, moves and weakens the remaining part
+// _method = 1 simply pushes any under the threshold up to the threshold
+// _method = 2 weakens particles linearly by 100% at 0 to 0% at _cutoff_mult*_ips and pushes them out to there
+//
 template <class S>
 void clear_inner_panp2 (const int _method,
                         Surfaces<S> const & _src,
@@ -633,6 +637,29 @@ void clear_inner_panp2 (const int _method,
         last_close_panel = hits[0].jidx;
         for (size_t d=0; d<3; ++d) last_normal[d] = mnorm[d];
       }
+
+    } else if (_method == 2) {
+      // weaken the particle based on its distance from the wall and push it out
+      // conceptually, this is realizing that a particle in this zone can also be
+      //   represented with minimal loss of accuracy by two particles: one at the
+      //   threshold distance and one at the wall (reabsorbed). The strength
+      //   scaling maintains the first moment
+      const S reldist = dot_product(mnorm, dx) / (_cutoff_mult*_ips);
+      if (reldist < 0.0) {
+        // weaken to zero
+        for (size_t d=0; d<3; ++d) ts[d][i] = 0.0;
+        // and push it back out to the right distance
+        for (size_t d=0; d<3; ++d) tx[d][i] -= dotp * mnorm[d];
+        num_times++;
+      } else if (reldist > 1.0) {
+        // leave alone
+      } else {
+        // scale strength between these two
+        for (size_t d=0; d<3; ++d) ts[d][i] *= reldist;
+        // and push it back out to the right distance
+        for (size_t d=0; d<3; ++d) tx[d][i] -= dotp * mnorm[d];
+        num_times++;
+      }
     }
 
     } // end while (part_was_moved)
@@ -647,6 +674,8 @@ void clear_inner_panp2 (const int _method,
     std::cout << "    cropped " << num_cropped << " particles" << std::endl;
   } else if (_method == 1) {
     std::cout << "    pushed " << num_cropped << " particles" << std::endl;
+  } else if (_method == 2) {
+    std::cout << "    weakened " << num_cropped << " particles" << std::endl;
   }
 
   if (_method==0 and not are_fldpts) {
