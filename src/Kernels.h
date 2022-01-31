@@ -1022,6 +1022,10 @@ static inline int my_simdwide(const S _in) {
 }
 #endif
 
+//
+// Recursive functions involving panels
+//
+
 // panel-point influence, including subpaneling
 //   initial input strength is a sheet strength, all recursive calls are absolute
 //   returns flops
@@ -1204,6 +1208,101 @@ int rkernel_2vs_0pg (const S sx0, const S sy0, const S sz0,
                                 sca, lev+1, maxlev,
                                 tu, tv, tw,
                                 tux, tvx, twx, tuy, tvy, twy, tuz, tvz, twz);
+    }
+  }
+
+  return flops;
+}
+
+
+// panel-blob influence, including subpaneling - DON'T USE FOR RHS
+//   initial input strength is a sheet strength, all recursive calls are absolute
+//   can also be used for  blob-panel influence
+//   returns flops
+template <class S, class A>
+int rkernel_2vs_0b (const S sx0, const S sy0, const S sz0,
+                    const S sx1, const S sy1, const S sz1,
+                    const S sx2, const S sy2, const S sz2,
+                    const S ssx, const S ssy, const S ssz, const S ss,
+                    const S tx, const S ty, const S tz, const S tr,
+                    const S sa, const int lev, const int maxlev,
+                    A* const __restrict__ tu, A* const __restrict__ tv, A* const __restrict__ tw) {
+
+  // accumulate flop count
+  int flops = 0;
+
+  // convert from sheet strength into absolute strength - only once
+  S strx = ssx;
+  S stry = ssy;
+  S strz = ssz;
+  S strs = ss;
+  if (lev == 0) {
+    strx *= sa;
+    stry *= sa;
+    strz *= sa;
+    strs *= sa;
+    flops += 4;
+  }
+
+  // compute the sizes and distance
+  const S sx = (sx0 + sx1 + sx2) / S(3.0);
+  const S sy = (sy0 + sy1 + sy2) / S(3.0);
+  const S sz = (sz0 + sz1 + sz2) / S(3.0);
+  flops += 9;
+  const S trisize = my_sqrt<S>(sa);
+  const S dist = my_dist<S>(tx-sx, ty-sy, tz-sz);
+  flops += 10;
+
+  // recurse or solve?
+  const bool wellseparated = my_well_sep<S>(dist, trisize);
+  flops += 1;
+  if (wellseparated or lev == maxlev) {
+
+    // run just one influence calculation
+    // desingularize, but only by a little bit
+    //(void) kernel_0vs_0p (sx, sy, sz, S(0.5)*trisize,
+    // keep panel singular
+    (void) kernel_0vs_0b (sx, sy, sz, S(0.0),
+                          strx, stry, strz, strs,
+                          tx, ty, tz, tr,
+                          tu, tv, tw);
+
+    flops += (int)flops_0vs_0b<S>();
+    flops *= my_simdwide<S>(sx);
+
+  } else {
+
+    // split source into 4 subpanels and run 4 calls
+
+    // scale the strength by 1/4, to account for the 4 calls below
+    strx *= S(0.25);
+    stry *= S(0.25);
+    strz *= S(0.25);
+    strs *= S(0.25);
+    // and scale the area by 1/4
+    const S sca = S(0.25) * sa;
+    flops += 5;
+
+    // find the 6 nodes of the source and target triangles
+    const S scx[6] = {sx0, S(0.5)*(sx0+sx1), sx1, S(0.5)*(sx0+sx2), S(0.5)*(sx1+sx2), sx2};
+    const S scy[6] = {sy0, S(0.5)*(sy0+sy1), sy1, S(0.5)*(sy0+sy2), S(0.5)*(sy1+sy2), sy2};
+    const S scz[6] = {sz0, S(0.5)*(sz0+sz1), sz1, S(0.5)*(sz0+sz2), S(0.5)*(sz1+sz2), sz2};
+    flops += 18;
+    flops *= my_simdwide<S>(sx);
+
+    // the index pointers to the child triangles
+    const int id[4][3] = {{0,1,3}, {1,2,4}, {1,4,3}, {3,4,5}};
+
+    for (int i=0; i<4; ++i) {
+
+      // accumulate the influence
+      flops += rkernel_2vs_0b (scx[id[i][0]], scy[id[i][0]], scz[id[i][0]],
+                               scx[id[i][1]], scy[id[i][1]], scz[id[i][1]],
+                               scx[id[i][2]], scy[id[i][2]], scz[id[i][2]],
+                               strx, stry, strz, strs,
+                               tx, ty, tz, tr,
+                               sca, lev+1, maxlev,
+                               tu, tv, tw);
     }
   }
 
