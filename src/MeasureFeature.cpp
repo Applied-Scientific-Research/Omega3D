@@ -421,7 +421,7 @@ MeasurementLine::init_elements(float _ips) const {
 
   // how many points do we need?
   float llen = std::sqrt( std::pow(m_xf-m_x, 2) + std::pow(m_yf-m_y, 2) + std::pow(m_zf-m_z, 2));
-  int ilen = 1 + llen / _ips;
+  int ilen = 1 + llen / m_dx;
 
   std::cout << "Creating measure line with " << ilen << " points" << std::endl;
 
