@@ -93,7 +93,7 @@ void points_affect_points (const Points<S>& src, Points<S>& targ, const ResultsT
       std::array<Vector<S>,9>& tug = *opttug;
       int ns = src.get_n();
       int nt = targ.get_n();
-      if (restype.compute_grads()) {
+      if (restype.compute_grad()) {
       flops = external_vel_solver_f_(&ns, sx[0].data(), sx[1].data(), sx[2].data(),
                                           ss[0].data(), ss[1].data(), ss[2].data(), sr.data(), 
                                      &nt, tx[0].data(), tx[1].data(), tx[2].data(),
