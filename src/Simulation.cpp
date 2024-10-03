@@ -889,7 +889,7 @@ void Simulation::dump_stats_to_status() {
     std::array<float,Dimensions> impulse = calculate_simple_forces();
     sf.append_value("fx",impulse[0]);
     sf.append_value("fy",impulse[1]);
-    if (Dimensions > 2) sf.append_value("fz",impulse[3]);
+    if (Dimensions > 2) sf.append_value("fz",impulse[2]);
 
     // write here
     sf.write_line();
