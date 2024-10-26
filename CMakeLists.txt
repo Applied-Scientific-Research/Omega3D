@@ -88,8 +88,8 @@ SET( BASE_LIBS ${BASE_LIBS} Eigen3::Eigen )
 # optional libraries
 FetchContent_Declare(
   Vc
-  URL https://github.com/VcDevel/Vc/archive/refs/tags/1.4.5.zip
   DOWNLOAD_EXTRACT_TIMESTAMP true
+  URL https://github.com/VcDevel/Vc/archive/refs/tags/1.4.5.zip
 )
 IF( OMEGA3D_USE_VC )
   FetchContent_MakeAvailable(Vc)
