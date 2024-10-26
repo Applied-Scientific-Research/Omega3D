@@ -25,20 +25,6 @@ or on OSX via [Homebrew](https://docs.brew.sh/Installation) with
 
     brew install cmake glfw eigen
 
-#### Optional libraries
-[Vc](https://github.com/VcDevel/Vc) is a vectorization library, and Omega3D uses it to greatly accelerate the velocity evaluations. This package can be built and installed external to Omega3D with
-
-    git clone https://github.com/VcDevel/Vc.git
-    cd Vc
-    mkdir build
-    cd build
-    cmake -DCMAKE_INSTALL_PREFIX=/opt/Vc -DBUILD_TESTING=OFF ..
-    make -j 4
-    sudo make install
-    cd ../..
-
-The above commands should work verbatim on Linux and OSX. Don't ask about Windows - there's a calling convention issue preventing this from working.
-
 #### Compile
 Upon installation of the prerequisites, the following commands should build Omega3D.
 
@@ -76,7 +62,9 @@ At any time you can press *PAUSE* to pause the simulation or *Reset* to go back 
 There are several collapsible headers which you can open to modify this simulation, those include *Simulation globals* such as viscosity and flow speed, *Flow structures* such as solid bodies, vortex blobs, and tracers, and *Rendering parameters*. Some changes you make in these fields will affect the simulation immediately, but most will require you to *Reset*.
 
 ### Run a batch job
-If you already have an input file in JSON format, or you exported one from the GUI, you can run a batch (no GUI) simulation with
+You'll first need to build the batch (no GUI) version of the code. Head back to the `cmake` command above and add `-DOMEGA3D_BUILD_BATCH=ON`, then rebuild.
+
+Now if you already have an input file in JSON format, or you exported one from the GUI, you can run a batch simulation with
 
     ./Omega3Dbatch.bin input.json
 
