@@ -1,8 +1,6 @@
 # Omega3D
 Three-dimensional flow solver with GUI using vortex particle and boundary element methods
 
-*NOTE: This program currrently uses O(N^2) calculations for velocity, so runs more slowly than desired. A O(N log N) treecode is being prepared to alleviate this.*
-
 ![startupvideo](media/IntroSphere1.gif?raw=true "Session sample")
 
 ## Overview
@@ -48,12 +46,14 @@ Upon installation of the prerequisites, the following commands should build Omeg
     cd Omega3D
     mkdir build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DUSE_OMP=ON -DUSE_VC=OFF ..
+    cmake -DCMAKE_BUILD_TYPE=Release -DOMEGA3D_USE_ONBODY=ON ..
     make
 
-If you were able to build and install Vc, then you should set `-DUSE_VC=ON` in the above `cmake` command.
+This will build the GUI version of Omega3D with [Vc](https://github.com/VcDevel/Vc),
+a vectorization library, and [onbody](https://github.com/Applied-Scientific-Research/onbody), and order
+N-log-N velocity solver.
 
-To use the system Clang on Linux, you will want the following variables defined:
+To use the system Clang on Linux, you may need the following variables defined:
 
     cmake -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ ..
 
@@ -98,7 +98,6 @@ Tasks to consider or implement:
 * Consider using [libigl](https://libigl.github.io/tutorial/#closest-points) to find point-mesh closest point queries
 * Instead of manipulating the projection matrix, have the mouse change the view matrix (assume model matrix is unity), see [here](https://solarianprogrammer.com/2013/05/22/opengl-101-matrices-projection-view-model/) for a nice write-up on the three OpenGL matrices
 * Add arcball rotation to the viewport - see [here](https://www.3dgep.com/understanding-the-view-matrix/) for some glm code
-* Add other repos as submodules, or just by copying? `submodule add https://...xxx.git thirdparty/xxx`
 
 ## Thanks
 This project is funded by the [National Institutes of Health (NIH)](https://www.nih.gov/) under grant number 1 R01 EB022180-01A1 ("A Fast High-Order CFD for Turbulent Flow Simulation in Cardio-Devices").
